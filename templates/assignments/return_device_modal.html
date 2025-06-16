@@ -1,0 +1,196 @@
+<!-- Return Device Modal Content -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-arrow-return-left"></i>
+        Return Device
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>Returning:</strong> {{ device.asset_tag }} ({{ device.device_model.manufacturer }} {{ device.device_model.model_name }})
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <strong>Currently Assigned To:</strong><br>
+            {{ assignment.user.get_full_name|default:assignment.user.username }}<br>
+            <small class="text-muted">{{ assignment.user.email }}</small>
+        </div>
+        <div class="col-md-6">
+            <strong>Assignment Date:</strong><br>
+            {{ assignment.assigned_date|date:"M d, Y" }}<br>
+            <small class="text-muted">{{ assignment.days_assigned }} days ago</small>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <strong>Expected Return:</strong><br>
+            {% if assignment.expected_return_date %}
+                {{ assignment.expected_return_date|date:"M d, Y" }}
+                {% if assignment.is_overdue %}
+                    <span class="badge bg-danger ms-1">Overdue</span>
+                {% endif %}
+            {% else %}
+                <span class="text-muted">Not specified</span>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <strong>Condition at Assignment:</strong><br>
+            <span class="badge bg-info">{{ assignment.condition_at_assignment|default:"Not recorded" }}</span>
+        </div>
+    </div>
+    
+    <form id="returnDeviceForm" hx-post="{% url 'return-device-api' device_id=device.id %}" 
+          hx-trigger="submit" hx-indicator="#return-spinner">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label for="return_condition" class="form-label">Current Condition *</label>
+            <select class="form-select" id="return_condition" name="condition" required>
+                <option value="">Select condition...</option>
+                <option value="new">New</option>
+                <option value="excellent" selected>Excellent</option>
+                <option value="good">Good</option>
+                <option value="fair">Fair</option>
+                <option value="poor">Poor</option>
+                <option value="damaged">Damaged</option>
+            </select>
+            <div class="form-text">Assess the device's current condition</div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="return_notes" class="form-label">Return Notes</label>
+            <textarea class="form-control" id="return_notes" name="notes" rows="3" 
+                      placeholder="Any issues, damages, or observations about the device..."></textarea>
+            <div class="form-text">Optional: Add notes about the device's condition or any issues</div>
+        </div>
+        
+        {% if assignment.purpose %}
+        <div class="mb-3">
+            <label class="form-label">Assignment Purpose</label>
+            <div class="form-control-plaintext">{{ assignment.purpose }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Please confirm:</strong> This action will mark the device as returned and make it available for future assignments.
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <button type="submit" form="returnDeviceForm" class="btn btn-warning">
+        <span id="return-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+        <i class="bi bi-arrow-return-left"></i>
+        Return Device
+    </button>
+</div>
+
+<script>
+// Handle return form submission
+document.getElementById('returnDeviceForm').addEventListener('htmx:afterRequest', function(event) {
+    const spinner = document.getElementById('return-spinner');
+    spinner.classList.add('d-none');
+    
+    if (event.detail.xhr.status === 200) {
+        // Success - close modal and refresh lists
+        const deviceModal = document.getElementById('deviceModal');
+        const returnModal = document.getElementById('returnModal');
+        const userReturnModal = document.getElementById('userReturnModal');
+        const deviceReturnModal = document.getElementById('deviceReturnModal');
+        
+        // Close whichever modal is open
+        if (deviceModal && bootstrap.Modal.getInstance(deviceModal)) {
+            bootstrap.Modal.getInstance(deviceModal).hide();
+        }
+        if (returnModal && bootstrap.Modal.getInstance(returnModal)) {
+            bootstrap.Modal.getInstance(returnModal).hide();
+        }
+        if (userReturnModal && bootstrap.Modal.getInstance(userReturnModal)) {
+            bootstrap.Modal.getInstance(userReturnModal).hide();
+        }
+        if (deviceReturnModal && bootstrap.Modal.getInstance(deviceReturnModal)) {
+            bootstrap.Modal.getInstance(deviceReturnModal).hide();
+        }
+        
+        // Show success message
+        const response = JSON.parse(event.detail.xhr.responseText);
+        showAlert('success', response.message);
+        
+        // Refresh the appropriate list
+        if (window.refreshDeviceList) {
+            window.refreshDeviceList();
+        }
+        if (window.refreshAssignments) {
+            window.refreshAssignments();
+        }
+        
+        // Refresh user assignments if we're on a user detail page
+        const currentAssignments = document.getElementById('currentAssignments');
+        if (currentAssignments) {
+            htmx.trigger(currentAssignments, 'refresh');
+        }
+        
+        const assignmentHistory = document.getElementById('assignmentHistory');
+        if (assignmentHistory) {
+            htmx.trigger(assignmentHistory, 'refresh');
+        }
+        
+        // Refresh device assignment history if we're on device detail page
+        const deviceAssignmentHistory = document.getElementById('assignment-history');
+        if (deviceAssignmentHistory) {
+            htmx.trigger(deviceAssignmentHistory, 'refresh');
+        }
+        
+        // If we're on device detail page, reload to show updated status
+        if (window.location.pathname.includes('/devices/') && window.location.pathname.includes('/')) {
+            setTimeout(() => window.location.reload(), 1000);
+            return;
+        }
+        
+        // Fallback - reload page if no refresh functions available
+        if (!window.refreshDeviceList && !window.refreshAssignments && !currentAssignments) {
+            window.location.reload();
+        }
+    } else {
+        // Error handling
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            showAlert('danger', 'Error: ' + (response.error || 'Failed to return device'));
+        } catch (e) {
+            showAlert('danger', 'An error occurred while returning the device');
+        }
+    }
+});
+
+// Handle form submission start
+document.getElementById('returnDeviceForm').addEventListener('htmx:beforeRequest', function(event) {
+    const spinner = document.getElementById('return-spinner');
+    spinner.classList.remove('d-none');
+});
+
+// Helper function to show alerts
+function showAlert(type, message) {
+    const alertContainer = document.getElementById('alert-container') || document.body;
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    alertContainer.insertBefore(alert, alertContainer.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>

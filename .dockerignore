@@ -1,0 +1,52 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-shm
+db.sqlite3-wal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.prod
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Media files (if any)
+media/
+
+# Backup files
+*.bak
+*.backup

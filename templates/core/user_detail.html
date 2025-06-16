@@ -1,0 +1,494 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}{{ user_profile.get_full_name }} - User Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-person-circle me-2"></i>
+        {{ user_profile.get_full_name }}
+        <small class="text-muted">@{{ user_profile.username }}</small>
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'users' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back to Users
+            </a>
+            <a href="{% url 'user-edit-page' user_id=user_profile.id %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-pencil"></i>
+                Edit User
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- User Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">User Information</h5>
+                <div>
+                    {% if user_profile.is_active %}
+                        <span class="badge bg-success fs-6">Active</span>
+                    {% else %}
+                        <span class="badge bg-danger fs-6">Inactive</span>
+                    {% endif %}
+                    <span class="badge bg-secondary fs-6">{{ user_profile.get_role_display }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Full Name:</td>
+                                <td>{{ user_profile.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Username:</td>
+                                <td><code>{{ user_profile.username }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Email:</td>
+                                <td>{{ user_profile.email }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Employee ID:</td>
+                                <td>{{ user_profile.employee_id|default:"Not assigned" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Role:</td>
+                                <td>
+                                    {% if user_profile.role == 'admin' %}
+                                        <span class="badge bg-danger">{{ user_profile.get_role_display }}</span>
+                                    {% elif user_profile.role == 'manager' %}
+                                        <span class="badge bg-warning">{{ user_profile.get_role_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ user_profile.get_role_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Date Joined:</td>
+                                <td>{{ user_profile.date_joined|date:"M d, Y" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Last Login:</td>
+                                <td>
+                                    {% if user_profile.last_login %}
+                                        {{ user_profile.last_login|date:"M d, Y H:i" }}
+                                    {% else %}
+                                        Never
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Account Status:</td>
+                                <td>
+                                    {% if user_profile.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Staff Status:</td>
+                                <td>
+                                    {% if user_profile.is_staff %}
+                                        <span class="badge bg-primary">Staff</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Regular User</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Superuser:</td>
+                                <td>
+                                    {% if user_profile.is_superuser %}
+                                        <span class="badge bg-danger">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Device Assignments -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Current Device Assignments</h5>
+            </div>
+            <div class="card-body" id="currentAssignments"
+                 hx-get="/assignments/api/assignments/?user={{ user_profile.id }}&status=active"
+                 hx-trigger="load"
+                 hx-indicator="#assignments-loading">
+                <div class="d-flex justify-content-center p-3" id="assignments-loading">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading assignments...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Assignment History</h5>
+            </div>
+            <div class="card-body" id="assignmentHistory"
+                 hx-get="/assignments/api/assignments/?user={{ user_profile.id }}"
+                 hx-trigger="load delay:500ms"
+                 hx-indicator="#history-loading">
+                <div class="d-flex justify-content-center p-3" id="history-loading">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading history...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Stats & Quick Actions -->
+    <div class="col-lg-4">
+        <!-- User Avatar & Quick Info -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <div class="avatar-circle-xl mb-3">
+                    <i class="bi bi-person"></i>
+                </div>
+                <h5>{{ user_profile.get_full_name }}</h5>
+                <p class="text-muted">{{ user_profile.email }}</p>
+                <div class="row text-center">
+                    <div class="col">
+                        <small class="text-muted">Role</small>
+                        <div class="fw-bold">{{ user_profile.get_role_display }}</div>
+                    </div>
+                    <div class="col">
+                        <small class="text-muted">Member Since</small>
+                        <div class="fw-bold">{{ user_profile.date_joined|date:"M Y" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'user-edit-page' user_id=user_profile.id %}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i>
+                        Edit User
+                    </a>
+                    <button class="btn btn-success" onclick="showAssignDeviceModal({{ user_profile.id }})">
+                        <i class="bi bi-plus-circle"></i>
+                        Assign Device
+                    </button>
+                    {% if user_profile.is_active %}
+                    <button class="btn btn-warning" onclick="toggleUserStatus({{ user_profile.id }}, false)">
+                        <i class="bi bi-person-x"></i>
+                        Deactivate User
+                    </button>
+                    {% else %}
+                    <button class="btn btn-success" onclick="toggleUserStatus({{ user_profile.id }}, true)">
+                        <i class="bi bi-person-check"></i>
+                        Activate User
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-info" onclick="resetPassword({{ user_profile.id }})">
+                        <i class="bi bi-key"></i>
+                        Reset Password
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">User Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary" id="activeDevices">-</h4>
+                            <small class="text-muted">Active Devices</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info" id="totalAssignments">-</h4>
+                        <small class="text-muted">Total Assignments</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h5 class="text-warning" id="overdueDevices">-</h5>
+                            <small class="text-muted">Overdue</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-success" id="returnedDevices">-</h5>
+                        <small class="text-muted">Returned</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">{{ user_profile.date_joined|date:"M d, Y" }}</small>
+                            <div>Account created</div>
+                        </div>
+                    </div>
+                    {% if user_profile.last_login %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">{{ user_profile.last_login|date:"M d, Y" }}</small>
+                            <div>Last login</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Device Modal -->
+<div class="modal fade" id="assignDeviceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Device to {{ user_profile.get_full_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignDeviceForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="deviceSelect" class="form-label">Select Device</label>
+                        <select class="form-select" id="deviceSelect" name="device_id" required>
+                            <option value="">Choose a device...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="expectedReturn" class="form-label">Expected Return Date</label>
+                        <input type="date" class="form-control" id="expectedReturn" name="expected_return_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="assignNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitDeviceAssignment()">Assign Device</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle-xl {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 3rem;
+    margin: 0 auto;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 1rem;
+    width: 2px;
+    height: calc(100% + 0.5rem);
+    background-color: #dee2e6;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    top: 0.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding-left: 0.5rem;
+}
+</style>
+
+<script>
+let currentUserId = {{ user_profile.id }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserStatistics();
+});
+
+function loadUserStatistics() {
+    // Load assignment statistics for this user
+    fetch(`/assignments/api/assignments/json/?user=${currentUserId}`)
+        .then(response => response.json())
+        .then(data => {
+            const assignments = data.results || data;
+            
+            const active = assignments.filter(a => a.status === 'active').length;
+            const overdue = assignments.filter(a => a.status === 'overdue').length;
+            const returned = assignments.filter(a => a.status === 'returned').length;
+            
+            document.getElementById('activeDevices').textContent = active;
+            document.getElementById('totalAssignments').textContent = assignments.length;
+            document.getElementById('overdueDevices').textContent = overdue;
+            document.getElementById('returnedDevices').textContent = returned;
+        })
+        .catch(error => {
+            console.error('Error loading user statistics:', error);
+        });
+}
+
+function showAssignDeviceModal(userId) {
+    // Load available devices
+    fetch('/devices/api/devices/json/?status=available')
+        .then(response => response.json())
+        .then(data => {
+            const deviceSelect = document.getElementById('deviceSelect');
+            deviceSelect.innerHTML = '<option value="">Choose a device...</option>';
+            data.results.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.id;
+                option.textContent = `${device.asset_tag} - ${device.device_model_display}`;
+                deviceSelect.appendChild(option);
+            });
+        });
+    
+    const modal = new bootstrap.Modal(document.getElementById('assignDeviceModal'));
+    modal.show();
+}
+
+function submitDeviceAssignment() {
+    const form = document.getElementById('assignDeviceForm');
+    const formData = new FormData(form);
+    const deviceId = formData.get('device_id');
+    
+    if (!deviceId) {
+        alert('Please select a device');
+        return;
+    }
+    
+    fetch(`/devices/api/devices/${deviceId}/assign/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: currentUserId,
+            expected_return_date: formData.get('expected_return_date'),
+            notes: formData.get('notes')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            bootstrap.Modal.getInstance(document.getElementById('assignDeviceModal')).hide();
+            // Refresh the assignments and statistics
+            htmx.trigger('#currentAssignments', 'refreshAssignments');
+            htmx.trigger('#assignmentHistory', 'refreshAssignments');
+            loadUserStatistics();
+        } else {
+            alert(data.error || 'Assignment failed');
+        }
+    })
+    .catch(error => {
+        alert('An error occurred during assignment');
+        console.error('Error:', error);
+    });
+}
+
+function toggleUserStatus(userId, activate) {
+    const action = activate ? 'activate' : 'deactivate';
+    const message = activate ? 'activate' : 'deactivate';
+    
+    if (confirm(`Are you sure you want to ${message} this user?`)) {
+        fetch(`/api/users/${userId}/toggle-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                location.reload(); // Refresh to show updated status
+            } else {
+                alert(data.error || 'Status update failed');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred during status update');
+            console.error('Error:', error);
+        });
+    }
+}
+
+function resetPassword(userId) {
+    if (confirm('Are you sure you want to reset this user\'s password?')) {
+        alert('Password reset functionality coming soon!');
+    }
+}
+
+// Handle HTMX events for refreshing content
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'currentAssignments' || event.detail.target.id === 'assignmentHistory') {
+        loadUserStatistics();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% if devices %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th width="40" id="bulk-select-header" style="display: none;">
+                    <input type="checkbox" class="form-check-input" id="selectAllDevices" onchange="toggleSelectAll()">
+                </th>
+                <th>Asset Tag</th>
+                <th>Device</th>
+                <th>Status</th>
+                <th>Condition</th>
+                <th>Assigned To</th>
+                <th>Location</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for device in devices %}
+            <tr>
+                <td class="bulk-select-cell" style="display: none;">
+                    <input type="checkbox" class="form-check-input device-checkbox" value="{{ device.id }}" onchange="updateBulkActions()">
+                </td>
+                <td>
+                    <strong>{{ device.asset_tag }}</strong>
+                    <br><small class="text-muted">{{ device.serial_number }}</small>
+                </td>
+                <td>
+                    <div>
+                        <strong>{{ device.device_model_display }}</strong>
+                        <br><small class="text-muted">{{ device.category }}</small>
+                    </div>
+                </td>
+                <td>
+                    {% if device.status == 'available' %}
+                        <span class="badge bg-success">{{ device.status_display }}</span>
+                    {% elif device.status == 'assigned' %}
+                        <span class="badge bg-warning">{{ device.status_display }}</span>
+                    {% elif device.status == 'maintenance' %}
+                        <span class="badge bg-info">{{ device.status_display }}</span>
+                    {% elif device.status == 'retired' %}
+                        <span class="badge bg-secondary">{{ device.status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ device.status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if device.condition == 'new' %}
+                        <span class="badge bg-primary">{{ device.condition_display }}</span>
+                    {% elif device.condition == 'excellent' %}
+                        <span class="badge bg-success">{{ device.condition_display }}</span>
+                    {% elif device.condition == 'good' %}
+                        <span class="badge bg-info">{{ device.condition_display }}</span>
+                    {% elif device.condition == 'fair' %}
+                        <span class="badge bg-warning">{{ device.condition_display }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ device.condition_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if device.assigned_to %}
+                        <div>
+                            <strong>{{ device.assigned_to.get_full_name }}</strong>
+                            <br><small class="text-muted">{{ device.assigned_to.email }}</small>
+                            {% if device.assigned_date %}
+                                <br><small class="text-muted">Since {{ device.assigned_date|date:"M d, Y" }}</small>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <span class="text-muted">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if device.location %}
+                        {{ device.location }}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'device-detail-page' device_id=device.id %}" class="btn btn-outline-primary" title="View Details">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if device.status == 'available' %}
+                            <button type="button" class="btn btn-outline-success" 
+                                    onclick="showAssignModal({{ device.id }})" title="Assign Device">
+                                <i class="bi bi-person-plus"></i>
+                            </button>
+                        {% elif device.status == 'assigned' %}
+                            <button type="button" class="btn btn-outline-warning" 
+                                    onclick="showUnassignModal({{ device.id }})" title="Return Device">
+                                <i class="bi bi-arrow-return-left"></i>
+                            </button>
+                        {% elif device.status == 'maintenance' %}
+                            {% if device.assigned_to %}
+                                <button type="button" class="btn btn-outline-warning" 
+                                        onclick="showUnassignModal({{ device.id }})" title="Return Device">
+                                    <i class="bi bi-arrow-return-left"></i>
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-outline-success" 
+                                        onclick="showAssignModal({{ device.id }})" title="Assign Device">
+                                    <i class="bi bi-person-plus"></i>
+                                </button>
+                            {% endif %}
+                            <button type="button" class="btn btn-outline-info" 
+                                    onclick="alert('Maintenance functionality coming soon!')" title="Manage Maintenance">
+                                <i class="bi bi-tools"></i>
+                            </button>
+                        {% elif device.status == 'retired' %}
+                            <button type="button" class="btn btn-outline-secondary" disabled title="Device Retired">
+                                <i class="bi bi-archive"></i>
+                            </button>
+                        {% endif %}
+                        <a href="{% url 'edit-device' device_id=device.id %}" class="btn btn-outline-secondary" title="Edit Device">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Devices pagination">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-laptop display-1 text-muted"></i>
+    <h3 class="mt-3">No Devices Found</h3>
+    <p class="text-muted">No devices match your current filters.</p>
+    <a href="{% url 'add-device' %}" class="btn btn-primary">
+        <i class="bi bi-plus"></i>
+        Add Your First Device
+    </a>
+</div>
+{% endif %}

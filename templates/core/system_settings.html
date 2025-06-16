@@ -1,0 +1,196 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}{{ page_title }} - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ page_title }}</h1>
+    <div class="badge bg-danger">Superuser Only</div>
+</div>
+
+<div class="row">
+    <!-- General Settings -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear"></i>
+                    General Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="systemName" class="form-label">System Name</label>
+                        <input type="text" class="form-control" id="systemName" value="IT Device Management">
+                    </div>
+                    <div class="mb-3">
+                        <label for="adminEmail" class="form-label">Administrator Email</label>
+                        <input type="email" class="form-control" id="adminEmail" value="admin@company.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone">
+                            <option selected>UTC</option>
+                            <option>America/New_York</option>
+                            <option>America/Los_Angeles</option>
+                            <option>Europe/London</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="alert('Save functionality coming soon!')">
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Toggles -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-toggles"></i>
+                    Feature Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enableLDAP">
+                    <label class="form-check-label" for="enableLDAP">
+                        Enable LDAP/Active Directory Integration
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enableMFA">
+                    <label class="form-check-label" for="enableMFA">
+                        Enable Multi-Factor Authentication
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enableBarcode" checked>
+                    <label class="form-check-label" for="enableBarcode">
+                        Enable Barcode/QR Code Scanning
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
+                    <label class="form-check-label" for="enableNotifications">
+                        Enable Email Notifications
+                    </label>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="alert('Save functionality coming soon!')">
+                    Save Features
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security Settings -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-lock"></i>
+                    Security Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+                    <input type="number" class="form-control" id="sessionTimeout" value="30">
+                </div>
+                <div class="mb-3">
+                    <label for="passwordPolicy" class="form-label">Password Policy</label>
+                    <select class="form-select" id="passwordPolicy">
+                        <option selected>Standard (8+ characters)</option>
+                        <option>Strong (12+ characters, mixed case, numbers, symbols)</option>
+                        <option>Custom</option>
+                    </select>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="requireApproval" checked>
+                    <label class="form-check-label" for="requireApproval">
+                        Require approval for device assignments
+                    </label>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="alert('Save functionality coming soon!')">
+                    Save Security
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup & Maintenance -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Backup & Maintenance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Last Backup</label>
+                    <p class="form-control-plaintext">Today at 2:00 AM</p>
+                </div>
+                <div class="mb-3">
+                    <label for="backupFrequency" class="form-label">Backup Frequency</label>
+                    <select class="form-select" id="backupFrequency">
+                        <option selected>Daily</option>
+                        <option>Weekly</option>
+                        <option>Manual</option>
+                    </select>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="alert('Backup functionality coming soon!')">
+                        <i class="bi bi-download"></i>
+                        Create Backup Now
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="alert('Maintenance functionality coming soon!')">
+                        <i class="bi bi-tools"></i>
+                        Run Maintenance
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Version:</strong><br>
+                        <span class="text-muted">1.0.0</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Database:</strong><br>
+                        <span class="text-muted">SQLite</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Python:</strong><br>
+                        <span class="text-muted">3.12.7</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Django:</strong><br>
+                        <span class="text-muted">5.2.1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

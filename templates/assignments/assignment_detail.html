@@ -1,0 +1,427 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Assignment #{{ assignment.id }} - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-person-lines-fill me-2"></i>
+        Assignment #{{ assignment.id }}
+        {% if assignment.status == 'active' %}
+            <span class="badge bg-success fs-6">Active</span>
+        {% elif assignment.status == 'returned' %}
+            <span class="badge bg-secondary fs-6">Returned</span>
+        {% elif assignment.status == 'overdue' %}
+            <span class="badge bg-danger fs-6">Overdue</span>
+        {% endif %}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'assignments' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back to Assignments
+            </a>
+            {% if assignment.status == 'active' %}
+            <button class="btn btn-sm btn-warning" onclick="returnDevice({{ assignment.id }})">
+                <i class="bi bi-arrow-return-left"></i>
+                Return Device
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Assignment Details -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Assignment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Assignment ID:</td>
+                                <td><code>#{{ assignment.id }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Assigned Date:</td>
+                                <td>{{ assignment.assigned_date|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Assigned By:</td>
+                                <td>{{ assignment.assigned_by.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Expected Return:</td>
+                                <td>
+                                    {% if assignment.expected_return_date %}
+                                        {{ assignment.expected_return_date|date:"M d, Y" }}
+                                        {% if assignment.is_overdue %}
+                                            <span class="badge bg-danger ms-2">Overdue</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Not specified
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Status:</td>
+                                <td>
+                                    {% if assignment.status == 'active' %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% elif assignment.status == 'returned' %}
+                                        <span class="badge bg-secondary">Returned</span>
+                                    {% elif assignment.status == 'overdue' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            {% if assignment.status == 'returned' %}
+                            <tr>
+                                <td class="fw-bold">Return Date:</td>
+                                <td>{{ assignment.return_date|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Returned By:</td>
+                                <td>{{ assignment.returned_by.get_full_name }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="fw-bold">Condition (Assignment):</td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ assignment.get_condition_at_assignment_display }}</span>
+                                </td>
+                            </tr>
+                            {% if assignment.condition_at_return %}
+                            <tr>
+                                <td class="fw-bold">Condition (Return):</td>
+                                <td>
+                                    {% if assignment.condition_at_return == 'excellent' %}
+                                        <span class="badge bg-success">{{ assignment.get_condition_at_return_display }}</span>
+                                    {% elif assignment.condition_at_return == 'good' %}
+                                        <span class="badge bg-info">{{ assignment.get_condition_at_return_display }}</span>
+                                    {% elif assignment.condition_at_return == 'fair' %}
+                                        <span class="badge bg-warning">{{ assignment.get_condition_at_return_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ assignment.get_condition_at_return_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                {% if assignment.notes %}
+                <div class="mt-3">
+                    <h6>Assignment Notes:</h6>
+                    <p class="text-muted">{{ assignment.notes }}</p>
+                </div>
+                {% endif %}
+
+                {% if assignment.return_notes %}
+                <div class="mt-3">
+                    <h6>Return Notes:</h6>
+                    <p class="text-muted">{{ assignment.return_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Device Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Device Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            {% if assignment.device.device_model.category.name == 'Laptop' %}
+                                <i class="bi bi-laptop display-4 text-primary"></i>
+                            {% elif assignment.device.device_model.category.name == 'Desktop' %}
+                                <i class="bi bi-pc-display display-4 text-info"></i>
+                            {% elif assignment.device.device_model.category.name == 'Phone' %}
+                                <i class="bi bi-phone display-4 text-success"></i>
+                            {% elif assignment.device.device_model.category.name == 'Monitor' %}
+                                <i class="bi bi-display display-4 text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-device-hdd display-4 text-secondary"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Asset Tag:</td>
+                                <td><code>{{ assignment.device.asset_tag }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Serial Number:</td>
+                                <td><code>{{ assignment.device.serial_number }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Device Model:</td>
+                                <td>{{ assignment.device.device_model }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Category:</td>
+                                <td>{{ assignment.device.device_model.category.name }}</td>
+                            </tr>
+                            {% if assignment.device.location %}
+                            <tr>
+                                <td class="fw-bold">Location:</td>
+                                <td>{{ assignment.device.location }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                        <a href="/devices/{{ assignment.device.id }}/" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i>
+                            View Device Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">User Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="avatar-circle-large">
+                                <i class="bi bi-person"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">Name:</td>
+                                <td>{{ assignment.user.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Email:</td>
+                                <td>{{ assignment.user.email }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Username:</td>
+                                <td>{{ assignment.user.username }}</td>
+                            </tr>
+                            {% if assignment.user.employee_id %}
+                            <tr>
+                                <td class="fw-bold">Employee ID:</td>
+                                <td>{{ assignment.user.employee_id }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="fw-bold">Role:</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ assignment.user.get_role_display }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                        <a href="/users/{{ assignment.user.id }}/" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i>
+                            View User Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Timeline -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Assignment Timeline</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">{{ assignment.assigned_date|date:"M d, Y H:i" }}</small>
+                            <div>Device assigned</div>
+                            <small class="text-muted">by {{ assignment.assigned_by.get_full_name }}</small>
+                        </div>
+                    </div>
+                    
+                    {% if assignment.expected_return_date %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if assignment.is_overdue %}bg-danger{% else %}bg-warning{% endif %}"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">{{ assignment.expected_return_date|date:"M d, Y" }}</small>
+                            <div>Expected return date</div>
+                            {% if assignment.is_overdue %}
+                            <small class="text-danger">Overdue</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if assignment.status == 'returned' %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">{{ assignment.return_date|date:"M d, Y H:i" }}</small>
+                            <div>Device returned</div>
+                            <small class="text-muted">by {{ assignment.returned_by.get_full_name }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if assignment.status == 'active' %}
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i>
+            <strong>Active Assignment</strong><br>
+            This device is currently assigned and in use.
+        </div>
+        {% endif %}
+
+        {% if assignment.is_overdue %}
+        <div class="alert alert-warning mt-3">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Overdue</strong><br>
+            This assignment is past its expected return date.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Return Device Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Return Device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="returnForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="returnCondition" class="form-label">Device Condition</label>
+                        <select class="form-select" id="returnCondition" name="condition" required>
+                            <option value="">Select condition...</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="returnNotes" class="form-label">Return Notes</label>
+                        <textarea class="form-control" id="returnNotes" name="notes" rows="3" 
+                                  placeholder="Any issues or observations..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="submitReturn()">Return Device</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 2rem;
+    margin: 0 auto;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 1rem;
+    width: 2px;
+    height: calc(100% + 0.5rem);
+    background-color: #dee2e6;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    top: 0.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding-left: 0.5rem;
+}
+</style>
+
+<script>
+function returnDevice(assignmentId) {
+    const modal = new bootstrap.Modal(document.getElementById('returnModal'));
+    modal.show();
+}
+
+function submitReturn() {
+    const form = document.getElementById('returnForm');
+    const formData = new FormData(form);
+    
+    fetch(`/devices/api/devices/{{ assignment.device.id }}/unassign/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            condition: formData.get('condition'),
+            notes: formData.get('notes')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            bootstrap.Modal.getInstance(document.getElementById('returnModal')).hide();
+            location.reload(); // Refresh the page to show updated status
+        } else {
+            alert(data.error || 'Return failed');
+        }
+    })
+    .catch(error => {
+        alert('An error occurred during return');
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

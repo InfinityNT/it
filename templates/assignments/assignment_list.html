@@ -1,0 +1,177 @@
+{% if assignments %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Device</th>
+                <th>User</th>
+                <th>Assigned Date</th>
+                <th>Expected Return</th>
+                <th>Status</th>
+                <th>Condition</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assignment in assignments %}
+            <tr class="assignment-row">
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="device-icon me-2">
+                            {% if assignment.device.device_model.category.name == 'Laptop' %}
+                                <i class="bi bi-laptop text-primary"></i>
+                            {% elif assignment.device.device_model.category.name == 'Desktop' %}
+                                <i class="bi bi-pc-display text-info"></i>
+                            {% elif assignment.device.device_model.category.name == 'Phone' %}
+                                <i class="bi bi-phone text-success"></i>
+                            {% elif assignment.device.device_model.category.name == 'Monitor' %}
+                                <i class="bi bi-display text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-device-hdd text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ assignment.device.asset_tag }}</strong><br>
+                            <small class="text-muted">{{ assignment.device.device_model }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-2">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <strong>{{ assignment.user.get_full_name|default:assignment.user.username }}</strong><br>
+                            <small class="text-muted">{{ assignment.user.email }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        {{ assignment.assigned_date|date:"M d, Y" }}<br>
+                        <small class="text-muted">by {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</small>
+                    </div>
+                </td>
+                <td>
+                    {% if assignment.expected_return_date %}
+                        {{ assignment.expected_return_date|date:"M d, Y" }}
+                        {% if assignment.is_overdue %}
+                            <br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</small>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if assignment.status == 'active' %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif assignment.status == 'returned' %}
+                        <span class="badge bg-secondary">Returned</span>
+                    {% elif assignment.status == 'overdue' %}
+                        <span class="badge bg-danger">Overdue</span>
+                    {% else %}
+                        <span class="badge bg-warning">{{ assignment.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div>
+                        <span class="badge bg-light text-dark">{{ assignment.get_condition_at_assignment_display }}</span>
+                        {% if assignment.status == 'returned' and assignment.condition_at_return and assignment.condition_at_return != assignment.condition_at_assignment %}
+                            <br><small class="text-muted">Returned: {{ assignment.get_condition_at_return_display }}</small>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/assignments/{{ assignment.id }}/" class="btn btn-outline-primary" title="View Details">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if assignment.status == 'active' %}
+                        <button class="btn btn-outline-warning" onclick="showReturnModal({{ assignment.device.id }})" title="Return Device">
+                            <i class="bi bi-arrow-return-left"></i>
+                        </button>
+                        {% endif %}
+                        <a href="/devices/{{ assignment.device.id }}/" class="btn btn-outline-secondary" title="View Device">
+                            <i class="bi bi-laptop"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Return Device Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="return-modal-content">
+            <!-- Modal content will be loaded via HTMX -->
+            <div class="modal-header">
+                <h5 class="modal-title">Loading...</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.device-icon {
+    font-size: 1.5rem;
+}
+</style>
+
+<script>
+function showReturnModal(deviceId) {
+    // Load return device modal content via HTMX
+    htmx.ajax('GET', `/assignments/api/return-device-modal/${deviceId}/`, {
+        target: '#return-modal-content',
+        swap: 'innerHTML'
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('returnModal'));
+    modal.show();
+}
+
+// Global function to refresh assignments
+function refreshAssignments() {
+    // Trigger refresh of assignment list
+    const event = new CustomEvent('refreshAssignments');
+    document.dispatchEvent(event);
+}
+
+// Make it available globally
+window.refreshAssignments = refreshAssignments;
+</script>
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-person-lines-fill display-1 text-muted"></i>
+    <h4 class="mt-3">No Assignments Found</h4>
+    <p class="text-muted">No device assignments match your current filters.</p>
+    <a href="/devices/" class="btn btn-primary">
+        <i class="bi bi-plus"></i>
+        Assign a Device
+    </a>
+</div>
+{% endif %}

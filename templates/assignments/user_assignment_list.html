@@ -1,0 +1,134 @@
+{% if assignments %}
+<div class="table-responsive">
+    <table class="table table-sm table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>Device</th>
+                <th>Assigned Date</th>
+                <th>Expected Return</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assignment in assignments %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="device-icon me-2">
+                            {% if assignment.device.device_model.category.name == 'Laptop' %}
+                                <i class="bi bi-laptop text-primary"></i>
+                            {% elif assignment.device.device_model.category.name == 'Desktop' %}
+                                <i class="bi bi-pc-display text-info"></i>
+                            {% elif assignment.device.device_model.category.name == 'Phone' %}
+                                <i class="bi bi-phone text-success"></i>
+                            {% elif assignment.device.device_model.category.name == 'Monitor' %}
+                                <i class="bi bi-display text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-device-hdd text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ assignment.device.asset_tag }}</strong><br>
+                            <small class="text-muted">{{ assignment.device.device_model }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {{ assignment.assigned_date|date:"M d, Y" }}
+                </td>
+                <td>
+                    {% if assignment.expected_return_date %}
+                        {{ assignment.expected_return_date|date:"M d, Y" }}
+                        {% if assignment.is_overdue %}
+                            <br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</small>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if assignment.status == 'active' %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif assignment.status == 'returned' %}
+                        <span class="badge bg-secondary">Returned</span>
+                    {% elif assignment.status == 'overdue' %}
+                        <span class="badge bg-danger">Overdue</span>
+                    {% else %}
+                        <span class="badge bg-warning">{{ assignment.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/assignments/{{ assignment.id }}/" class="btn btn-outline-primary" title="View Assignment">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="/devices/{{ assignment.device.id }}/" class="btn btn-outline-secondary" title="View Device">
+                            <i class="bi bi-laptop"></i>
+                        </a>
+                        {% if assignment.status == 'active' %}
+                        <button class="btn btn-outline-warning" onclick="showUserReturnModal({{ assignment.device.id }})" title="Return Device">
+                            <i class="bi bi-arrow-return-left"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.device-icon {
+    font-size: 1.2rem;
+}
+</style>
+
+<script>
+function showUserReturnModal(deviceId) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('userReturnModal');
+    if (!modal) {
+        // Create the modal HTML
+        const modalHTML = `
+            <div class="modal fade" id="userReturnModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content" id="user-return-modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Loading...</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex justify-content-center p-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        modal = document.getElementById('userReturnModal');
+    }
+    
+    // Load return device modal content via HTMX
+    htmx.ajax('GET', `/assignments/api/return-device-modal/${deviceId}/`, {
+        target: '#user-return-modal-content',
+        swap: 'innerHTML'
+    });
+    
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+</script>
+
+{% else %}
+<div class="text-center py-4">
+    <i class="bi bi-person-x display-6 text-muted"></i>
+    <h6 class="mt-2">No Assignments</h6>
+    <p class="text-muted">This user has no device assignments{% if request.GET.status == 'active' %} currently active{% endif %}.</p>
+</div>
+{% endif %}

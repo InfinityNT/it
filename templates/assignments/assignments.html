@@ -1,0 +1,246 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Assignments - IT Device Management{% endblock %}
+
+{% block content %}
+<!-- Alert Container -->
+<div id="alert-container"></div>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-person-lines-fill me-2"></i>
+        Device Assignments
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAssignments()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Controls -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <form class="row g-3" id="filterForm">
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="returned">Returned</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="userFilter" class="form-label">User</label>
+                        <select class="form-select" id="userFilter" name="user">
+                            <option value="">All Users</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="searchFilter" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="searchFilter" name="search" 
+                               placeholder="Asset tag, user name, email...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i>
+                                Filter
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignments List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Assignment List</h5>
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3" id="assignmentCount">Loading...</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" onclick="exportAssignments()">
+                                <i class="bi bi-download"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="assignmentsContainer" 
+                     hx-get="/assignments/api/assignments/" 
+                     hx-trigger="load, refreshAssignments from:body" 
+                     hx-indicator="#loading-spinner">
+                    <div class="d-flex justify-content-center p-4" id="loading-spinner">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading assignments...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary" id="activeCount">-</h5>
+                <p class="card-text">Active Assignments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning" id="overdueCount">-</h5>
+                <p class="card-text">Overdue</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success" id="returnedCount">-</h5>
+                <p class="card-text">Returned This Month</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info" id="totalCount">-</h5>
+                <p class="card-text">Total Assignments</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load users for filter
+    loadUsers();
+    
+    // Handle filter form submission
+    const filterForm = document.getElementById('filterForm');
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        applyFilters();
+    });
+    
+    // Auto-apply filters on input change
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('userFilter').addEventListener('change', applyFilters);
+    
+    // Search with debounce
+    let searchTimeout;
+    document.getElementById('searchFilter').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(applyFilters, 500);
+    });
+    
+    // Load statistics
+    loadStatistics();
+});
+
+function loadUsers() {
+    fetch('/api/users/json/')
+        .then(response => response.json())
+        .then(data => {
+            const userSelect = document.getElementById('userFilter');
+            data.results.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.first_name} ${user.last_name}`;
+                userSelect.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error loading users:', error));
+}
+
+function applyFilters() {
+    const formData = new FormData(document.getElementById('filterForm'));
+    const params = new URLSearchParams(formData);
+    const url = '/assignments/api/assignments/?' + params.toString();
+    
+    htmx.ajax('GET', url, {
+        target: '#assignmentsContainer',
+        indicator: '#loading-spinner'
+    });
+}
+
+function refreshAssignments() {
+    // Apply current filters to refresh the list
+    applyFilters();
+    // Reload statistics
+    loadStatistics();
+}
+
+// Make it available globally
+window.refreshAssignments = refreshAssignments;
+
+// Listen for custom refresh events
+document.addEventListener('refreshAssignments', function() {
+    refreshAssignments();
+});
+
+function loadStatistics() {
+    fetch('/assignments/api/assignments/statistics/', {
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('activeCount').textContent = data.active_assignments;
+            document.getElementById('overdueCount').textContent = data.overdue_assignments;
+            document.getElementById('returnedCount').textContent = data.returned_this_month;
+            document.getElementById('totalCount').textContent = data.total_assignments;
+            document.getElementById('assignmentCount').textContent = `${data.total_assignments} assignments`;
+        })
+        .catch(error => {
+            console.error('Error loading statistics:', error);
+            document.getElementById('assignmentCount').textContent = 'Error loading';
+            // Set error placeholders
+            document.getElementById('activeCount').textContent = '-';
+            document.getElementById('overdueCount').textContent = '-';
+            document.getElementById('returnedCount').textContent = '-';
+            document.getElementById('totalCount').textContent = '-';
+        });
+}
+
+function exportAssignments() {
+    alert('Export functionality coming soon!');
+}
+
+// Update assignment count when list is loaded
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'assignmentsContainer') {
+        const rows = event.detail.target.querySelectorAll('.assignment-row');
+        document.getElementById('assignmentCount').textContent = `${rows.length} assignments`;
+    }
+});
+</script>
+{% endblock %}

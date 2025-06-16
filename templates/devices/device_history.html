@@ -1,0 +1,95 @@
+{% if assignments %}
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead class="table-light">
+            <tr>
+                <th>User</th>
+                <th>Assigned Date</th>
+                <th>Expected Return</th>
+                <th>Actual Return</th>
+                <th>Status</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assignment in assignments %}
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-2">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <strong>{{ assignment.user.get_full_name|default:assignment.user.username }}</strong><br>
+                            <small class="text-muted">{{ assignment.user.email }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {{ assignment.assigned_date|date:"M d, Y" }}<br>
+                    <small class="text-muted">by {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</small>
+                </td>
+                <td>
+                    {% if assignment.expected_return_date %}
+                        {{ assignment.expected_return_date|date:"M d, Y" }}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if assignment.actual_return_date %}
+                        {{ assignment.actual_return_date|date:"M d, Y" }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if assignment.status == 'active' %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif assignment.status == 'returned' %}
+                        <span class="badge bg-secondary">Returned</span>
+                    {% elif assignment.status == 'overdue' %}
+                        <span class="badge bg-danger">Overdue</span>
+                    {% else %}
+                        <span class="badge bg-warning">{{ assignment.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if assignment.actual_return_date %}
+                        {% with assignment.actual_return_date|timesince:assignment.assigned_date as duration %}
+                            <small>{{ duration }}</small>
+                        {% endwith %}
+                    {% elif assignment.status == 'active' %}
+                        {% with assignment.assigned_date|timesince as duration %}
+                            <small class="text-success">{{ duration }} (ongoing)</small>
+                        {% endwith %}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+</style>
+{% else %}
+<div class="text-center py-4">
+    <i class="bi bi-clock-history display-6 text-muted"></i>
+    <h6 class="mt-2">No Assignment History</h6>
+    <p class="text-muted">This device has never been assigned to a user.</p>
+</div>
+{% endif %}

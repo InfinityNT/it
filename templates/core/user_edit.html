@@ -1,0 +1,321 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Edit {{ user_profile.get_full_name }} - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Edit User: {{ user_profile.get_full_name }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'user-detail-page' user_id=user_profile.id %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back to User
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">User Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" hx-post="{% url 'user-edit-page' user_id=user_profile.id %}" hx-trigger="submit" hx-indicator="#save-spinner">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ user_profile.first_name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ user_profile.last_name }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="{{ user_profile.username }}" readonly>
+                                <div class="form-text">Username cannot be changed</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ user_profile.email }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="employee_id" class="form-label">Employee ID</label>
+                                <input type="text" class="form-control" id="employee_id" name="employee_id" 
+                                       value="{{ user_profile.employee_id }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Role *</label>
+                                <select class="form-select" id="role" name="role" required>
+                                    <option value="user" {% if user_profile.role == 'user' %}selected{% endif %}>User</option>
+                                    <option value="manager" {% if user_profile.role == 'manager' %}selected{% endif %}>Manager</option>
+                                    <option value="admin" {% if user_profile.role == 'admin' %}selected{% endif %}>Administrator</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                           {% if user_profile.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_active">
+                                        Active Account
+                                    </label>
+                                    <div class="form-text">Unchecking this will disable the user's access</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_staff" name="is_staff" 
+                                           {% if user_profile.is_staff %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_staff">
+                                        Staff Status
+                                    </label>
+                                    <div class="form-text">Staff users can access admin interface</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'user-detail-page' user_id=user_profile.id %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <span id="save-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            <i class="bi bi-check"></i>
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Current Status -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Current Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Account Status:</strong>
+                    {% if user_profile.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Role:</strong>
+                    {% if user_profile.role == 'admin' %}
+                        <span class="badge bg-danger">{{ user_profile.get_role_display }}</span>
+                    {% elif user_profile.role == 'manager' %}
+                        <span class="badge bg-warning">{{ user_profile.get_role_display }}</span>
+                    {% else %}
+                        <span class="badge bg-info">{{ user_profile.get_role_display }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Staff Status:</strong>
+                    {% if user_profile.is_staff %}
+                        <span class="badge bg-primary">Staff</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Regular User</span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Last Updated:</strong><br>
+                    <small class="text-muted">{{ user_profile.date_joined|date:"M d, Y H:i" }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Account Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Date Joined:</strong><br>
+                    {{ user_profile.date_joined|date:"M d, Y" }}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Last Login:</strong><br>
+                    {% if user_profile.last_login %}
+                        {{ user_profile.last_login|date:"M d, Y H:i" }}
+                    {% else %}
+                        <span class="text-muted">Never</span>
+                    {% endif %}
+                </div>
+                
+                {% if user_profile.is_superuser %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-shield-exclamation"></i>
+                    <strong>Superuser Account</strong><br>
+                    This user has full system access.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-warning" onclick="resetPassword()">
+                        <i class="bi bi-key"></i>
+                        Reset Password
+                    </button>
+                    <button class="btn btn-info" onclick="sendWelcomeEmail()">
+                        <i class="bi bi-envelope"></i>
+                        Send Welcome Email
+                    </button>
+                    {% if user_profile.is_active %}
+                    <button class="btn btn-outline-danger" onclick="deactivateUser()">
+                        <i class="bi bi-person-x"></i>
+                        Deactivate Account
+                    </button>
+                    {% else %}
+                    <button class="btn btn-outline-success" onclick="activateUser()">
+                        <i class="bi bi-person-check"></i>
+                        Activate Account
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submission success
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.xhr.status === 200 && event.detail.elt.tagName === 'FORM') {
+            // Form submitted successfully - redirect will be handled by server
+            const spinner = document.getElementById('save-spinner');
+            spinner.classList.add('d-none');
+        }
+    });
+    
+    // Handle form submission errors
+    document.body.addEventListener('htmx:responseError', function(event) {
+        const spinner = document.getElementById('save-spinner');
+        spinner.classList.add('d-none');
+        
+        if (event.detail.xhr.status === 400) {
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                alert('Error: ' + (response.error || 'Please check your input and try again.'));
+            } catch (e) {
+                alert('An error occurred. Please check your input and try again.');
+            }
+        }
+    });
+    
+    // Show spinner on form submit
+    document.body.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.detail.elt.tagName === 'FORM') {
+            const spinner = document.getElementById('save-spinner');
+            spinner.classList.remove('d-none');
+        }
+    });
+    
+    // Validate email format
+    const emailInput = document.getElementById('email');
+    emailInput.addEventListener('blur', function() {
+        const email = this.value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (email && !emailRegex.test(email)) {
+            this.setCustomValidity('Please enter a valid email address');
+            this.classList.add('is-invalid');
+        } else {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // Role change warnings
+    const roleSelect = document.getElementById('role');
+    roleSelect.addEventListener('change', function() {
+        const newRole = this.value;
+        const currentRole = '{{ user_profile.role }}';
+        
+        if (newRole === 'admin' && currentRole !== 'admin') {
+            if (!confirm('You are about to grant administrator privileges to this user. This will give them full system access. Continue?')) {
+                this.value = currentRole;
+            }
+        } else if (currentRole === 'admin' && newRole !== 'admin') {
+            if (!confirm('You are about to remove administrator privileges from this user. This will restrict their system access. Continue?')) {
+                this.value = currentRole;
+            }
+        }
+    });
+});
+
+function resetPassword() {
+    if (confirm('Are you sure you want to reset this user\'s password? They will need to create a new password.')) {
+        alert('Password reset functionality coming soon!');
+    }
+}
+
+function sendWelcomeEmail() {
+    if (confirm('Send welcome email to {{ user_profile.email }}?')) {
+        alert('Welcome email functionality coming soon!');
+    }
+}
+
+function deactivateUser() {
+    if (confirm('Are you sure you want to deactivate this user account? They will not be able to log in.')) {
+        const checkbox = document.getElementById('is_active');
+        checkbox.checked = false;
+        alert('Please save the form to apply the deactivation.');
+    }
+}
+
+function activateUser() {
+    if (confirm('Are you sure you want to activate this user account?')) {
+        const checkbox = document.getElementById('is_active');
+        checkbox.checked = true;
+        alert('Please save the form to apply the activation.');
+    }
+}
+</script>
+{% endblock %}

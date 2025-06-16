@@ -1,0 +1,684 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Edit {{ device.asset_tag }} - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Edit Device: {{ device.asset_tag }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'device-detail-page' device_id=device.id %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back to Device
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Device Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" hx-post="{% url 'edit-device' device_id=device.id %}" hx-trigger="submit" hx-indicator="#save-spinner">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="asset_tag" class="form-label">Asset Tag *</label>
+                                <input type="text" class="form-control" id="asset_tag" name="asset_tag" 
+                                       value="{{ device.asset_tag }}" required 
+                                       pattern="[A-Z0-9-]+" title="Only uppercase letters, numbers, and hyphens allowed">
+                                <div class="form-text">Format: ABC-001, LAP-2024-001</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="serial_number" class="form-label">Serial Number *</label>
+                                <input type="text" class="form-control" id="serial_number" name="serial_number" 
+                                       value="{{ device.serial_number }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category *</label>
+                                <input type="text" class="form-control" id="category" name="category" 
+                                       value="{{ device.device_model.category.name }}" list="categoryList" required>
+                                <datalist id="categoryList">
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.name }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="manufacturer" class="form-label">Manufacturer *</label>
+                                <input type="text" class="form-control" id="manufacturer" name="manufacturer" 
+                                       value="{{ device.device_model.manufacturer }}" list="manufacturerList" required>
+                                <datalist id="manufacturerList">
+                                    <option value="Dell">
+                                    <option value="HP">
+                                    <option value="Lenovo">
+                                    <option value="Apple">
+                                    <option value="Microsoft">
+                                    <option value="ASUS">
+                                    <option value="Acer">
+                                    <option value="Samsung">
+                                    <option value="Canon">
+                                    <option value="Epson">
+                                </datalist>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="model_name" class="form-label">Model *</label>
+                                <input type="text" class="form-control" id="model_name" name="model_name" 
+                                       value="{{ device.device_model.model_name }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    {% for status_value, status_label in device.STATUS_CHOICES %}
+                                    <option value="{{ status_value }}" {% if device.status == status_value %}selected{% endif %}>
+                                        {{ status_label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="condition" class="form-label">Condition</label>
+                                <select class="form-select" id="condition" name="condition">
+                                    {% for condition_value, condition_label in device.CONDITION_CHOICES %}
+                                    <option value="{{ condition_value }}" {% if device.condition == condition_value %}selected{% endif %}>
+                                        {{ condition_label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="purchase_date" class="form-label">Purchase Date</label>
+                                <input type="date" class="form-control" id="purchase_date" name="purchase_date" 
+                                       value="{{ device.purchase_date|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="purchase_price" class="form-label">Purchase Price</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
+                                           value="{{ device.purchase_price }}" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="warranty_expiry" class="form-label">Warranty Expiry</label>
+                                <input type="date" class="form-control" id="warranty_expiry" name="warranty_expiry" 
+                                       value="{{ device.warranty_expiry|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="vendor" class="form-label">Vendor</label>
+                                <input type="text" class="form-control" id="vendor" name="vendor" 
+                                       value="{{ device.vendor }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="{{ device.location }}" placeholder="Building, Floor, Room">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="barcode" class="form-label">Barcode</label>
+                        <input type="text" class="form-control" id="barcode" name="barcode" 
+                               value="{{ device.barcode }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="4">{{ device.notes }}</textarea>
+                    </div>
+
+                    <!-- Device Specifications -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Device Specifications</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="specifications-container">
+                                {% if device.device_model.specifications %}
+                                    {% for key, value in device.device_model.specifications.items %}
+                                    <div class="row specification-row{% if not forloop.first %} mt-2{% endif %}">
+                                        <div class="col-md-5">
+                                            <select class="form-select" name="spec_key[]" onchange="updateSpecPlaceholder(this)">
+                                                <option value="">Select specification...</option>
+                                                <optgroup label="Hardware">
+                                                    <option value="CPUModel" {% if key == "CPUModel" %}selected{% endif %}>CPU Model</option>
+                                                    <option value="GPU" {% if key == "GPU" %}selected{% endif %}>Graphics Card</option>
+                                                    <option value="RAM" {% if key == "RAM" %}selected{% endif %}>Memory (RAM)</option>
+                                                    <option value="Storage" {% if key == "Storage" %}selected{% endif %}>Storage</option>
+                                                    <option value="Display" {% if key == "Display" %}selected{% endif %}>Display</option>
+                                                    <option value="BatteryHealth" {% if key == "BatteryHealth" %}selected{% endif %}>Battery Health</option>
+                                                    <option value="BIOSVersion" {% if key == "BIOSVersion" %}selected{% endif %}>BIOS Version</option>
+                                                </optgroup>
+                                                <optgroup label="Software">
+                                                    <option value="OperatingSystem" {% if key == "OperatingSystem" %}selected{% endif %}>Operating System</option>
+                                                    <option value="Firmware" {% if key == "Firmware" %}selected{% endif %}>Firmware Version</option>
+                                                    <option value="Drivers" {% if key == "Drivers" %}selected{% endif %}>Driver Version</option>
+                                                </optgroup>
+                                                <optgroup label="Connectivity">
+                                                    <option value="Ports" {% if key == "Ports" %}selected{% endif %}>Ports</option>
+                                                    <option value="WiFi" {% if key == "WiFi" %}selected{% endif %}>Wi-Fi</option>
+                                                    <option value="Bluetooth" {% if key == "Bluetooth" %}selected{% endif %}>Bluetooth</option>
+                                                    <option value="Ethernet" {% if key == "Ethernet" %}selected{% endif %}>Ethernet</option>
+                                                    <option value="Network" {% if key == "Network" %}selected{% endif %}>Network</option>
+                                                </optgroup>
+                                                <optgroup label="Physical">
+                                                    <option value="ChassisType" {% if key == "ChassisType" %}selected{% endif %}>Chassis Type</option>
+                                                    <option value="FormFactor" {% if key == "FormFactor" %}selected{% endif %}>Form Factor</option>
+                                                    <option value="Dimensions" {% if key == "Dimensions" %}selected{% endif %}>Dimensions</option>
+                                                    <option value="Weight" {% if key == "Weight" %}selected{% endif %}>Weight</option>
+                                                    <option value="Color" {% if key == "Color" %}selected{% endif %}>Color</option>
+                                                    <option value="ScreenSize" {% if key == "ScreenSize" %}selected{% endif %}>Screen Size</option>
+                                                </optgroup>
+                                                <optgroup label="Other">
+                                                    <option value="SerialNumber" {% if key == "SerialNumber" %}selected{% endif %}>Serial Number</option>
+                                                    <option value="ModelNumber" {% if key == "ModelNumber" %}selected{% endif %}>Model Number</option>
+                                                    <option value="PartNumber" {% if key == "PartNumber" %}selected{% endif %}>Part Number</option>
+                                                    <option value="Capacity" {% if key == "Capacity" %}selected{% endif %}>Capacity</option>
+                                                    <option value="PowerConsumption" {% if key == "PowerConsumption" %}selected{% endif %}>Power Consumption</option>
+                                                    <option value="Custom" {% if key not in "CPUModel,GPU,RAM,Storage,Display,BatteryHealth,BIOSVersion,OperatingSystem,Firmware,Drivers,Ports,WiFi,Bluetooth,Ethernet,Network,ChassisType,FormFactor,Dimensions,Weight,Color,ScreenSize,SerialNumber,ModelNumber,PartNumber,Capacity,PowerConsumption" %}selected{% endif %}>Custom (type below)</option>
+                                                </optgroup>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control spec-value-input" name="spec_value[]" value="{{ value }}" placeholder="Enter value...">
+                                            <input type="text" class="form-control custom-spec-input {% if key in "CPUModel,GPU,RAM,Storage,Display,BatteryHealth,BIOSVersion,OperatingSystem,Firmware,Drivers,Ports,WiFi,Bluetooth,Ethernet,Network,ChassisType,FormFactor,Dimensions,Weight,Color,ScreenSize,SerialNumber,ModelNumber,PartNumber,Capacity,PowerConsumption" %}d-none{% endif %}" name="custom_spec_key[]" value="{% if key not in "CPUModel,GPU,RAM,Storage,Display,BatteryHealth,BIOSVersion,OperatingSystem,Firmware,Drivers,Ports,WiFi,Bluetooth,Ethernet,Network,ChassisType,FormFactor,Dimensions,Weight,Color,ScreenSize,SerialNumber,ModelNumber,PartNumber,Capacity,PowerConsumption" %}{{ key }}{% endif %}" placeholder="Enter custom specification name...">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSpecification(this)" {% if forloop.first and device.device_model.specifications.items|length == 1 %}style="display: none;"{% endif %}>
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="row specification-row">
+                                        <div class="col-md-5">
+                                            <select class="form-select" name="spec_key[]" onchange="updateSpecPlaceholder(this)">
+                                                <option value="">Select specification...</option>
+                                                <optgroup label="Hardware">
+                                                    <option value="CPUModel">CPU Model</option>
+                                                    <option value="GPU">Graphics Card</option>
+                                                    <option value="RAM">Memory (RAM)</option>
+                                                    <option value="Storage">Storage</option>
+                                                    <option value="Display">Display</option>
+                                                    <option value="BatteryHealth">Battery Health</option>
+                                                    <option value="BIOSVersion">BIOS Version</option>
+                                                </optgroup>
+                                                <optgroup label="Software">
+                                                    <option value="OperatingSystem">Operating System</option>
+                                                    <option value="Firmware">Firmware Version</option>
+                                                    <option value="Drivers">Driver Version</option>
+                                                </optgroup>
+                                                <optgroup label="Connectivity">
+                                                    <option value="Ports">Ports</option>
+                                                    <option value="WiFi">Wi-Fi</option>
+                                                    <option value="Bluetooth">Bluetooth</option>
+                                                    <option value="Ethernet">Ethernet</option>
+                                                    <option value="Network">Network</option>
+                                                </optgroup>
+                                                <optgroup label="Physical">
+                                                    <option value="ChassisType">Chassis Type</option>
+                                                    <option value="FormFactor">Form Factor</option>
+                                                    <option value="Dimensions">Dimensions</option>
+                                                    <option value="Weight">Weight</option>
+                                                    <option value="Color">Color</option>
+                                                    <option value="ScreenSize">Screen Size</option>
+                                                </optgroup>
+                                                <optgroup label="Other">
+                                                    <option value="SerialNumber">Serial Number</option>
+                                                    <option value="ModelNumber">Model Number</option>
+                                                    <option value="PartNumber">Part Number</option>
+                                                    <option value="Capacity">Capacity</option>
+                                                    <option value="PowerConsumption">Power Consumption</option>
+                                                    <option value="Custom">Custom (type below)</option>
+                                                </optgroup>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control spec-value-input" name="spec_value[]" placeholder="Enter value...">
+                                            <input type="text" class="form-control custom-spec-input d-none" name="custom_spec_key[]" placeholder="Enter custom specification name...">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSpecification(this)" style="display: none;">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addSpecification()">
+                                <i class="bi bi-plus"></i>
+                                Add Specification
+                            </button>
+                            
+                            <!-- Common Specifications Templates -->
+                            <div class="mt-3">
+                                <small class="text-muted">Quick add:</small>
+                                <div class="mt-1">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="addCommonSpecs('laptop')">Laptop Specs</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="addCommonSpecs('desktop')">Desktop Specs</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="addCommonSpecs('monitor')">Monitor Specs</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addCommonSpecs('phone')">Phone Specs</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'device-detail-page' device_id=device.id %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <span id="save-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            <i class="bi bi-check"></i>
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Current Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    {% if device.status == 'available' %}
+                        <span class="badge bg-success">{{ device.get_status_display }}</span>
+                    {% elif device.status == 'assigned' %}
+                        <span class="badge bg-warning">{{ device.get_status_display }}</span>
+                    {% elif device.status == 'maintenance' %}
+                        <span class="badge bg-info">{{ device.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ device.get_status_display }}</span>
+                    {% endif %}
+                </div>
+                
+                {% if device.assigned_to %}
+                <div class="mb-3">
+                    <strong>Assigned To:</strong><br>
+                    {{ device.assigned_to.get_full_name }}<br>
+                    <small class="text-muted">{{ device.assigned_to.email }}</small>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <strong>Last Updated:</strong><br>
+                    {{ device.updated_at|date:"M d, Y H:i" }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Device Specifications</h6>
+            </div>
+            <div class="card-body">
+                {% if formatted_specs %}
+                    {% for spec in formatted_specs %}
+                    <div class="mb-2">
+                        <strong>{{ spec.display_name }}:</strong> {{ spec.value }}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No specifications available</p>
+                {% endif %}
+                
+                <button class="btn btn-sm btn-outline-primary mt-2" onclick="alert('Edit specifications coming soon!')">
+                    <i class="bi bi-gear"></i>
+                    Edit Specifications
+                </button>
+            </div>
+        </div>
+
+        {% if device.status == 'assigned' %}
+        <div class="alert alert-warning mt-3">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Note:</strong> This device is currently assigned. Some changes may affect the current assignment.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Form validation and enhancement
+document.addEventListener('DOMContentLoaded', function() {
+    const assetTagInput = document.getElementById('asset_tag');
+    
+    // Auto-uppercase asset tag
+    assetTagInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+    
+    // Handle form submission success
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.xhr.status === 200 && event.detail.elt.tagName === 'FORM') {
+            // Form submitted successfully - redirect will be handled by server
+            const spinner = document.getElementById('save-spinner');
+            spinner.classList.add('d-none');
+        }
+    });
+    
+    // Handle form submission errors
+    document.body.addEventListener('htmx:responseError', function(event) {
+        const spinner = document.getElementById('save-spinner');
+        spinner.classList.add('d-none');
+        
+        if (event.detail.xhr.status === 400) {
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                alert('Error: ' + (response.error || 'Please check your input and try again.'));
+            } catch (e) {
+                alert('An error occurred. Please check your input and try again.');
+            }
+        }
+    });
+    
+    // Show spinner on form submit
+    document.body.addEventListener('htmx:beforeRequest', function(event) {
+        if (event.detail.elt.tagName === 'FORM') {
+            const spinner = document.getElementById('save-spinner');
+            spinner.classList.remove('d-none');
+        }
+    });
+});
+
+// Specifications management
+function addSpecification() {
+    const container = document.getElementById('specifications-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'row specification-row mt-2';
+    newRow.innerHTML = `
+        <div class="col-md-5">
+            <select class="form-select" name="spec_key[]" onchange="updateSpecPlaceholder(this)">
+                <option value="">Select specification...</option>
+                <optgroup label="Hardware">
+                    <option value="CPUModel">CPU Model</option>
+                    <option value="GPU">Graphics Card</option>
+                    <option value="RAM">Memory (RAM)</option>
+                    <option value="Storage">Storage</option>
+                    <option value="Display">Display</option>
+                    <option value="BatteryHealth">Battery Health</option>
+                    <option value="BIOSVersion">BIOS Version</option>
+                </optgroup>
+                <optgroup label="Software">
+                    <option value="OperatingSystem">Operating System</option>
+                    <option value="Firmware">Firmware Version</option>
+                    <option value="Drivers">Driver Version</option>
+                </optgroup>
+                <optgroup label="Connectivity">
+                    <option value="Ports">Ports</option>
+                    <option value="WiFi">Wi-Fi</option>
+                    <option value="Bluetooth">Bluetooth</option>
+                    <option value="Ethernet">Ethernet</option>
+                    <option value="Network">Network</option>
+                </optgroup>
+                <optgroup label="Physical">
+                    <option value="ChassisType">Chassis Type</option>
+                    <option value="FormFactor">Form Factor</option>
+                    <option value="Dimensions">Dimensions</option>
+                    <option value="Weight">Weight</option>
+                    <option value="Color">Color</option>
+                    <option value="ScreenSize">Screen Size</option>
+                </optgroup>
+                <optgroup label="Other">
+                    <option value="SerialNumber">Serial Number</option>
+                    <option value="ModelNumber">Model Number</option>
+                    <option value="PartNumber">Part Number</option>
+                    <option value="Capacity">Capacity</option>
+                    <option value="PowerConsumption">Power Consumption</option>
+                    <option value="Custom">Custom (type below)</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <input type="text" class="form-control spec-value-input" name="spec_value[]" placeholder="Enter value...">
+            <input type="text" class="form-control custom-spec-input d-none" name="custom_spec_key[]" placeholder="Enter custom specification name...">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSpecification(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    
+    // Show remove buttons for all rows except the first one
+    updateRemoveButtons();
+}
+
+function removeSpecification(button) {
+    const row = button.closest('.specification-row');
+    row.remove();
+    updateRemoveButtons();
+}
+
+function updateRemoveButtons() {
+    const rows = document.querySelectorAll('.specification-row');
+    rows.forEach((row, index) => {
+        const removeBtn = row.querySelector('.btn-outline-danger');
+        if (index === 0 && rows.length === 1) {
+            removeBtn.style.display = 'none';
+        } else {
+            removeBtn.style.display = 'block';
+        }
+    });
+}
+
+// Handle specification dropdown changes
+function updateSpecPlaceholder(select) {
+    const row = select.closest('.specification-row');
+    const valueInput = row.querySelector('.spec-value-input');
+    const customInput = row.querySelector('.custom-spec-input');
+    const selectedValue = select.value;
+    
+    // Define placeholders for each specification type
+    const placeholders = {
+        'CPUModel': 'e.g., Intel i7-1265U, AMD Ryzen 5 5600X',
+        'GPU': 'e.g., Intel Iris Xe, NVIDIA GTX 1660, Integrated',
+        'RAM': 'e.g., 16 GB DDR4, 8 GB DDR5',
+        'Storage': 'e.g., 512 GB NVMe SSD, 1 TB HDD',
+        'Display': 'e.g., 14" 1920x1080 IPS, 27" 4K',
+        'BatteryHealth': 'e.g., 100%, 85%, Good',
+        'BIOSVersion': 'e.g., 1.2.0, F4a',
+        'OperatingSystem': 'e.g., Windows 11 Pro, macOS 13.1, Ubuntu 22.04',
+        'Firmware': 'e.g., 1.0.2, Rev. A',
+        'Drivers': 'e.g., 30.0.101.1191, Latest',
+        'Ports': 'e.g., USB-C, HDMI, Ethernet, 3.5mm',
+        'WiFi': 'e.g., Wi-Fi 6, 802.11ac',
+        'Bluetooth': 'e.g., 5.1, 5.3',
+        'Ethernet': 'e.g., Gigabit, 10/100',
+        'Network': 'e.g., 5G, LTE, Wi-Fi only',
+        'ChassisType': 'e.g., Laptop, Desktop, All-in-One',
+        'FormFactor': 'e.g., Small Form Factor, Tower, Rack',
+        'Dimensions': 'e.g., 12.3 x 8.5 x 0.6 inches',
+        'Weight': 'e.g., 2.8 lbs, 1.3 kg',
+        'Color': 'e.g., Space Gray, Silver, Black',
+        'ScreenSize': 'e.g., 13.3", 15.6", 24"',
+        'SerialNumber': 'e.g., ABC123456789',
+        'ModelNumber': 'e.g., MBA13-2023, XPS-9320',
+        'PartNumber': 'e.g., P/N 123-456-789',
+        'Capacity': 'e.g., 500 sheets, 32 GB',
+        'PowerConsumption': 'e.g., 65W, 150W max'
+    };
+    
+    if (selectedValue === 'Custom') {
+        // Show custom input, hide value input
+        valueInput.classList.add('d-none');
+        customInput.classList.remove('d-none');
+        customInput.focus();
+    } else {
+        // Show value input, hide custom input
+        valueInput.classList.remove('d-none');
+        customInput.classList.add('d-none');
+        
+        // Update placeholder
+        valueInput.placeholder = placeholders[selectedValue] || 'Enter value...';
+        valueInput.focus();
+    }
+}
+
+function addCommonSpecs(type) {
+    // Clear existing specifications
+    const container = document.getElementById('specifications-container');
+    container.innerHTML = '';
+    
+    let specs = [];
+    
+    switch(type) {
+        case 'laptop':
+            specs = [
+                ['CPUModel', 'Intel i7-1265U'],
+                ['GPU', 'Intel Iris Xe'],
+                ['Display', '14" 1920x1080 IPS'],
+                ['RAM', '16 GB DDR4'],
+                ['Storage', '512 GB NVMe SSD'],
+                ['OperatingSystem', 'Windows 11 Pro'],
+                ['BatteryHealth', '100%'],
+                ['BIOSVersion', '1.2.0'],
+                ['Ports', 'USB-C, USB-C, HDMI, Ethernet'],
+                ['WiFi', 'Wi-Fi 6'],
+                ['Bluetooth', '5.1'],
+                ['ChassisType', 'Laptop']
+            ];
+            break;
+        case 'desktop':
+            specs = [
+                ['CPUModel', 'Intel i5-12400'],
+                ['GPU', 'Intel UHD Graphics 730'],
+                ['Display', 'External Required'],
+                ['RAM', '16 GB DDR4'],
+                ['Storage', '512 GB NVMe SSD'],
+                ['OperatingSystem', 'Windows 11 Pro'],
+                ['BIOSVersion', '2.1.0'],
+                ['Ports', 'USB-A, USB-A, USB-C, HDMI, Ethernet'],
+                ['WiFi', 'Wi-Fi 6'],
+                ['Bluetooth', '5.1'],
+                ['ChassisType', 'Desktop']
+            ];
+            break;
+        case 'monitor':
+            specs = [
+                ['Display', '27" 2560x1440 IPS'],
+                ['Ports', 'HDMI, DisplayPort, USB-C'],
+                ['ChassisType', 'Monitor']
+            ];
+            break;
+        case 'phone':
+            specs = [
+                ['Display', '6.1" OLED'],
+                ['Storage', '256 GB'],
+                ['RAM', '8 GB'],
+                ['OperatingSystem', 'iOS 17'],
+                ['BatteryHealth', '100%'],
+                ['Ports', 'Lightning'],
+                ['WiFi', 'Wi-Fi 6'],
+                ['Bluetooth', '5.3'],
+                ['ChassisType', 'Phone']
+            ];
+            break;
+    }
+    
+    specs.forEach((spec, index) => {
+        const row = document.createElement('div');
+        row.className = 'row specification-row' + (index > 0 ? ' mt-2' : '');
+        row.innerHTML = `
+            <div class="col-md-5">
+                <select class="form-select" name="spec_key[]" onchange="updateSpecPlaceholder(this)">
+                    <option value="">Select specification...</option>
+                    <optgroup label="Hardware">
+                        <option value="CPUModel" ${spec[0] === 'CPUModel' ? 'selected' : ''}>CPU Model</option>
+                        <option value="GPU" ${spec[0] === 'GPU' ? 'selected' : ''}>Graphics Card</option>
+                        <option value="RAM" ${spec[0] === 'RAM' ? 'selected' : ''}>Memory (RAM)</option>
+                        <option value="Storage" ${spec[0] === 'Storage' ? 'selected' : ''}>Storage</option>
+                        <option value="Display" ${spec[0] === 'Display' ? 'selected' : ''}>Display</option>
+                        <option value="BatteryHealth" ${spec[0] === 'BatteryHealth' ? 'selected' : ''}>Battery Health</option>
+                        <option value="BIOSVersion" ${spec[0] === 'BIOSVersion' ? 'selected' : ''}>BIOS Version</option>
+                    </optgroup>
+                    <optgroup label="Software">
+                        <option value="OperatingSystem" ${spec[0] === 'OperatingSystem' ? 'selected' : ''}>Operating System</option>
+                        <option value="Firmware" ${spec[0] === 'Firmware' ? 'selected' : ''}>Firmware Version</option>
+                        <option value="Drivers" ${spec[0] === 'Drivers' ? 'selected' : ''}>Driver Version</option>
+                    </optgroup>
+                    <optgroup label="Connectivity">
+                        <option value="Ports" ${spec[0] === 'Ports' ? 'selected' : ''}>Ports</option>
+                        <option value="WiFi" ${spec[0] === 'WiFi' ? 'selected' : ''}>Wi-Fi</option>
+                        <option value="Bluetooth" ${spec[0] === 'Bluetooth' ? 'selected' : ''}>Bluetooth</option>
+                        <option value="Ethernet" ${spec[0] === 'Ethernet' ? 'selected' : ''}>Ethernet</option>
+                        <option value="Network" ${spec[0] === 'Network' ? 'selected' : ''}>Network</option>
+                    </optgroup>
+                    <optgroup label="Physical">
+                        <option value="ChassisType" ${spec[0] === 'ChassisType' ? 'selected' : ''}>Chassis Type</option>
+                        <option value="FormFactor" ${spec[0] === 'FormFactor' ? 'selected' : ''}>Form Factor</option>
+                        <option value="Dimensions" ${spec[0] === 'Dimensions' ? 'selected' : ''}>Dimensions</option>
+                        <option value="Weight" ${spec[0] === 'Weight' ? 'selected' : ''}>Weight</option>
+                        <option value="Color" ${spec[0] === 'Color' ? 'selected' : ''}>Color</option>
+                        <option value="ScreenSize" ${spec[0] === 'ScreenSize' ? 'selected' : ''}>Screen Size</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                        <option value="SerialNumber" ${spec[0] === 'SerialNumber' ? 'selected' : ''}>Serial Number</option>
+                        <option value="ModelNumber" ${spec[0] === 'ModelNumber' ? 'selected' : ''}>Model Number</option>
+                        <option value="PartNumber" ${spec[0] === 'PartNumber' ? 'selected' : ''}>Part Number</option>
+                        <option value="Capacity" ${spec[0] === 'Capacity' ? 'selected' : ''}>Capacity</option>
+                        <option value="PowerConsumption" ${spec[0] === 'PowerConsumption' ? 'selected' : ''}>Power Consumption</option>
+                        <option value="Custom">Custom (type below)</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <input type="text" class="form-control spec-value-input" name="spec_value[]" value="${spec[1]}">
+                <input type="text" class="form-control custom-spec-input d-none" name="custom_spec_key[]" placeholder="Enter custom specification name...">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSpecification(this)" ${index === 0 && specs.length === 1 ? 'style="display: none;"' : ''}>
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+    
+    updateRemoveButtons();
+}
+</script>
+{% endblock %}

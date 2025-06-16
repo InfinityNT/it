@@ -1,0 +1,605 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Reports & Analytics - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-graph-up me-2"></i>
+        Reports & Analytics
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-primary btn-sm" onclick="exportAllReports()">
+            <i class="bi bi-download"></i>
+            Export All Reports
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4" id="summary-cards" 
+     hx-get="/api/reports/summary/" 
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <!-- Loading placeholders -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Asset Value
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-6"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-currency-dollar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Utilization Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-4"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-percent fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Avg Assignment Duration
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-5"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Warranty Expiring
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-3"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Reports -->
+<div class="row">
+    <!-- Device Distribution Chart -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Device Distribution by Category</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('deviceDistribution')">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="deviceDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Overview Chart -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Device Status Overview</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('statusOverview')">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="statusOverviewChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Assignment Trends -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Assignment Trends (Last 12 Months)</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('assignmentTrends')">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="assignmentTrendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Users -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Top Device Users</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportTable('topUsers')">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="topUsersTable">
+                    <div class="d-flex justify-content-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Reports -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Detailed Reports</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <h6 class="card-title">Device Inventory Report</h6>
+                                <p class="card-text">Complete list of all devices with specifications and status.</p>
+                                <button class="btn btn-primary btn-sm" onclick="generateReport('inventory')">
+                                    <i class="bi bi-file-text"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-success">
+                            <div class="card-body">
+                                <h6 class="card-title">Assignment History Report</h6>
+                                <p class="card-text">Historical data of all device assignments and returns.</p>
+                                <button class="btn btn-success btn-sm" onclick="generateReport('assignments')">
+                                    <i class="bi bi-file-text"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-info">
+                            <div class="card-body">
+                                <h6 class="card-title">Utilization Analysis</h6>
+                                <p class="card-text">Device usage patterns and optimization recommendations.</p>
+                                <button class="btn btn-info btn-sm" onclick="generateReport('utilization')">
+                                    <i class="bi bi-file-text"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-warning">
+                            <div class="card-body">
+                                <h6 class="card-title">Maintenance Report</h6>
+                                <p class="card-text">Devices requiring maintenance and warranty status.</p>
+                                <button class="btn btn-warning btn-sm" onclick="generateReport('maintenance')">
+                                    <i class="bi bi-file-text"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-danger">
+                            <div class="card-body">
+                                <h6 class="card-title">Cost Analysis Report</h6>
+                                <p class="card-text">Financial analysis including TCO and depreciation.</p>
+                                <button class="btn btn-danger btn-sm" onclick="generateReport('cost')">
+                                    <i class="bi bi-file-text"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-left-dark">
+                            <div class="card-body">
+                                <h6 class="card-title">User Activity Report</h6>
+                                <p class="card-text">User behavior and device usage patterns.</p>
+                                <button class="btn btn-dark btn-sm" onclick="generateReport('user-activity')">
+                                    <i class="bi bi-file-text"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+.border-left-dark {
+    border-left: 0.25rem solid #5a5c69 !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let charts = {};
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadChartData();
+    loadTopUsers();
+});
+
+function loadChartData() {
+    fetch('/api/reports/charts/', {
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        createDeviceDistributionChart(data.device_distribution);
+        createStatusOverviewChart(data.status_overview);
+        createAssignmentTrendsChart(data.assignment_trends);
+    })
+    .catch(error => {
+        console.error('Error loading chart data:', error);
+    });
+}
+
+function createDeviceDistributionChart(data) {
+    const ctx = document.getElementById('deviceDistributionChart').getContext('2d');
+    charts.deviceDistribution = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: [
+                    '#4e73df',
+                    '#1cc88a', 
+                    '#36b9cc',
+                    '#f6c23e',
+                    '#e74a3b',
+                    '#858796',
+                    '#5a5c69'
+                ],
+                hoverBackgroundColor: [
+                    '#2e59d9',
+                    '#17a673',
+                    '#2c9faf',
+                    '#f4b619',
+                    '#c0392b',
+                    '#717277',
+                    '#484848'
+                ],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createStatusOverviewChart(data) {
+    const ctx = document.getElementById('statusOverviewChart').getContext('2d');
+    charts.statusOverview = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: [
+                    '#1cc88a',  // Available - Green
+                    '#f6c23e',  // Assigned - Yellow
+                    '#36b9cc',  // Maintenance - Blue
+                    '#858796',  // Retired - Gray
+                ],
+                hoverBackgroundColor: [
+                    '#17a673',
+                    '#f4b619',
+                    '#2c9faf',
+                    '#717277'
+                ],
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createAssignmentTrendsChart(data) {
+    const ctx = document.getElementById('assignmentTrendsChart').getContext('2d');
+    charts.assignmentTrends = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'New Assignments',
+                data: data.assignments,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                fill: true
+            }, {
+                label: 'Returns',
+                data: data.returns,
+                borderColor: '#1cc88a',
+                backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Count'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+}
+
+function loadTopUsers() {
+    fetch('/api/reports/top-users/', {
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayTopUsers(data.users);
+    })
+    .catch(error => {
+        console.error('Error loading top users:', error);
+        document.getElementById('topUsersTable').innerHTML = '<p class="text-danger">Error loading data</p>';
+    });
+}
+
+function displayTopUsers(users) {
+    const container = document.getElementById('topUsersTable');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<p class="text-muted">No user data available</p>';
+        return;
+    }
+    
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Devices</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${users.map(user => `
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                    <div>
+                                        <strong>${user.name}</strong><br>
+                                        <small class="text-muted">${user.email}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">${user.device_count}</span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function generateReport(type) {
+    const loadingBtn = event.target;
+    const originalText = loadingBtn.innerHTML;
+    loadingBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Generating...';
+    loadingBtn.disabled = true;
+    
+    fetch(`/api/reports/generate/${type}/`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        throw new Error('Report generation failed');
+    })
+    .then(blob => {
+        // Download the generated report
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${type}_report_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showAlert('success', 'Report generated and downloaded successfully!');
+    })
+    .catch(error => {
+        console.error('Error generating report:', error);
+        showAlert('danger', 'Failed to generate report. Please try again.');
+    })
+    .finally(() => {
+        loadingBtn.innerHTML = originalText;
+        loadingBtn.disabled = false;
+    });
+}
+
+function exportChart(chartName) {
+    if (charts[chartName]) {
+        const canvas = charts[chartName].canvas;
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${chartName}_${new Date().toISOString().split('T')[0]}.png`;
+        a.click();
+    }
+}
+
+function exportTable(tableName) {
+    // Implementation for table export
+    alert('Table export functionality would be implemented here');
+}
+
+function exportAllReports() {
+    if (confirm('This will generate and download all available reports. Continue?')) {
+        const reportTypes = ['inventory', 'assignments', 'utilization', 'maintenance', 'cost', 'user-activity'];
+        
+        reportTypes.forEach((type, index) => {
+            setTimeout(() => {
+                generateReport(type);
+            }, index * 1000); // Stagger downloads to avoid overwhelming the server
+        });
+    }
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Small avatar circle style
+const style = document.createElement('style');
+style.textContent = `
+    .avatar-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

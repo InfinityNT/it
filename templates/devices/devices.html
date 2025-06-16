@@ -1,0 +1,565 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Devices - IT Device Management{% endblock %}
+
+{% block content %}
+<!-- Alert Container -->
+<div id="alert-container"></div>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Device Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'add-device' %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus"></i>
+                Add Device
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row" x-data="{ filters: { search: '', status: '', category: '' } }">
+            <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="Search devices..." 
+                       x-model="filters.search"
+                       hx-get="/devices/api/devices/" 
+                       hx-trigger="keyup changed delay:300ms" 
+                       hx-target="#devices-table"
+                       hx-include="[x-data] input, [x-data] select"
+                       name="search">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" 
+                        x-model="filters.status"
+                        hx-get="/devices/api/devices/" 
+                        hx-trigger="change" 
+                        hx-target="#devices-table"
+                        hx-include="[x-data] input, [x-data] select"
+                        name="status">
+                    <option value="">All Status</option>
+                    <option value="available">Available</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="retired">Retired</option>
+                    <option value="lost">Lost/Stolen</option>
+                    <option value="damaged">Damaged</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control" placeholder="Category..."
+                       x-model="filters.category"
+                       hx-get="/devices/api/devices/" 
+                       hx-trigger="keyup changed delay:300ms" 
+                       hx-target="#devices-table"
+                       hx-include="[x-data] input, [x-data] select"
+                       name="category">
+            </div>
+            <div class="col-md-3">
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-secondary" id="bulkActionsBtn" onclick="toggleBulkMode()" disabled>
+                        <i class="bi bi-check2-square"></i>
+                        Bulk Actions
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="exportDevices()">
+                        <i class="bi bi-download"></i>
+                        Export
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-primary w-100" 
+                        hx-get="/devices/api/devices/" 
+                        hx-target="#devices-table">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Devices Table -->
+<div class="card">
+    <div class="card-body">
+        <div id="devices-table" hx-get="/devices/api/devices/" hx-trigger="load">
+            <div class="d-flex justify-content-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="assignUser" class="form-label">Select User</label>
+                        <select class="form-select" id="assignUser" name="user_id" required>
+                            <option value="">Choose a user...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="expectedReturn" class="form-label">Expected Return Date</label>
+                        <input type="date" class="form-control" id="expectedReturn" name="expected_return_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="assignNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssignment()">Assign Device</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Return Modal -->
+<div class="modal fade" id="deviceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="modal-content">
+            <!-- Modal content will be loaded via HTMX -->
+            <div class="modal-header">
+                <h5 class="modal-title">Loading...</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Operations Modal -->
+<div class="modal fade" id="bulkOperationsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Operations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bulk-operation-content">
+                    <p>Select an operation to perform on <span id="selected-count">0</span> selected devices:</p>
+                    
+                    <div class="list-group">
+                        <button type="button" class="list-group-item list-group-item-action" onclick="showBulkForm('update_status')">
+                            <i class="bi bi-gear"></i> Update Status
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="showBulkForm('update_location')">
+                            <i class="bi bi-geo-alt"></i> Update Location
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="showBulkForm('update_condition')">
+                            <i class="bi bi-wrench"></i> Update Condition
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="showBulkForm('assign_devices')">
+                            <i class="bi bi-person-plus"></i> Assign to User
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="showBulkForm('unassign_devices')">
+                            <i class="bi bi-person-dash"></i> Unassign Devices
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Form container for specific operations -->
+                <div id="bulk-form-container" style="display: none;">
+                    <button type="button" class="btn btn-link p-0 mb-3" onclick="backToBulkMenu()">
+                        <i class="bi bi-arrow-left"></i> Back to operations
+                    </button>
+                    <form id="bulkOperationForm">
+                        <div id="form-fields"></div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="executeBulkBtn" onclick="executeBulkOperation()" style="display: none;">Execute</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let bulkMode = false;
+let selectedDevices = [];
+let currentBulkOperation = null;
+let currentDeviceId = null;
+
+// Bulk Operations Functions
+function toggleBulkMode() {
+    bulkMode = !bulkMode;
+    const btn = document.getElementById('bulkActionsBtn');
+    const header = document.getElementById('bulk-select-header');
+    const cells = document.querySelectorAll('.bulk-select-cell');
+    
+    if (bulkMode) {
+        btn.innerHTML = '<i class="bi bi-x"></i> Exit Bulk';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-warning');
+        header.style.display = 'table-cell';
+        cells.forEach(cell => cell.style.display = 'table-cell');
+    } else {
+        btn.innerHTML = '<i class="bi bi-check2-square"></i> Bulk Actions';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-outline-secondary');
+        header.style.display = 'none';
+        cells.forEach(cell => cell.style.display = 'none');
+        selectedDevices = [];
+        updateBulkActions();
+    }
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAllDevices');
+    const checkboxes = document.querySelectorAll('.device-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.device-checkbox:checked');
+    selectedDevices = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    const btn = document.getElementById('bulkActionsBtn');
+    if (selectedDevices.length > 0) {
+        btn.innerHTML = `<i class="bi bi-check2-square"></i> Bulk Actions (${selectedDevices.length})`;
+        btn.onclick = showBulkOperationsModal;
+    } else {
+        btn.innerHTML = '<i class="bi bi-x"></i> Exit Bulk';
+        btn.onclick = toggleBulkMode;
+    }
+}
+
+function showBulkOperationsModal() {
+    if (selectedDevices.length === 0) {
+        alert('Please select devices first');
+        return;
+    }
+    
+    document.getElementById('selected-count').textContent = selectedDevices.length;
+    document.getElementById('bulk-operation-content').style.display = 'block';
+    document.getElementById('bulk-form-container').style.display = 'none';
+    document.getElementById('executeBulkBtn').style.display = 'none';
+    
+    const modal = new bootstrap.Modal(document.getElementById('bulkOperationsModal'));
+    modal.show();
+}
+
+function showBulkForm(operation) {
+    currentBulkOperation = operation;
+    document.getElementById('bulk-operation-content').style.display = 'none';
+    document.getElementById('bulk-form-container').style.display = 'block';
+    document.getElementById('executeBulkBtn').style.display = 'inline-block';
+    
+    const formFields = document.getElementById('form-fields');
+    
+    switch(operation) {
+        case 'update_status':
+            formFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">New Status</label>
+                    <select class="form-select" name="new_status" required>
+                        <option value="">Select status...</option>
+                        <option value="available">Available</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="retired">Retired</option>
+                        <option value="lost">Lost/Stolen</option>
+                        <option value="damaged">Damaged</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'update_location':
+            formFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">New Location</label>
+                    <input type="text" class="form-control" name="new_location" placeholder="Enter location..." required>
+                </div>
+            `;
+            break;
+            
+        case 'update_condition':
+            formFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">New Condition</label>
+                    <select class="form-select" name="new_condition" required>
+                        <option value="">Select condition...</option>
+                        <option value="new">New</option>
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                    </select>
+                </div>
+            `;
+            break;
+            
+        case 'assign_devices':
+            formFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Assign to User</label>
+                    <select class="form-select" name="user_id" required>
+                        <option value="">Loading users...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Expected Return Date</label>
+                    <input type="date" class="form-control" name="expected_return_date">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" name="notes" rows="3"></textarea>
+                </div>
+            `;
+            // Load users
+            loadUsersForBulkAssign();
+            break;
+            
+        case 'unassign_devices':
+            formFields.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Return Condition</label>
+                    <select class="form-select" name="condition">
+                        <option value="">Keep current condition</option>
+                        <option value="new">New</option>
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" name="notes" rows="3" placeholder="Return notes..."></textarea>
+                </div>
+            `;
+            break;
+    }
+}
+
+function loadUsersForBulkAssign() {
+    fetch('/api/users/')
+        .then(response => response.json())
+        .then(data => {
+            const userSelect = document.querySelector('select[name="user_id"]');
+            userSelect.innerHTML = '<option value="">Choose a user...</option>';
+            data.results.forEach(user => {
+                userSelect.innerHTML += `<option value="${user.id}">${user.first_name} ${user.last_name} (${user.username})</option>`;
+            });
+        })
+        .catch(() => {
+            const userSelect = document.querySelector('select[name="user_id"]');
+            userSelect.innerHTML = '<option value="">Error loading users</option>';
+        });
+}
+
+function backToBulkMenu() {
+    document.getElementById('bulk-operation-content').style.display = 'block';
+    document.getElementById('bulk-form-container').style.display = 'none';
+    document.getElementById('executeBulkBtn').style.display = 'none';
+    currentBulkOperation = null;
+}
+
+function executeBulkOperation() {
+    if (!currentBulkOperation || selectedDevices.length === 0) {
+        return;
+    }
+    
+    const form = document.getElementById('bulkOperationForm');
+    const formData = new FormData(form);
+    
+    const requestData = {
+        device_ids: selectedDevices,
+        operation: currentBulkOperation
+    };
+    
+    // Add form data to request
+    for (let [key, value] of formData.entries()) {
+        if (value.trim()) {
+            requestData[key] = value;
+        }
+    }
+    
+    // Show loading state
+    const executeBtn = document.getElementById('executeBulkBtn');
+    const originalText = executeBtn.innerHTML;
+    executeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Processing...';
+    executeBtn.disabled = true;
+    
+    fetch('/devices/api/bulk-operations/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        executeBtn.innerHTML = originalText;
+        executeBtn.disabled = false;
+        
+        if (data.message) {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('bulkOperationsModal')).hide();
+            
+            // Show success message
+            let message = data.message;
+            if (data.errors && data.errors.length > 0) {
+                message += `\\n\\nWarnings:\\n${data.errors.join('\\n')}`;
+            }
+            showAlert('success', message);
+            
+            // Exit bulk mode and refresh
+            toggleBulkMode();
+            refreshDeviceList();
+        } else {
+            showAlert('danger', data.error || 'Bulk operation failed');
+        }
+    })
+    .catch(error => {
+        executeBtn.innerHTML = originalText;
+        executeBtn.disabled = false;
+        showAlert('danger', 'An error occurred during bulk operation');
+    });
+}
+
+function exportDevices() {
+    // Simple CSV export of current device list
+    window.open('/devices/search/?export=csv', '_blank');
+}
+
+// Enable bulk actions button after page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const bulkBtn = document.getElementById('bulkActionsBtn');
+    if (bulkBtn) {
+        bulkBtn.disabled = false;
+    }
+});
+
+function showAssignModal(deviceId) {
+    currentDeviceId = deviceId;
+    
+    // Load users for assignment
+    fetch('/api/users/')
+        .then(response => response.json())
+        .then(data => {
+            const userSelect = document.getElementById('assignUser');
+            userSelect.innerHTML = '<option value="">Choose a user...</option>';
+            data.results.forEach(user => {
+                userSelect.innerHTML += `<option value="${user.id}">${user.first_name} ${user.last_name} (${user.username})</option>`;
+            });
+        });
+    
+    const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+    modal.show();
+}
+
+function showUnassignModal(deviceId) {
+    currentDeviceId = deviceId;
+    
+    // Load return device modal content via HTMX
+    const modalContent = document.getElementById('modal-content');
+    htmx.ajax('GET', `/assignments/api/return-device-modal/${deviceId}/`, {
+        target: '#modal-content',
+        swap: 'innerHTML'
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('deviceModal'));
+    modal.show();
+}
+
+function submitAssignment() {
+    const form = document.getElementById('assignForm');
+    const formData = new FormData(form);
+    
+    fetch(`/devices/api/devices/${currentDeviceId}/assign/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: parseInt(formData.get('user_id')),
+            expected_return_date: formData.get('expected_return_date'),
+            notes: formData.get('notes')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            bootstrap.Modal.getInstance(document.getElementById('assignModal')).hide();
+            // Refresh the devices table
+            refreshDeviceList();
+            // Show success message
+            showAlert('success', data.message);
+        } else {
+            showAlert('danger', data.error || 'Assignment failed');
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'An error occurred during assignment');
+    });
+}
+
+// Global function to refresh device list
+function refreshDeviceList() {
+    htmx.ajax('GET', '/devices/api/devices/', {
+        target: '#devices-table',
+        swap: 'innerHTML'
+    });
+}
+
+// Make it available globally
+window.refreshDeviceList = refreshDeviceList;
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('main').insertBefore(alertDiv, document.querySelector('main').firstChild);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Add HTMX refresh trigger
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.elt.id === 'devices-table') {
+        // Re-attach event listeners after HTMX updates
+        console.log('Devices table refreshed');
+    }
+});
+</script>
+{% endblock %}

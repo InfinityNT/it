@@ -1,0 +1,115 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}{{ page_title }} - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ page_title }}</h1>
+</div>
+
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person"></i>
+                    Profile Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'settings' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" name="first_name" value="{{ user.first_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" name="last_name" value="{{ user.last_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Department</label>
+                        <input type="text" class="form-control" id="department" name="department" value="{{ user.department }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="phone" name="phone" value="{{ user.phone }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location" value="{{ user.location }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Information -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-lock"></i>
+                    Account Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                    <div class="form-text">Username cannot be changed</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Employee ID</label>
+                    <input type="text" class="form-control" value="{{ user.employee_id }}" readonly>
+                    <div class="form-text">Employee ID is managed by administrators</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <input type="text" class="form-control" value="{{ user.get_role_display }}" readonly>
+                    <div class="form-text">Role is assigned by administrators</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Member Since</label>
+                    <input type="text" class="form-control" value="{{ user.date_joined|date:'F d, Y' }}" readonly>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-key"></i>
+                    Change Password
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">Change Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

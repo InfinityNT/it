@@ -1,0 +1,486 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Dashboard - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-calendar"></i>
+                This week
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Global Search Bar -->
+<div class="row mb-4">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-body py-3">
+                <div class="position-relative">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="globalSearch" 
+                               placeholder="Search devices, users, locations..."
+                               autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Search Results Dropdown -->
+                    <div id="searchResults" class="position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-lg" 
+                         style="top: 100%; z-index: 1000; max-height: 400px; overflow-y: auto; display: none;">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+                <div class="form-text mt-2" id="searchTip" style="display: none;">
+                    <i class="bi bi-lightbulb text-warning"></i>
+                    <small>Quick tip: Search for asset tags (e.g., "LAP-001"), users (e.g., "John"), or any device information</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4" id="stats-cards" 
+     hx-get="/api/dashboard/stats/" 
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Devices
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-4"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-laptop fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Available
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-4"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Assigned
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-4"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Maintenance
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-4"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-tools fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity and Quick Actions -->
+<div class="row">
+    <!-- Recent Activity -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Activity</h6>
+                <div class="dropdown no-arrow">
+                    <button class="btn btn-sm btn-outline-primary" onclick="alert('Full activity log coming soon!')">
+                        View All
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" id="recent-activity" hx-get="/api/dashboard/activity/" hx-trigger="load">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    <span>Loading recent activity...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'add-device' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i>
+                        Add New Device
+                    </a>
+                    <a href="{% url 'devices' %}" class="btn btn-success">
+                        <i class="bi bi-arrow-right-circle"></i>
+                        Manage Devices
+                    </a>
+                    <button class="btn btn-warning" onclick="alert('Maintenance Request coming soon!')">
+                        <i class="bi bi-tools"></i>
+                        Maintenance Request
+                    </button>
+                    <button class="btn btn-info" onclick="alert('Generate Report coming soon!')">
+                        <i class="bi bi-file-text"></i>
+                        Generate Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">System Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success rounded-circle" style="width: 10px; height: 10px;"></div>
+                    <span class="ms-2 small">Database: Online</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success rounded-circle" style="width: 10px; height: 10px;"></div>
+                    <span class="ms-2 small">API: Operational</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="bg-success rounded-circle" style="width: 10px; height: 10px;"></div>
+                    <span class="ms-2 small">Last Backup: Today</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+
+#searchResults .search-result-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#searchResults .search-result-item:hover {
+    background-color: #f8f9fa;
+}
+
+#searchResults .search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-device {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.search-result-info {
+    flex-grow: 1;
+}
+
+.search-result-asset-tag {
+    font-weight: 600;
+    color: #495057;
+}
+
+.search-result-details {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.search-result-status {
+    margin-left: 1rem;
+}
+</style>
+
+<script>
+let searchTimeout;
+const searchInput = document.getElementById('globalSearch');
+const searchResults = document.getElementById('searchResults');
+const clearButton = document.getElementById('clearSearch');
+const searchTip = document.getElementById('searchTip');
+
+// Show/hide search tip based on focus and content
+function updateSearchTip() {
+    const query = searchInput.value.trim();
+    if (document.activeElement === searchInput && query.length === 0) {
+        searchTip.style.display = 'block';
+    } else {
+        searchTip.style.display = 'none';
+    }
+}
+
+// Focus and blur events for search tip
+searchInput.addEventListener('focus', updateSearchTip);
+searchInput.addEventListener('blur', updateSearchTip);
+
+// Search functionality
+searchInput.addEventListener('input', function() {
+    const query = this.value.trim();
+    
+    // Update search tip visibility
+    updateSearchTip();
+    
+    // Show/hide clear button
+    if (query.length > 0) {
+        clearButton.style.display = 'block';
+    } else {
+        clearButton.style.display = 'none';
+        hideSearchResults();
+        return;
+    }
+    
+    // Debounce search requests
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        if (query.length >= 2) {
+            performSearch(query);
+        } else {
+            hideSearchResults();
+        }
+    }, 300);
+});
+
+// Clear search
+clearButton.addEventListener('click', function() {
+    searchInput.value = '';
+    clearButton.style.display = 'none';
+    hideSearchResults();
+    searchInput.focus();
+    updateSearchTip(); // Update tip visibility after clearing
+});
+
+// Hide results when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.position-relative')) {
+        hideSearchResults();
+    }
+});
+
+// Keyboard navigation
+searchInput.addEventListener('keydown', function(event) {
+    const items = searchResults.querySelectorAll('.search-result-item');
+    const selected = searchResults.querySelector('.search-result-item.active');
+    
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (selected) {
+            selected.classList.remove('active');
+            const next = selected.nextElementSibling;
+            if (next) {
+                next.classList.add('active');
+            } else {
+                items[0]?.classList.add('active');
+            }
+        } else {
+            items[0]?.classList.add('active');
+        }
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (selected) {
+            selected.classList.remove('active');
+            const prev = selected.previousElementSibling;
+            if (prev) {
+                prev.classList.add('active');
+            } else {
+                items[items.length - 1]?.classList.add('active');
+            }
+        } else {
+            items[items.length - 1]?.classList.add('active');
+        }
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (selected) {
+            selected.click();
+        }
+    } else if (event.key === 'Escape') {
+        hideSearchResults();
+    }
+});
+
+function performSearch(query) {
+    showSearchLoading();
+    
+    fetch(`/api/dashboard/search/?q=${encodeURIComponent(query)}`, {
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        displaySearchResults(data.results || []);
+    })
+    .catch(error => {
+        console.error('Search error:', error);
+        showSearchError();
+    });
+}
+
+function showSearchLoading() {
+    searchResults.innerHTML = `
+        <div class="search-result-item text-center">
+            <div class="d-flex align-items-center justify-content-center">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <span>Searching...</span>
+            </div>
+        </div>
+    `;
+    searchResults.style.display = 'block';
+}
+
+function showSearchError() {
+    searchResults.innerHTML = `
+        <div class="search-result-item text-center text-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Search error. Please try again.
+        </div>
+    `;
+    searchResults.style.display = 'block';
+}
+
+function displaySearchResults(results) {
+    if (results.length === 0) {
+        searchResults.innerHTML = `
+            <div class="search-result-item text-center text-muted">
+                <i class="bi bi-search me-2"></i>
+                No devices found matching your search.
+            </div>
+        `;
+    } else {
+        searchResults.innerHTML = results.map(device => `
+            <div class="search-result-item" onclick="navigateToDevice(${device.id})">
+                <div class="search-result-device">
+                    <div class="search-result-info">
+                        <div class="search-result-asset-tag">${device.asset_tag}</div>
+                        <div class="search-result-details">
+                            ${device.manufacturer} ${device.model_name}
+                            ${device.serial_number ? `• S/N: ${device.serial_number}` : ''}
+                            ${device.assigned_to ? `• Assigned to: ${device.assigned_to}` : ''}
+                            ${device.location ? `• Location: ${device.location}` : ''}
+                        </div>
+                    </div>
+                    <div class="search-result-status">
+                        <span class="badge ${getStatusBadgeClass(device.status)}">${device.status_display}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    searchResults.style.display = 'block';
+}
+
+function hideSearchResults() {
+    searchResults.style.display = 'none';
+    // Remove active states
+    searchResults.querySelectorAll('.search-result-item.active').forEach(item => {
+        item.classList.remove('active');
+    });
+}
+
+function navigateToDevice(deviceId) {
+    window.location.href = `/devices/${deviceId}/`;
+}
+
+function getStatusBadgeClass(status) {
+    switch(status) {
+        case 'available': return 'bg-success';
+        case 'assigned': return 'bg-warning';
+        case 'maintenance': return 'bg-info';
+        case 'retired': return 'bg-secondary';
+        default: return 'bg-secondary';
+    }
+}
+
+// Auto-focus search on Ctrl+K or Cmd+K
+document.addEventListener('keydown', function(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        searchInput.focus();
+        updateSearchTip(); // Show tip when focusing with keyboard shortcut
+    }
+});
+</script>
+{% endblock %}

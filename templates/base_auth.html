@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}IT Device Management System{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+        }
+        
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: 0;
+                width: 100%;
+                height: calc(100vh - 56px);
+                z-index: 1000;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            }
+        }
+        
+        /* Remove border from navbar toggle button */
+        .navbar-toggler {
+            border: none;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .navbar-toggler:focus {
+            box-shadow: none;
+        }
+        
+        .toggle-icon {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        
+        /* Sidebar user profile styles */
+        .user-profile-section {
+            margin-bottom: 0;
+        }
+        
+        .user-profile {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            margin-bottom: 0;
+            padding: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .user-profile:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .user-avatar {
+            font-size: 2.5rem;
+            color: #6c757d;
+            margin-right: 0.75rem;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+        
+        .user-role {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: capitalize;
+        }
+        
+        .user-arrow {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+        
+        .nav.flex-column {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logout-section {
+            margin-top: auto;
+        }
+        
+        .sidebar-divider {
+            margin: 1rem 0;
+            border-color: #dee2e6;
+        }
+        
+        .nav-form {
+            margin: 0;
+        }
+        
+        .logout-btn {
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            color: #6c757d;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        .logout-btn:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .logout-btn i {
+            margin-right: 0.5rem;
+        }
+        
+        /* Mobile sidebar styles */
+        @media (max-width: 767.98px) {
+            .user-profile {
+                padding: 0.75rem;
+            }
+            
+            .user-avatar {
+                font-size: 2rem;
+                margin-right: 0.5rem;
+            }
+            
+            .user-name {
+                font-size: 0.9rem;
+            }
+            
+            .user-role {
+                font-size: 0.75rem;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .sidebar.hiding {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+        .main-content {
+            min-height: calc(100vh - 56px);
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .nav-link.active {
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <!-- Mobile sidebar toggle button -->
+            <button class="navbar-toggler d-md-none" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle sidebar">
+                <i class="bi bi-list toggle-icon"></i>
+            </button>
+            
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                <i class="bi bi-laptop"></i>
+                IT Device Management
+            </a>
+            
+        </div>
+    </nav>
+
+    <div class="container-fluid" style="padding-top: 56px;">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="sidebarMenu">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <!-- User Profile Section -->
+                        <li class="nav-item user-profile-section">
+                            <a href="{% url 'settings' %}" class="nav-link user-profile">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle user-avatar"></i>
+                                    <div class="user-info">
+                                        <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                                        <div class="user-role">{{ user.role|default:"User" }}</div>
+                                    </div>
+                                    <i class="bi bi-chevron-right user-arrow"></i>
+                                </div>
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <hr class="sidebar-divider">
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                                <i class="bi bi-speedometer2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'devices' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'devices' %}">
+                                <i class="bi bi-laptop"></i>
+                                Devices
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'advanced-search' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'advanced-search' %}">
+                                <i class="bi bi-search"></i>
+                                Advanced Search
+                            </a>
+                        </li>
+                        {% if user.can_assign_devices %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'assignments' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'assignments' %}">
+                                <i class="bi bi-person-lines-fill"></i>
+                                Assignments
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if user.can_manage_users %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}" href="{% url 'users' %}">
+                                <i class="bi bi-people"></i>
+                                Users
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}">
+                                <i class="bi bi-graph-up"></i>
+                                Reports
+                            </a>
+                        </li>
+                        
+                        {% if user.can_assign_devices %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'approvals' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'approvals' %}">
+                                <i class="bi bi-check-circle"></i>
+                                Approvals
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if user.can_manage_system_settings %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" href="{% url 'settings' %}">
+                                <i class="bi bi-gear"></i>
+                                System Settings
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if user.can_access_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
+                                <i class="bi bi-tools"></i>
+                                Django Admin
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        
+                        <!-- Spacer to push logout to bottom -->
+                        <li class="nav-item flex-grow-1"></li>
+                        
+                        <!-- Logout at bottom -->
+                        <li class="nav-item logout-section">
+                            <hr class="sidebar-divider">
+                            <form method="post" action="{% url 'api-logout' %}" 
+                                  hx-post="{% url 'api-logout' %}" 
+                                  hx-trigger="submit"
+                                  class="nav-form">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link logout-btn">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- CSRF Token for HTMX -->
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+        
+        // Alternative: Get CSRF token from cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Backup CSRF token setup
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+            const csrfToken = '{{ csrf_token }}' || getCookie('csrftoken');
+            if (csrfToken) {
+                event.detail.xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            }
+        });
+        
+        // Mobile sidebar toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.querySelector('.navbar-toggler');
+            const sidebar = document.getElementById('sidebarMenu');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (sidebarToggle && sidebar) {
+                const toggleIcon = sidebarToggle.querySelector('.toggle-icon');
+                
+                sidebarToggle.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    const isOpen = sidebar.classList.contains('show');
+                    
+                    if (isOpen) {
+                        // Close sidebar with animation
+                        sidebar.classList.add('hiding');
+                        sidebar.classList.remove('show');
+                        toggleIcon.className = 'bi bi-list toggle-icon';
+                        sidebarToggle.setAttribute('aria-expanded', 'false');
+                        
+                        // Remove hiding class after animation completes
+                        setTimeout(() => {
+                            sidebar.classList.remove('hiding');
+                        }, 300);
+                    } else {
+                        // Open sidebar with animation
+                        sidebar.classList.remove('hiding');
+                        sidebar.classList.add('show');
+                        toggleIcon.className = 'bi bi-x-lg toggle-icon';
+                        sidebarToggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+                
+                // Close sidebar when clicking outside on mobile
+                document.addEventListener('click', function(event) {
+                    if (window.innerWidth <= 767.98) {
+                        const isToggleButton = event.target.closest('.navbar-toggler');
+                        const isSidebar = event.target.closest('#sidebarMenu');
+                        
+                        if (!isToggleButton && !isSidebar && sidebar.classList.contains('show')) {
+                            sidebar.classList.add('hiding');
+                            sidebar.classList.remove('show');
+                            toggleIcon.className = 'bi bi-list toggle-icon';
+                            sidebarToggle.setAttribute('aria-expanded', 'false');
+                            
+                            setTimeout(() => {
+                                sidebar.classList.remove('hiding');
+                            }, 300);
+                        }
+                    }
+                });
+                
+                // Close sidebar when window is resized to desktop
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth > 767.98) {
+                        sidebar.classList.remove('show', 'hiding');
+                        toggleIcon.className = 'bi bi-list toggle-icon';
+                        sidebarToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

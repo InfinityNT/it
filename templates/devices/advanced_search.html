@@ -1,0 +1,597 @@
+{% extends 'base_auth.html' %}
+
+{% block title %}Advanced Search - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-search me-2"></i>
+        Advanced Search
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-outline-secondary btn-sm me-2" onclick="clearAllFilters()">
+            <i class="bi bi-arrow-clockwise"></i>
+            Clear All
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="exportResults()">
+            <i class="bi bi-download"></i>
+            Export Results
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Search Filters -->
+    <div class="col-lg-3">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-funnel"></i>
+                    Search Filters
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="advancedSearchForm">
+                    <!-- Text Search -->
+                    <div class="mb-3">
+                        <label for="searchQuery" class="form-label">Search Text</label>
+                        <input type="text" class="form-control" id="searchQuery" name="search" 
+                               placeholder="Asset tag, serial number, user...">
+                    </div>
+
+                    <!-- Device Status -->
+                    <div class="mb-3">
+                        <label class="form-label">Device Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_available" name="status" value="available">
+                            <label class="form-check-label" for="status_available">Available</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_assigned" name="status" value="assigned">
+                            <label class="form-check-label" for="status_assigned">Assigned</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_maintenance" name="status" value="maintenance">
+                            <label class="form-check-label" for="status_maintenance">Maintenance</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_retired" name="status" value="retired">
+                            <label class="form-check-label" for="status_retired">Retired</label>
+                        </div>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="mb-3">
+                        <label for="categoryFilter" class="form-label">Category</label>
+                        <select class="form-select" id="categoryFilter" name="category">
+                            <option value="">All Categories</option>
+                            <option value="Laptop">Laptop</option>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Monitor">Monitor</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Printer">Printer</option>
+                            <option value="Networking">Networking</option>
+                            <option value="Storage">Storage</option>
+                        </select>
+                    </div>
+
+                    <!-- Manufacturer Filter -->
+                    <div class="mb-3">
+                        <label for="manufacturerFilter" class="form-label">Manufacturer</label>
+                        <select class="form-select" id="manufacturerFilter" name="manufacturer">
+                            <option value="">All Manufacturers</option>
+                            <option value="Dell">Dell</option>
+                            <option value="HP">HP</option>
+                            <option value="Lenovo">Lenovo</option>
+                            <option value="Apple">Apple</option>
+                            <option value="Microsoft">Microsoft</option>
+                            <option value="ASUS">ASUS</option>
+                            <option value="Samsung">Samsung</option>
+                        </select>
+                    </div>
+
+                    <!-- Condition Filter -->
+                    <div class="mb-3">
+                        <label for="conditionFilter" class="form-label">Condition</label>
+                        <select class="form-select" id="conditionFilter" name="condition">
+                            <option value="">All Conditions</option>
+                            <option value="new">New</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range Filters -->
+                    <div class="mb-3">
+                        <label class="form-label">Purchase Date Range</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="purchase_date_from" placeholder="From">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="purchase_date_to" placeholder="To">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Date Range -->
+                    <div class="mb-3">
+                        <label class="form-label">Assignment Date Range</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="assigned_date_from" placeholder="From">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="assigned_date_to" placeholder="To">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Filter -->
+                    <div class="mb-3">
+                        <label for="locationFilter" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="locationFilter" name="location" 
+                               placeholder="Building, floor, room...">
+                    </div>
+
+                    <!-- Warranty Status -->
+                    <div class="mb-3">
+                        <label class="form-label">Warranty Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="warranty_all" name="warranty_status" value="" checked>
+                            <label class="form-check-label" for="warranty_all">All</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="warranty_active" name="warranty_status" value="active">
+                            <label class="form-check-label" for="warranty_active">Under Warranty</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="warranty_expired" name="warranty_status" value="expired">
+                            <label class="form-check-label" for="warranty_expired">Warranty Expired</label>
+                        </div>
+                    </div>
+
+                    <!-- Search Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i>
+                            Search
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearAllFilters()">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Filters -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i>
+                    Quick Filters
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-success btn-sm" onclick="quickFilter('available')">
+                        Available Devices
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="quickFilter('assigned')">
+                        Assigned Devices
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="quickFilter('maintenance')">
+                        In Maintenance
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="quickFilter('overdue')">
+                        Overdue Returns
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="quickFilter('warranty_expiring')">
+                        Warranty Expiring
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="col-lg-9">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-list"></i>
+                    Search Results
+                    <span id="resultCount" class="badge bg-primary ms-2">0</span>
+                </h6>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="toggleView('grid')" id="gridViewBtn">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary active" onclick="toggleView('list')" id="listViewBtn">
+                        <i class="bi bi-list"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Loading State -->
+                <div id="loadingState" class="text-center py-5" style="display: none;">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <div>Searching devices...</div>
+                </div>
+
+                <!-- Results Container -->
+                <div id="searchResults">
+                    <!-- Initial state -->
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-search display-1 mb-3"></i>
+                        <h5>Ready to Search</h5>
+                        <p>Use the filters on the left to find devices or try a quick filter.</p>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <nav id="paginationNav" style="display: none;">
+                    <ul class="pagination justify-content-center mt-4" id="paginationList">
+                        <!-- Pagination will be generated here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.device-card {
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.grid-view .device-card {
+    height: 100%;
+}
+
+.list-view .device-item {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.list-view .device-item:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-tag {
+    display: inline-block;
+    background-color: #e9ecef;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    margin: 0.125rem;
+}
+
+.filter-tag .btn-close {
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}
+</style>
+
+<script>
+let currentPage = 1;
+let currentView = 'list';
+let searchTimeout;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadInitialResults();
+    
+    // Form submission
+    document.getElementById('advancedSearchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+    
+    // Real-time search on text input
+    document.getElementById('searchQuery').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch();
+        }, 500);
+    });
+    
+    // Filter change listeners
+    document.querySelectorAll('input[type="checkbox"], select, input[type="radio"]').forEach(element => {
+        element.addEventListener('change', performSearch);
+    });
+    
+    // Date inputs
+    document.querySelectorAll('input[type="date"]').forEach(element => {
+        element.addEventListener('change', performSearch);
+    });
+});
+
+function loadInitialResults() {
+    // Load all devices initially
+    performSearch();
+}
+
+function performSearch(page = 1) {
+    currentPage = page;
+    showLoading();
+    
+    const formData = new FormData(document.getElementById('advancedSearchForm'));
+    const params = new URLSearchParams();
+    
+    // Add form data to params
+    for (let [key, value] of formData.entries()) {
+        if (value.trim()) {
+            params.append(key, value);
+        }
+    }
+    
+    // Add page parameter
+    params.append('page', page);
+    
+    fetch(`/devices/api/advanced-search/?${params.toString()}`, {
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        displayResults(data.results || []);
+        updateResultCount(data.total || 0);
+        updatePagination(data.pagination || {});
+        updateActiveFilters();
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Search error:', error);
+        showError('Search failed. Please try again.');
+    });
+}
+
+function showLoading() {
+    document.getElementById('loadingState').style.display = 'block';
+    document.getElementById('searchResults').style.display = 'none';
+}
+
+function hideLoading() {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('searchResults').style.display = 'block';
+}
+
+function displayResults(devices) {
+    const container = document.getElementById('searchResults');
+    
+    if (devices.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-search display-1 mb-3"></i>
+                <h5>No devices found</h5>
+                <p>Try adjusting your search filters.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    if (currentView === 'grid') {
+        displayGridView(devices);
+    } else {
+        displayListView(devices);
+    }
+}
+
+function displayGridView(devices) {
+    const container = document.getElementById('searchResults');
+    container.className = 'grid-view';
+    
+    const html = `
+        <div class="row">
+            ${devices.map(device => `
+                <div class="col-md-4 col-lg-3 mb-3">
+                    <div class="card device-card h-100" onclick="navigateToDevice(${device.id})">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0">${device.asset_tag}</h6>
+                                <span class="badge ${getStatusBadgeClass(device.status)}">${device.status_display}</span>
+                            </div>
+                            <p class="card-text">
+                                <small class="text-muted">${device.manufacturer} ${device.model_name}</small><br>
+                                <small class="text-muted">S/N: ${device.serial_number || 'N/A'}</small>
+                            </p>
+                            ${device.assigned_to ? `
+                                <p class="card-text">
+                                    <small><i class="bi bi-person"></i> ${device.assigned_to}</small>
+                                </p>
+                            ` : ''}
+                            ${device.location ? `
+                                <p class="card-text">
+                                    <small><i class="bi bi-geo-alt"></i> ${device.location}</small>
+                                </p>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function displayListView(devices) {
+    const container = document.getElementById('searchResults');
+    container.className = 'list-view';
+    
+    const html = devices.map(device => `
+        <div class="device-item" onclick="navigateToDevice(${device.id})">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <div class="device-icon me-2">
+                            <i class="bi ${getDeviceIcon(device.category)} text-primary"></i>
+                        </div>
+                        <div>
+                            <strong>${device.asset_tag}</strong><br>
+                            <small class="text-muted">${device.serial_number || 'No S/N'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div>
+                        ${device.manufacturer} ${device.model_name}<br>
+                        <small class="text-muted">${device.category}</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <span class="badge ${getStatusBadgeClass(device.status)}">${device.status_display}</span>
+                </div>
+                <div class="col-md-2">
+                    ${device.assigned_to ? `
+                        <div>
+                            <i class="bi bi-person"></i> ${device.assigned_to}<br>
+                            <small class="text-muted">${device.assigned_date ? new Date(device.assigned_date).toLocaleDateString() : ''}</small>
+                        </div>
+                    ` : '<span class="text-muted">Unassigned</span>'}
+                </div>
+                <div class="col-md-2">
+                    ${device.location ? `<i class="bi bi-geo-alt"></i> ${device.location}` : '<span class="text-muted">No location</span>'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function toggleView(view) {
+    currentView = view;
+    
+    // Update button states
+    document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+    document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+    
+    // Re-render current results
+    const container = document.getElementById('searchResults');
+    if (container.children.length > 0) {
+        performSearch(currentPage);
+    }
+}
+
+function updateResultCount(count) {
+    document.getElementById('resultCount').textContent = count.toLocaleString();
+}
+
+function updatePagination(pagination) {
+    // Implementation for pagination
+    const nav = document.getElementById('paginationNav');
+    if (pagination.total_pages > 1) {
+        nav.style.display = 'block';
+        // Generate pagination HTML
+    } else {
+        nav.style.display = 'none';
+    }
+}
+
+function updateActiveFilters() {
+    // Show active filters as removable tags
+    // Implementation for active filter display
+}
+
+function quickFilter(type) {
+    clearAllFilters();
+    
+    switch (type) {
+        case 'available':
+            document.getElementById('status_available').checked = true;
+            break;
+        case 'assigned':
+            document.getElementById('status_assigned').checked = true;
+            break;
+        case 'maintenance':
+            document.getElementById('status_maintenance').checked = true;
+            break;
+        case 'overdue':
+            // This would require special handling
+            break;
+        case 'warranty_expiring':
+            // This would require special handling
+            break;
+    }
+    
+    performSearch();
+}
+
+function clearAllFilters() {
+    document.getElementById('advancedSearchForm').reset();
+    document.getElementById('warranty_all').checked = true;
+    performSearch();
+}
+
+function exportResults() {
+    const formData = new FormData(document.getElementById('advancedSearchForm'));
+    const params = new URLSearchParams();
+    
+    for (let [key, value] of formData.entries()) {
+        if (value.trim()) {
+            params.append(key, value);
+        }
+    }
+    
+    // Add export parameter
+    params.append('export', 'csv');
+    
+    window.open(`/devices/api/advanced-search/?${params.toString()}`, '_blank');
+}
+
+function navigateToDevice(deviceId) {
+    window.location.href = `/devices/${deviceId}/`;
+}
+
+function getStatusBadgeClass(status) {
+    switch(status) {
+        case 'available': return 'bg-success';
+        case 'assigned': return 'bg-warning text-dark';
+        case 'maintenance': return 'bg-info';
+        case 'retired': return 'bg-secondary';
+        default: return 'bg-secondary';
+    }
+}
+
+function getDeviceIcon(category) {
+    switch(category?.toLowerCase()) {
+        case 'laptop': return 'bi-laptop';
+        case 'desktop': return 'bi-pc-display';
+        case 'phone': return 'bi-phone';
+        case 'monitor': return 'bi-display';
+        case 'tablet': return 'bi-tablet';
+        case 'printer': return 'bi-printer';
+        default: return 'bi-device-hdd';
+    }
+}
+
+function showError(message) {
+    document.getElementById('searchResults').innerHTML = `
+        <div class="alert alert-danger text-center">
+            <i class="bi bi-exclamation-triangle"></i>
+            ${message}
+        </div>
+    `;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/page-titles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="settings-container"
+     hx-get="{% url 'settings' %}"
+     hx-trigger="load"
+     hx-swap="innerHTML"
+     hx-on::after-swap="loadSettingsScript()">
+    <div class="text-center p-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading settings...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/settings.js' %}"></script>
+<script>
+// Reload settings script after HTMX swap
+function loadSettingsScript() {
+    // Re-run the DOMContentLoaded logic after HTMX loads content
+    const event = new Event('DOMContentLoaded');
+    document.dispatchEvent(event);
+}
+</script>
+{% endblock %}

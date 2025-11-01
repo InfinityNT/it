@@ -1,0 +1,252 @@
+/* ==========================================
+   RESPONSIVE FILTERS SYSTEM
+   Clean, adaptive filter layout
+   ========================================== */
+
+/* ==========================================
+   1. FILTERS CONTAINER
+   ========================================== */
+
+.filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+/* ==========================================
+   2. FILTER ITEMS
+   ========================================== */
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Search input - takes more space */
+.filter-search {
+    flex: 2;
+    min-width: 200px;
+}
+
+/* Select dropdowns - medium space */
+.filter-select {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Category input - medium space */
+.filter-category {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Action buttons - flexible */
+.filter-actions {
+    flex: 0 0 auto;
+    min-width: fit-content;
+}
+
+/* ==========================================
+   3. BUTTON GROUPS
+   ========================================== */
+
+.filter-button-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-button-group .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    white-space: nowrap;
+}
+
+/* ==========================================
+   4. RESPONSIVE BREAKPOINTS
+   ========================================== */
+
+/* Tablet: Stack inputs, keep buttons together */
+@media (max-width: 991.98px) {
+    .filter-search,
+    .filter-select,
+    .filter-category {
+        flex: 1 1 calc(50% - 0.375rem);
+        min-width: 0;
+    }
+
+    .filter-actions {
+        flex: 1 1 100%;
+    }
+
+    .filter-button-group {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* Mobile: Full width stacking */
+@media (max-width: 767.98px) {
+    .filters-container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .filter-item {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .filter-search,
+    .filter-select,
+    .filter-category,
+    .filter-actions {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+
+    .filter-button-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-button-group .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Show button text on mobile for clarity */
+    .btn-text {
+        display: inline;
+    }
+}
+
+/* Small mobile: Icon-only buttons to save space */
+@media (max-width: 575.98px) {
+    .filter-button-group {
+        flex-direction: row;
+    }
+
+    .filter-button-group .btn {
+        flex: 1;
+        width: auto;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .btn-text {
+        display: none;
+    }
+
+    .filter-button-group .btn i {
+        margin: 0;
+    }
+}
+
+/* ==========================================
+   5. FORM CONTROLS ADJUSTMENTS
+   ========================================== */
+
+.filters-container .form-control,
+.filters-container .form-select {
+    height: 38px;
+    font-size: 0.875rem;
+}
+
+.filters-container .form-control:focus,
+.filters-container .form-select:focus {
+    border-color: #0969da;
+    box-shadow: 0 0 0 0.2rem rgba(9, 105, 218, 0.1);
+}
+
+/* ==========================================
+   6. BUTTON STYLING
+   ========================================== */
+
+.filters-container .btn {
+    height: 38px;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #d0d7de;
+    transition: all 0.2s ease;
+}
+
+.filters-container .btn:hover {
+    border-color: #0969da;
+    background-color: #f6f8fa;
+}
+
+.filters-container .btn-outline-primary {
+    color: #0969da;
+    border-color: #0969da;
+}
+
+.filters-container .btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0969da;
+}
+
+.filters-container .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==========================================
+   7. ACCESSIBILITY
+   ========================================== */
+
+.filter-item:focus-within {
+    z-index: 1;
+}
+
+.filters-container .form-control:focus,
+.filters-container .form-select:focus,
+.filters-container .btn:focus {
+    outline: 2px solid #0969da;
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   8. LOADING STATES
+   ========================================== */
+
+.filters-container.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.filters-container .btn.loading {
+    position: relative;
+}
+
+.filters-container .btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================
+   9. PRINT STYLES
+   ========================================== */
+
+@media print {
+    .filters-container {
+        display: none;
+    }
+}

@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # Traefik Reverse Proxy with automatic HTTPS
+  traefik:
+    image: traefik:v2.10
+    container_name: dmp_traefik
+    command:
+      # Enable Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # Configure entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt configuration
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@emurh.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # Enable API and dashboard (optional - comment out in production)
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      # Dashboard port (optional - remove in production)
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/letsencrypt
+    networks:
+      - dmp_network
+    restart: unless-stopped
+    labels:
+      # Enable Traefik for dashboard (optional)
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.it.emurh.com`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      # Basic auth for dashboard (generate with: htpasswd -nb admin password)
+      # Username: admin, Password: admin (CHANGE THIS!)
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$8evjziFh$$8evjziFh8evjziFh8e"
+
+  # Django Application
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dmp_django_prod
+    image: dmp-django:production
+    volumes:
+      # Persist database (SQLite)
+      - django-data:/app/data
+      # Persist static files
+      - django-static:/app/staticfiles
+      # Persist media files
+      - django-media:/app/media
+    environment:
+      - DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=it.emurh.com,localhost
+      - CSRF_TRUSTED_ORIGINS=https://it.emurh.com
+      - SECURE_SSL_REDIRECT=True
+      - SECURE_HSTS_SECONDS=31536000
+      - SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+      - SECURE_HSTS_PRELOAD=True
+      - SESSION_COOKIE_SECURE=True
+      - CSRF_COOKIE_SECURE=True
+      - SESSION_COOKIE_AGE=43200
+    env_file:
+      - .env.production
+    networks:
+      - dmp_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+      # HTTP Router
+      - "traefik.http.routers.django.rule=Host(`it.emurh.com`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls.certresolver=letsencrypt"
+      # Service
+      - "traefik.http.services.django.loadbalancer.server.port=8000"
+      # Middlewares for security headers
+      - "traefik.http.middlewares.django-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.django-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.django-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.django-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.django-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.django-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.django-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.django-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.routers.django.middlewares=django-headers"
+
+volumes:
+  traefik-certificates:
+    driver: local
+  django-data:
+    driver: local
+  django-static:
+    driver: local
+  django-media:
+    driver: local
+
+networks:
+  dmp_network:
+    driver: bridge

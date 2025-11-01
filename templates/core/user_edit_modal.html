@@ -1,0 +1,116 @@
+{% load static %}
+<div class="modal-header">
+    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit User</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" hx-post="{% url 'edit-user-modal' user_id=user_profile.id %}" hx-swap="none">
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        {% csrf_token %}
+
+        <!-- Basic Information -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" value="{{ user_profile.username }}" readonly disabled>
+                    <small class="form-text text-muted">Username cannot be changed</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ user_profile.email }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="first_name" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user_profile.first_name }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="last_name" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user_profile.last_name }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Groups/Permissions -->
+        <div class="mb-3">
+            <label for="groups" class="form-label">User Group</label>
+            <select class="form-select" id="groups" name="groups">
+                <option value="">No Group</option>
+                {% for group in available_groups %}
+                    <option value="{{ group.id }}" {% if group in user_profile.groups.all %}selected{% endif %}>
+                        {{ group.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <small class="form-text text-muted">Select user's primary group for permissions</small>
+        </div>
+
+        <!-- Employee Linking -->
+        {% if employees %}
+        <div class="mb-3">
+            <label for="linked_employee" class="form-label">Linked Employee</label>
+            <select class="form-select" id="linked_employee" name="linked_employee">
+                <option value="">No Employee Link</option>
+                {% for employee in employees %}
+                    <option value="{{ employee.id }}" {% if user_profile.linked_employee == employee %}selected{% endif %}>
+                        {{ employee.employee_id }} - {{ employee.first_name }} {{ employee.last_name }} ({{ employee.department.name }})
+                    </option>
+                {% endfor %}
+            </select>
+            <small class="form-text text-muted">Link this user to an employee record</small>
+        </div>
+        {% endif %}
+
+        <!-- Status Flags -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if user_profile.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="is_active">
+                            Active Account
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is_staff" name="is_staff" {% if user_profile.is_staff %}checked{% endif %}>
+                        <label class="form-check-label" for="is_staff">
+                            Staff Status (Django Admin Access)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Info (Read-only) -->
+        <div class="alert alert-info">
+            <strong><i class="bi bi-info-circle me-2"></i>Account Information</strong>
+            <ul class="mb-0 mt-2">
+                <li><strong>Date Joined:</strong> {{ user_profile.date_joined|date:"M d, Y H:i" }}</li>
+                <li><strong>Last Login:</strong> {{ user_profile.last_login|date:"M d, Y H:i"|default:"Never" }}</li>
+                {% if user_profile.is_superuser %}
+                <li><strong>Superuser:</strong> <span class="badge bg-danger">Yes</span></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Save Changes
+        </button>
+    </div>
+</form>

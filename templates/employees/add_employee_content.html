@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Add Employee - IT Device Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Add New Employee</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'employees' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back to Employees
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Employee Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Employee Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="text-muted">Employee Information</h6>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="employee_id" class="form-label">Employee ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                    </div>
+                    
+                    <!-- System Access (Optional) -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="text-muted">System Access (Optional)</h6>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="create_system_user" name="create_system_user">
+                                <label class="form-check-label" for="create_system_user">
+                                    Create system user account (for portal access)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="system-user-fields" class="d-none">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" value="ChangeMe123!">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="groups" class="form-label">System Group</label>
+                                <select class="form-select" id="groups" name="groups">
+                                    <option value="">No System Access</option>
+                                    {% for group in available_groups %}
+                                    <option value="{{ group.id }}">{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Optional: Create system user account for this employee</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employment Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="text-muted">Employment Information</h6>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="department" class="form-label">Department</label>
+                            <select class="form-select" id="department" name="department">
+                                <option value="">Select Department</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="job_title" class="form-label">Job Title</label>
+                            <select class="form-select" id="job_title" name="job_title">
+                                <option value="">Select Job Title</option>
+                                {% for title in job_titles %}
+                                <option value="{{ title.id }}">{{ title.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="hire_date" class="form-label">Hire Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="hire_date" name="hire_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cost_center" class="form-label">Cost Center</label>
+                            <input type="text" class="form-control" id="cost_center" name="cost_center">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="manager_employee_id" class="form-label">Manager Employee ID</label>
+                            <input type="text" class="form-control" id="manager_employee_id" name="manager_employee_id">
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="text-muted">Contact Information</h6>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="work_phone" class="form-label">Work Phone</label>
+                            <input type="tel" class="form-control" id="work_phone" name="work_phone">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mobile_phone" class="form-label">Mobile Phone</label>
+                            <input type="tel" class="form-control" id="mobile_phone" name="mobile_phone">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="work_email" class="form-label">Work Email</label>
+                            <input type="email" class="form-control" id="work_email" name="work_email">
+                        </div>
+                    </div>
+                    
+                    <!-- Location Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="text-muted">Location Information</h6>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="office_location" class="form-label">Office Location</label>
+                            <select class="form-select" id="office_location" name="office_location">
+                                <option value="">Select Location</option>
+                                {% for location in locations %}
+                                <option value="{{ location.name }}">{{ location.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Choose from predefined locations</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="building" class="form-label">Building</label>
+                            <input type="text" class="form-control" id="building" name="building">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="floor" class="form-label">Floor</label>
+                            <input type="text" class="form-control" id="floor" name="floor">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="desk_number" class="form-label">Desk Number</label>
+                            <input type="text" class="form-control" id="desk_number" name="desk_number">
+                        </div>
+                    </div>
+                    
+                    <!-- Emergency Contact -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="text-muted">Emergency Contact</h6>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="emergency_contact_name" class="form-label">Emergency Contact Name</label>
+                            <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="emergency_contact_phone" class="form-label">Emergency Contact Phone</label>
+                            <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone">
+                        </div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check"></i>
+                                Create Employee
+                            </button>
+                            <a href="{% url 'employees' %}" class="btn btn-secondary">
+                                <i class="bi bi-x"></i>
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% block extra_js %}
+<script src="{% static 'employees/js/add_employee.js'  %}"></script>
+{% endblock %}
+{% endblock %}

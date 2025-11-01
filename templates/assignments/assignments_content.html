@@ -1,0 +1,174 @@
+{% load static %}
+<!-- Alert Container -->
+<div id="alert-container"></div>
+
+<!-- Modern Page Header -->
+<div class="page-header info">
+    <div class="page-header-content">
+        <div class="page-header-icon">
+            <i class="bi bi-person-lines-fill"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Device Assignments</h1>
+            <p class="page-description">Track device assignments, returns, and employee equipment allocation</p>
+        </div>
+    </div>
+    {% if user.can_assign_devices %}
+    <div class="page-header-actions">
+        <button type="button"
+                onclick="openAssignDeviceModal()"
+                class="btn btn-primary">
+            <i class="bi bi-plus me-1"></i>
+            Assign Device
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="filters-container" id="filterForm">
+            <!-- Search Input -->
+            <div class="filter-item filter-search">
+                <input type="text" class="form-control" id="searchFilter" name="search"
+                       placeholder="Search assignments...">
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-item filter-select">
+                <select class="form-select" id="statusFilter" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="returned">Returned</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+            </div>
+
+            <!-- Employee Filter -->
+            <div class="filter-item filter-select">
+                <select class="form-select" id="employeeFilter" name="employee">
+                    <option value="">All Employees</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="filter-item filter-actions">
+                <div class="filter-button-group">
+                    {% if user.can_modify_assignments %}
+                    <button class="btn btn-outline-secondary" id="bulkActionsBtn" onclick="toggleBulkMode()" disabled>
+                        <i class="bi bi-check2-square"></i>
+                        <span class="btn-text">Bulk Actions</span>
+                    </button>
+                    {% endif %}
+                    {% if user.can_generate_reports %}
+                    <button class="btn btn-outline-secondary" onclick="exportAssignments()">
+                        <i class="bi bi-download"></i>
+                        <span class="btn-text">Export</span>
+                    </button>
+                    {% endif %}
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i>
+                        <span class="btn-text">Search</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignments List -->
+<div class="card">
+    <div class="card-body p-0">
+        <div id="assignmentsContainer"
+             hx-get="/assignments/api/assignments/"
+             hx-trigger="load, refreshAssignments from:body"
+             hx-indicator="#loading-spinner">
+            <div class="d-flex justify-content-center p-4" id="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading assignments...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary" id="activeCount">-</h5>
+                <p class="card-text">Active Assignments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning" id="overdueCount">-</h5>
+                <p class="card-text">Overdue</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success" id="returnedCount">-</h5>
+                <p class="card-text">Returned This Month</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info" id="totalCount">-</h5>
+                <p class="card-text">Total Assignments</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include standardized bulk operations modal -->
+{% include 'components/forms/bulk_operations_modal.html' %}
+
+<script>
+    // Pass user permissions to JavaScript
+    window.userPermissions = {
+        can_modify_assignments: {% if user.can_modify_assignments %}true{% else %}false{% endif %},
+        can_view_assignments: {% if user.can_view_assignments %}true{% else %}false{% endif %}
+    };
+</script>
+<!-- Load bulk operations framework BEFORE assignments-new.js since it depends on BulkOperationsManager -->
+<script src="{% static 'core/js/bulk-operations.js' %}"></script>
+<script src="{% static 'assignments/js/assignments-new.js' %}"></script>
+
+<!-- HTMX SPA Re-initialization -->
+<script>
+    (function() {
+        // Reset initialization flag to allow re-init
+        window.assignmentsInitialized = false;
+
+        // Initialize with a small delay to ensure script is loaded
+        function tryInitialize() {
+            if (typeof initializeAssignmentsPage === 'function') {
+                initializeAssignmentsPage();
+                console.log('Assignments page initialized');
+            } else {
+                console.warn('initializeAssignmentsPage not yet available, retrying...');
+                setTimeout(tryInitialize, 50);
+            }
+        }
+
+        // Start initialization
+        tryInitialize();
+
+        // Re-initialize on HTMX content swap (when navigating back to this page)
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'content-area' && document.querySelector('#assignmentsContainer')) {
+                window.assignmentsInitialized = false;
+                tryInitialize();
+            }
+        });
+    })();
+</script>

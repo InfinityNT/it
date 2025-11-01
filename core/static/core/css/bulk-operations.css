@@ -1,0 +1,155 @@
+/* Bulk Operations Shared Styles */
+
+.bulk-select-cell {
+    display: none;
+    width: 50px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.bulk-select-header {
+    display: none;
+    width: 50px;
+    text-align: center;
+}
+
+.bulk-mode .bulk-select-cell,
+.bulk-mode .bulk-select-header {
+    display: table-cell;
+}
+
+.bulk-operations-button {
+    transition: all 0.3s ease;
+}
+
+.bulk-operations-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bulk-operations-modal .list-group-item {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.bulk-operations-modal .list-group-item:hover {
+    background-color: var(--bs-light);
+}
+
+.bulk-operations-modal .list-group-item i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+.bulk-form-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.bulk-progress {
+    margin-top: 15px;
+}
+
+.bulk-preview {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.bulk-preview h6 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.bulk-preview .preview-item {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.bulk-preview .preview-item:last-child {
+    border-bottom: none;
+}
+
+.bulk-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.bulk-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+/* Selection feedback */
+.item-checkbox:checked + .item-row {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.selected-count-badge {
+    background-color: #198754;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Loading states */
+.bulk-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.bulk-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    vertical-align: text-bottom;
+    border: 0.125em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: bulk-spinner-animation 0.75s linear infinite;
+}
+
+@keyframes bulk-spinner-animation {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Permission-based styling */
+.permission-restricted {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.permission-restricted:hover {
+    background-color: transparent !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .bulk-select-cell,
+    .bulk-select-header {
+        width: 40px;
+    }
+    
+    .bulk-operations-modal .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .bulk-form-container {
+        max-height: 300px;
+    }
+}

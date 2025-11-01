@@ -1,0 +1,92 @@
+{% load static %}
+
+{% if assignments %}
+<!-- Employee Assignment Cards Grid -->
+<div class="card-grid">
+    {% for assignment in assignments %}
+    <div class="item-card assignment-card status-{{ assignment.status }} {% if assignment.is_overdue %}overdue{% endif %}">
+        <!-- Card Header -->
+        <div class="item-card-header">
+            <div class="item-card-header-content">
+                <div class="item-card-header-left">
+                    <div class="device-icon me-2">
+                        {% if assignment.device.device_model.category.name == 'Laptop' %}
+                            <i class="bi bi-laptop text-primary"></i>
+                        {% elif assignment.device.device_model.category.name == 'Desktop' %}
+                            <i class="bi bi-pc-display text-info"></i>
+                        {% elif assignment.device.device_model.category.name == 'Phone' %}
+                            <i class="bi bi-phone text-success"></i>
+                        {% elif assignment.device.device_model.category.name == 'Monitor' %}
+                            <i class="bi bi-display text-warning"></i>
+                        {% else %}
+                            <i class="bi bi-device-hdd text-secondary"></i>
+                        {% endif %}
+                    </div>
+                    <h6 class="item-card-title">{{ assignment.device.asset_tag }}</h6>
+                </div>
+                <div class="item-card-header-right">
+                    {% if assignment.status == 'active' %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif assignment.status == 'returned' %}
+                        <span class="badge bg-secondary">Returned</span>
+                    {% elif assignment.status == 'overdue' %}
+                        <span class="badge bg-danger">Overdue</span>
+                    {% else %}
+                        <span class="badge bg-warning">{{ assignment.get_status_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="item-card-body">
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-laptop me-1"></i>Device Model:</span>
+                <span class="item-card-value">{{ assignment.device.device_model }}</span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-calendar-check me-1"></i>Assigned Date:</span>
+                <span class="item-card-value">{{ assignment.assigned_date|date:"M d, Y" }}</span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-calendar-x me-1"></i>Expected Return:</span>
+                <span class="item-card-value">
+                    {% if assignment.expected_return_date %}
+                        {{ assignment.expected_return_date|date:"M d, Y" }}
+                        {% if assignment.is_overdue %}
+                            <br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</small>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Card Footer -->
+        <div class="item-card-footer">
+            <a href="/assignments/{{ assignment.id }}/" class="btn btn-sm btn-outline-primary" title="View Assignment">
+                <i class="bi bi-eye me-1"></i>View
+            </a>
+            <a href="/devices/{{ assignment.device.id }}/" class="btn btn-sm btn-outline-secondary" title="View Device">
+                <i class="bi bi-laptop me-1"></i>Device
+            </a>
+            {% if assignment.status == 'active' %}
+            <button class="btn btn-sm btn-outline-warning" onclick="showUserReturnModal({{ assignment.device.id }})" title="Return Device">
+                <i class="bi bi-arrow-return-left me-1"></i>Return
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="text-center py-4">
+    <i class="bi bi-person-x display-6 text-muted"></i>
+    <h6 class="mt-2">No Assignments</h6>
+    <p class="text-muted">This user has no device assignments{% if request.GET.status == 'active' %} currently active{% endif %}.</p>
+</div>
+{% endif %}

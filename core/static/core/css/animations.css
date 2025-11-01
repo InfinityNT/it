@@ -1,0 +1,352 @@
+/* ===================================
+   Animation Framework
+   ================================== */
+
+/* Base Animation Classes */
+.animate {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-fast {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slow {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===================================
+   View Transitions
+   ================================== */
+
+/* Slide Animations */
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Fade Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Scale Animations */
+@keyframes scaleIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleInCenter {
+    from { transform: scale(0.8) translateX(-50%) translateY(-50%); opacity: 0; }
+    to { transform: scale(1) translateX(-50%) translateY(-50%); opacity: 1; }
+}
+
+/* ===================================
+   Component Animations
+   ================================== */
+
+/* Card Animations */
+.card-animate {
+    animation: fadeInScale 0.4s ease-out;
+}
+
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Button Animations */
+.btn-animate {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-animate::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.btn-animate:hover::before {
+    left: 100%;
+}
+
+.btn-pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* ===================================
+   Form Animations
+   ================================== */
+
+/* Input Focus Animations */
+.form-control-animate {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.form-control-animate:focus {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Label Float Animation */
+.form-floating-animate .form-control:focus ~ label,
+.form-floating-animate .form-control:not(:placeholder-shown) ~ label {
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+    color: #0d6efd;
+}
+
+/* ===================================
+   Loading Animations
+   ================================== */
+
+/* Spinner Variations */
+.spinner-dots {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.spinner-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: dotPulse 1.4s ease-in-out infinite both;
+}
+
+.spinner-dots span:nth-child(1) { animation-delay: -0.32s; }
+.spinner-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* Progress Bar Animation */
+.progress-animated .progress-bar {
+    animation: progressSlide 2s ease-in-out infinite;
+}
+
+@keyframes progressSlide {
+    0% { width: 0%; }
+    50% { width: 100%; }
+    100% { width: 0%; }
+}
+
+/* ===================================
+   Notification Animations
+   ================================== */
+
+/* Toast Animations */
+.toast-slide-in {
+    animation: toastSlideIn 0.3s ease-out;
+}
+
+@keyframes toastSlideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Alert Animations */
+.alert-bounce {
+    animation: alertBounce 0.5s ease-out;
+}
+
+@keyframes alertBounce {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===================================
+   Navigation Animations
+   ================================== */
+
+/* Sidebar Slide */
+.sidebar-slide {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Menu Item Hover */
+.nav-link-animate {
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-link-animate::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: currentColor;
+    transition: width 0.3s ease;
+}
+
+.nav-link-animate:hover::after,
+.nav-link-animate.active::after {
+    width: 100%;
+}
+
+/* ===================================
+   Modal Animations
+   ================================== */
+
+/* Modal Backdrop */
+.modal-backdrop-animate {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Modal Content */
+.modal-content-animate {
+    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideIn {
+    from { 
+        transform: translateY(-50px) scale(0.95); 
+        opacity: 0; 
+    }
+    to { 
+        transform: translateY(0) scale(1); 
+        opacity: 1; 
+    }
+}
+
+/* ===================================
+   Data Table Animations
+   ================================== */
+
+/* Row Hover */
+.table-row-animate {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.table-row-animate:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    transform: translateX(2px);
+}
+
+/* Sort Animation */
+.table-sort-animate {
+    transition: transform 0.2s ease;
+}
+
+.table-sort-animate.sorting-asc::after {
+    content: '↑';
+    margin-left: 5px;
+}
+
+.table-sort-animate.sorting-desc::after {
+    content: '↓';
+    margin-left: 5px;
+}
+
+/* ===================================
+   Utility Classes
+   ================================== */
+
+/* Hover Effects */
+.hover-lift {
+    transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-3px);
+}
+
+.hover-glow {
+    transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(13, 110, 253, 0.4);
+}
+
+/* Focus Effects */
+.focus-ring-animate {
+    transition: box-shadow 0.2s ease;
+}
+
+.focus-ring-animate:focus {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+/* Stagger Animation Utility */
+.stagger-children > * {
+    animation: fadeInScale 0.4s ease-out both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* ===================================
+   Responsive Animations
+   ================================== */
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .animate,
+    .animate-fast,
+    .animate-slow {
+        transition-duration: 0.2s;
+    }
+    
+    .view-content {
+        transition-duration: 0.2s;
+    }
+}

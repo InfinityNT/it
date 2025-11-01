@@ -1,0 +1,154 @@
+{% load static %}
+<!-- Alert Container -->
+<div id="alert-container"></div>
+
+<!-- Modern Page Header -->
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon">
+            <i class="bi bi-laptop"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Device Management</h1>
+            <p class="page-description">Monitor, track, and manage all IT devices across your organization</p>
+        </div>
+    </div>
+    {% if user.can_modify_devices %}
+    <div class="page-header-actions">
+        <a href="#"
+           hx-get="{% url 'add-device' %}"
+           hx-target="#dynamicModalContent"
+           hx-swap="innerHTML"
+           data-bs-toggle="modal"
+           data-bs-target="#dynamicModal"
+           class="btn btn-primary">
+            <i class="bi bi-plus me-1"></i>
+            Add Device
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="filters-container" id="device-filters">
+            <!-- Search Input -->
+            <div class="filter-item filter-search">
+                <input type="text" class="form-control" placeholder="Search devices..."
+                       hx-get="/devices/api/devices/"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#devices-table"
+                       hx-include="#device-filters input, #device-filters select"
+                       name="search">
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-item filter-select">
+                <select class="form-select"
+                        hx-get="/devices/api/devices/"
+                        hx-trigger="change"
+                        hx-target="#devices-table"
+                        hx-include="#device-filters input, #device-filters select"
+                        name="status">
+                    <option value="">All Status</option>
+                    <option value="available">Available</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="retired">Retired</option>
+                    <option value="lost">Lost/Stolen</option>
+                    <option value="damaged">Damaged</option>
+                </select>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="filter-item filter-category">
+                <input type="text" class="form-control" placeholder="Category..."
+                       hx-get="/devices/api/devices/"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#devices-table"
+                       hx-include="#device-filters input, #device-filters select"
+                       name="category">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="filter-item filter-actions">
+                <div class="filter-button-group">
+                    {% if user.can_modify_devices %}
+                    <button class="btn btn-outline-secondary" id="bulkActionsBtn" onclick="toggleBulkMode()" disabled>
+                        <i class="bi bi-check2-square"></i>
+                        <span class="btn-text">Bulk Actions</span>
+                    </button>
+                    {% endif %}
+                    {% if user.can_generate_reports %}
+                    <button class="btn btn-outline-secondary" onclick="exportDevices()">
+                        <i class="bi bi-download"></i>
+                        <span class="btn-text">Export</span>
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-outline-primary"
+                            hx-get="/devices/api/devices/"
+                            hx-target="#devices-table">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span class="btn-text">Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Devices Table -->
+<div class="card">
+    <div class="card-body">
+        <div id="devices-table" hx-get="/devices/api/devices/" hx-trigger="load">
+            <div class="d-flex justify-content-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include standardized bulk operations modal -->
+{% include 'components/forms/bulk_operations_modal.html' %}
+
+<script>
+    // Pass user permissions to JavaScript
+    window.userPermissions = {
+        can_modify_devices: {% if user.can_modify_devices %}true{% else %}false{% endif %},
+        can_assign_devices: {% if user.can_assign_devices %}true{% else %}false{% endif %}
+    };
+</script>
+<script src="{% static 'devices/js/devices-new.js' %}"></script>
+<script src="{% static 'devices/js/filter_state.js' %}"></script>
+
+<!-- HTMX SPA Re-initialization -->
+<script>
+    (function() {
+        // Reset initialization flag to allow re-init
+        window.devicesInitialized = false;
+
+        // Initialize with a small delay to ensure script is loaded
+        function tryInitialize() {
+            if (typeof initializeDevicesPage === 'function') {
+                initializeDevicesPage();
+                console.log('Devices page initialized');
+            } else {
+                console.warn('initializeDevicesPage not yet available, retrying...');
+                setTimeout(tryInitialize, 50);
+            }
+        }
+
+        // Start initialization
+        tryInitialize();
+
+        // Re-initialize on HTMX content swap (when navigating back to this page)
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'content-area' && document.querySelector('#devices-table')) {
+                window.devicesInitialized = false;
+                tryInitialize();
+            }
+        });
+    })();
+</script>

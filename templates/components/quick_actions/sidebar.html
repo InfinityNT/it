@@ -1,0 +1,57 @@
+{% if has_actions %}
+<li class="nav-item">
+    <hr class="sidebar-divider">
+</li>
+<li class="nav-item quick-actions-header">
+    <span class="nav-link-header">
+        <i class="bi bi-lightning"></i>
+        Quick Actions
+    </span>
+</li>
+
+{% for action in actions %}
+<li class="nav-item">
+    {% if action.code == 'add_device' or action.code == 'assign_device' or action.code == 'return_device' or action.code == 'add_employee' or action.code == 'add_user' %}
+    {# Modal-based quick actions #}
+    <a class="nav-link quick-action"
+       href="#"
+       hx-get="{% url action.url %}{{ action.url_params }}"
+       hx-target="#dynamicModalContent"
+       hx-swap="innerHTML"
+       data-bs-toggle="modal"
+       data-bs-target="#dynamicModal">
+        <i class="{{ action.icon }}"></i>
+        <span class="quick-action-text">{{ action.display_name }}</span>
+    </a>
+    {% else %}
+    {# Content-area quick action (full page views) #}
+    <a class="nav-link quick-action"
+       href="{% url action.url %}{{ action.url_params }}"
+       hx-get="{% url action.url %}{{ action.url_params }}"
+       hx-target="#content-area"
+       hx-push-url="true"
+       hx-swap="innerHTML show:none">
+        <i class="{{ action.icon }}"></i>
+        <span class="quick-action-text">{{ action.display_name }}</span>
+    </a>
+    {% endif %}
+</li>
+{% endfor %}
+
+<li class="nav-item">
+    <hr class="sidebar-divider">
+</li>
+{% else %}
+<!-- No quick actions configured -->
+<li class="nav-item">
+    <hr class="sidebar-divider">
+</li>
+<li class="nav-item">
+    <div class="text-center py-2">
+        <small class="text-muted">No quick actions configured</small>
+    </div>
+</li>
+<li class="nav-item">
+    <hr class="sidebar-divider">
+</li>
+{% endif %}

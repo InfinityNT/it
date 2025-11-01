@@ -1,0 +1,213 @@
+{% load static %}
+<div class="modal-header">
+    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Device</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" hx-post="{% url 'edit-device' device_id=device.id %}" hx-swap="none">
+    {% csrf_token %}
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <!-- Error Display Area -->
+        <div id="form-errors" class="alert alert-danger" style="display: none;">
+            <strong>Error:</strong> <span id="error-message"></span>
+            <ul id="error-details" style="margin-bottom: 0;"></ul>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="asset_tag" class="form-label">Asset Tag *</label>
+                <input type="text" class="form-control" id="asset_tag" name="asset_tag" value="{{ device.asset_tag }}" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="hostname" class="form-label">Hostname *</label>
+                <input type="text" class="form-control" id="hostname" name="hostname" value="{{ device.hostname }}" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="serial_number" class="form-label">Serial Number *</label>
+                <input type="text" class="form-control" id="serial_number" name="serial_number" value="{{ device.serial_number }}" required>
+            </div>
+        </div>
+
+        <!-- Device Model Information (Read-only) -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Category</label>
+                <input type="text" class="form-control" value="{{ device.device_model.category.name }}" disabled>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Device Model</label>
+                <input type="text" class="form-control" value="{{ device.device_model.manufacturer }} {{ device.device_model.model_name }}" disabled>
+            </div>
+        </div>
+
+        <!-- Specifications Section -->
+        {% if formatted_specs %}
+        <div class="mb-3">
+            <h6 class="border-bottom pb-2">Device Specifications</h6>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="spec_cpu" class="form-label">CPU Model</label>
+                <input type="text" class="form-control" id="spec_cpu" name="spec_cpu" value="{{ formatted_specs.CPUModel|default:'' }}" placeholder="e.g., Intel Core i7">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="spec_ram" class="form-label">RAM</label>
+                <input type="text" class="form-control" id="spec_ram" name="spec_ram" value="{{ formatted_specs.RAM|default:'' }}" placeholder="e.g., 16 GB DDR4">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="spec_storage" class="form-label">Storage</label>
+                <input type="text" class="form-control" id="spec_storage" name="spec_storage" value="{{ formatted_specs.Storage|default:'' }}" placeholder="e.g., 512 GB SSD">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="spec_gpu" class="form-label">GPU</label>
+                <input type="text" class="form-control" id="spec_gpu" name="spec_gpu" value="{{ formatted_specs.GPU|default:'' }}" placeholder="e.g., NVIDIA RTX 3080">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="spec_display" class="form-label">Display</label>
+                <input type="text" class="form-control" id="spec_display" name="spec_display" value="{{ formatted_specs.Display|default:'' }}" placeholder="e.g., 15.6&quot; FHD">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="spec_os" class="form-label">Operating System</label>
+                <input type="text" class="form-control" id="spec_os" name="spec_os" value="{{ formatted_specs.OperatingSystem|default:'' }}" placeholder="e.g., Windows 11">
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Network Information -->
+        <div class="mb-3">
+            <h6 class="border-bottom pb-2">Network Information</h6>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="ip_address" class="form-label">IP Address</label>
+                <input type="text" class="form-control" id="ip_address" name="ip_address" value="{{ device.ip_address|default:'' }}" placeholder="e.g., 192.168.1.100">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="mac_address" class="form-label">MAC Address</label>
+                <input type="text" class="form-control" id="mac_address" name="mac_address" value="{{ device.mac_address|default:'' }}" placeholder="e.g., XX:XX:XX:XX:XX:XX">
+            </div>
+        </div>
+
+        <!-- Usage Information -->
+        <div class="mb-3">
+            <h6 class="border-bottom pb-2">Usage Information</h6>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="usage_type" class="form-label">Usage Type</label>
+                <select class="form-select" id="usage_type" name="usage_type">
+                    <option value="individual" {% if device.usage_type == 'individual' %}selected{% endif %}>Individual</option>
+                    <option value="shared" {% if device.usage_type == 'shared' %}selected{% endif %}>Shared</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="shared_usage" class="form-label">Shared Usage Type</label>
+                <select class="form-select" id="shared_usage" name="shared_usage">
+                    <option value="">Not Shared</option>
+                    <option value="kiosk" {% if device.shared_usage == 'kiosk' %}selected{% endif %}>Kiosk</option>
+                    <option value="training" {% if device.shared_usage == 'training' %}selected{% endif %}>Training</option>
+                    <option value="shared" {% if device.shared_usage == 'shared' %}selected{% endif %}>Shared</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Location and Status -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="location" class="form-label">Location</label>
+                <select class="form-select" id="location" name="location">
+                    <option value="">Select Location</option>
+                    {% for location in locations %}
+                    <option value="{{ location.name }}" {% if device.location == location.name %}selected{% endif %}>{{ location.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="available" {% if device.status == 'available' %}selected{% endif %}>Available</option>
+                    <option value="assigned" {% if device.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                    <option value="retired" {% if device.status == 'retired' %}selected{% endif %}>Retired</option>
+                    <option value="lost" {% if device.status == 'lost' %}selected{% endif %}>Lost/Stolen</option>
+                    <option value="damaged" {% if device.status == 'damaged' %}selected{% endif %}>Damaged</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="mb-3">
+            <label for="barcode" class="form-label">Barcode</label>
+            <input type="text" class="form-control" id="barcode" name="barcode" value="{{ device.barcode|default:'' }}" placeholder="Optional barcode">
+        </div>
+
+        <div class="mb-3">
+            <label for="notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2">{{ device.notes }}</textarea>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check me-1"></i>Save Changes</button>
+    </div>
+</form>
+
+<script>
+// Handle form errors - use once to avoid duplicate listeners
+document.body.addEventListener('htmx:responseError', function handleEditError(event) {
+    // Only handle errors for this form
+    if (!event.detail.target || !event.detail.target.closest('form')) {
+        return;
+    }
+
+    const form = event.detail.target.closest('form');
+    const editFormCheck = form.querySelector('input[name="asset_tag"]');
+    if (!editFormCheck) {
+        return; // Not our form
+    }
+
+    console.log('Edit device error:', event.detail.xhr.status, event.detail.xhr.responseText);
+    console.log('Full error detail:', event.detail);
+
+    if (event.detail.xhr.status === 400 || event.detail.xhr.status === 500) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            const errorDiv = document.getElementById('form-errors');
+            const errorMessage = document.getElementById('error-message');
+            const errorDetails = document.getElementById('error-details');
+
+            if (errorDiv && errorMessage && errorDetails) {
+                errorMessage.textContent = response.error || 'An error occurred';
+                errorDetails.innerHTML = '';
+
+                if (response.details && Array.isArray(response.details)) {
+                    response.details.forEach(detail => {
+                        const li = document.createElement('li');
+                        li.textContent = detail;
+                        errorDetails.appendChild(li);
+                    });
+                } else if (response.type) {
+                    const li = document.createElement('li');
+                    li.textContent = `Error type: ${response.type}`;
+                    errorDetails.appendChild(li);
+                }
+
+                errorDiv.style.display = 'block';
+                // Scroll to top of modal to show error
+                // Use direct selector since form may be replaced by HTMX swap
+                const modalBody = document.querySelector('#dynamicModal .modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = 0;
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing error response:', e);
+            console.log('Raw response:', event.detail.xhr.responseText);
+        }
+    }
+}, { once: false });
+</script>

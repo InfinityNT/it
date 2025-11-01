@@ -1,0 +1,184 @@
+{% load static %}
+<div class="modal-header">
+    <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add New Device</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" 
+      hx-post="{% url 'add-device' %}" 
+      hx-target="#dynamicModalContent"
+      hx-swap="outerHTML">
+    {% csrf_token %}
+    
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="asset_tag" class="form-label">Asset Tag *</label>
+                    <input type="text" class="form-control" id="asset_tag" name="asset_tag" required>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="hostname" class="form-label">Hostname *</label>
+                    <input type="text" class="form-control" id="hostname" name="hostname" required>
+                    <small class="form-text text-muted">Default: MEX-[last 6 of serial]</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="serial_number" class="form-label">Serial Number *</label>
+                    <input type="text" class="form-control" id="serial_number" name="serial_number" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category *</label>
+                    <select class="form-select" id="category" name="category" required>
+                        <option value="">Select Category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.name }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="device_model" class="form-label">Device Model *</label>
+                    <select class="form-select" id="device_model" name="device_model" required>
+                        <option value="">Select Device Model</option>
+                        {% for model in device_models %}
+                        <option value="{{ model.id }}">{{ model.manufacturer }} {{ model.model_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Specifications Section -->
+        <div class="mb-3">
+            <h6 class="border-bottom pb-2">Device Specifications</h6>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="spec_cpu" class="form-label">CPU Model</label>
+                    <input type="text" class="form-control" id="spec_cpu" name="spec_cpu" placeholder="e.g., Intel Core i7">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="spec_ram" class="form-label">RAM</label>
+                    <input type="text" class="form-control" id="spec_ram" name="spec_ram" placeholder="e.g., 16 GB DDR4">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="spec_storage" class="form-label">Storage</label>
+                    <input type="text" class="form-control" id="spec_storage" name="spec_storage" placeholder="e.g., 512 GB SSD">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="spec_gpu" class="form-label">GPU (Optional)</label>
+                    <input type="text" class="form-control" id="spec_gpu" name="spec_gpu" placeholder="e.g., NVIDIA RTX 3080">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="spec_display" class="form-label">Display (Optional)</label>
+                    <input type="text" class="form-control" id="spec_display" name="spec_display" placeholder="e.g., 15.6&quot; FHD">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="spec_os" class="form-label">Operating System (Optional)</label>
+                    <input type="text" class="form-control" id="spec_os" name="spec_os" placeholder="e.g., Windows 11">
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="available" selected>Available</option>
+                <option value="assigned">Assigned</option>
+                <option value="retired">Retired</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="location" class="form-label">Location</label>
+            <select class="form-select" id="location" name="location">
+                <option value="">Select Location</option>
+                {% for location in locations %}
+                <option value="{{ location.name }}">{{ location.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check me-1"></i>Save Device
+        </button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const serialNumberInput = document.getElementById('serial_number');
+    const hostnameInput = document.getElementById('hostname');
+    const deviceModelSelect = document.getElementById('device_model');
+
+    // Auto-generate hostname from serial number
+    if (serialNumberInput && hostnameInput) {
+        serialNumberInput.addEventListener('input', function() {
+            const serial = this.value.trim();
+            if (serial.length >= 6) {
+                const last6 = serial.slice(-6);
+                hostnameInput.value = 'MEX-' + last6;
+            }
+        });
+    }
+
+    // Auto-load specifications when device model is selected
+    if (deviceModelSelect) {
+        deviceModelSelect.addEventListener('change', async function() {
+            const modelId = this.value;
+            if (!modelId) return;
+
+            try {
+                const response = await fetch(`/devices/api/models/${modelId}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const specs = data.specifications || {};
+
+                    // Populate specification fields if they exist in the model
+                    if (specs.CPUModel) document.getElementById('spec_cpu').value = specs.CPUModel;
+                    if (specs.RAM) document.getElementById('spec_ram').value = specs.RAM;
+                    if (specs.Storage) document.getElementById('spec_storage').value = specs.Storage;
+                    if (specs.GPU) document.getElementById('spec_gpu').value = specs.GPU;
+                    if (specs.Display) document.getElementById('spec_display').value = specs.Display;
+                    if (specs.OperatingSystem) document.getElementById('spec_os').value = specs.OperatingSystem;
+                }
+            } catch (error) {
+                console.error('Error loading device model specifications:', error);
+            }
+        });
+    }
+});
+</script>

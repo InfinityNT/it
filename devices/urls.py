@@ -12,7 +12,11 @@ api_urlpatterns = [
     path('devices/<int:device_id>/assign/', views.assign_device_view, name='device-assign'),
     path('devices/<int:device_id>/unassign/', views.unassign_device_view, name='device-unassign'),
     path('categories/', views.DeviceCategoryListView.as_view(), name='device-category-list'),
+    path('manufacturers/', views.DeviceManufacturerListView.as_view(), name='device-manufacturer-list'),
+    path('vendors/', views.DeviceVendorListView.as_view(), name='device-vendor-list'),
     path('models/', views.DeviceModelListView.as_view(), name='device-model-list'),
+    path('models/<int:model_id>/', views.device_model_detail_api, name='device-model-detail'),
+    path('locations/', views.location_list_api, name='device-location-list'),
 ]
 
 # Frontend URLs

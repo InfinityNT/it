@@ -1,0 +1,148 @@
+{% if users %}
+<!-- Bulk Select Header - Hidden by default -->
+<div id="bulk-select-header" class="mb-3" style="display: none;">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="selectAllUsers" onchange="toggleSelectAll()">
+        <label class="form-check-label fw-bold" for="selectAllUsers">
+            Select All Users
+        </label>
+    </div>
+</div>
+
+<!-- User Cards Grid -->
+<div class="card-grid">
+    {% for user_item in users %}
+    <div class="item-card user-card">
+        <!-- Card Header -->
+        <div class="item-card-header">
+            <div class="item-card-header-content">
+                <div class="item-card-header-left">
+                    <input type="checkbox" class="item-card-checkbox user-checkbox bulk-select-cell" value="{{ user_item.id }}" onchange="updateBulkActions()" style="display: none;">
+                    <h6 class="item-card-title">{{ user_item.username }}</h6>
+                </div>
+                <div class="item-card-header-right">
+                    {% if user_item.is_superuser %}
+                        <span class="badge bg-danger">Superuser</span>
+                    {% elif user_item.can_manage_system_settings %}
+                        <span class="badge bg-primary">System Manager</span>
+                    {% elif user_item.can_modify_devices %}
+                        <span class="badge bg-info">Device Manager</span>
+                    {% else %}
+                        <span class="badge bg-secondary">User</span>
+                    {% endif %}
+
+                    {% if user_item.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-warning">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="item-card-body">
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-person"></i> Full Name:</span>
+                <span class="item-card-value">
+                    {% if user_item.get_full_name %}
+                        <strong>{{ user_item.get_full_name }}</strong>
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-envelope"></i> Email:</span>
+                <span class="item-card-value">
+                    {% if user_item.email %}
+                        {{ user_item.email }}
+                    {% else %}
+                        <span class="text-muted">No email</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-people"></i> Groups:</span>
+                <span class="item-card-value">
+                    {% for group in user_item.groups.all %}
+                        <span class="badge bg-light text-dark me-1">{{ group.name }}</span>
+                    {% empty %}
+                        <span class="text-muted">No groups</span>
+                    {% endfor %}
+                </span>
+            </div>
+
+            {% if user_item.linked_employee %}
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-building"></i> Employee:</span>
+                <span class="item-card-value">
+                    <span class="badge bg-info">{{ user_item.linked_employee.employee_id }}</span> - {{ user_item.linked_employee.department.name }}
+                </span>
+            </div>
+            {% endif %}
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-calendar"></i> Joined:</span>
+                <span class="item-card-value">{{ user_item.date_joined|date:"M d, Y" }}</span>
+            </div>
+
+            {% if user_item.last_login %}
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-clock-history"></i> Last Login:</span>
+                <span class="item-card-value">{{ user_item.last_login|date:"M d, Y H:i" }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Card Footer -->
+        <div class="item-card-footer">
+            {% if user.can_manage_users %}
+            <a href="#"
+               hx-get="{% url 'user-detail-modal' user_id=user_item.id %}"
+               hx-target="#dynamicModalContent"
+               hx-swap="innerHTML"
+               data-bs-toggle="modal"
+               data-bs-target="#dynamicModal"
+               class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i><span class="btn-text ps-2">View</span>
+            </a>
+            <a href="#"
+               hx-get="{% url 'edit-user-modal' user_id=user_item.id %}"
+               hx-target="#dynamicModalContent"
+               hx-swap="innerHTML"
+               data-bs-toggle="modal"
+               data-bs-target="#dynamicModal"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i><span class="btn-text ps-2">Edit</span>
+            </a>
+
+            {% if user_item.is_active %}
+            <button class="btn btn-sm btn-outline-warning"
+                    hx-post="{% url 'api-toggle-user-status' user_id=user_item.id %}"
+                    hx-target="#users-table"
+                    hx-swap="innerHTML">
+                <i class="bi bi-pause-circle"></i> Deactivate
+            </button>
+            {% else %}
+            <button class="btn btn-sm btn-outline-success"
+                    hx-post="{% url 'api-toggle-user-status' user_id=user_item.id %}"
+                    hx-target="#users-table"
+                    hx-swap="innerHTML">
+                <i class="bi bi-play-circle"></i> Activate
+            </button>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="alert alert-info d-flex align-items-center" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    <div>No users found matching your criteria.</div>
+</div>
+{% endif %}

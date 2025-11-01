@@ -1,21 +1,18 @@
 from django.contrib import admin
-from .models import Assignment, MaintenanceRequest, DeviceReservation
+from .models import Assignment, DeviceReservation
 
 
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
-    list_display = ('device', 'user', 'assigned_date', 'expected_return_date', 'status', 'assigned_by')
+    list_display = ('device', 'employee', 'assigned_date', 'expected_return_date', 'status', 'assigned_by')
     list_filter = ('status', 'assigned_date', 'expected_return_date', 'device__device_model__category')
-    search_fields = ('device__asset_tag', 'user__username', 'user__first_name', 'user__last_name')
+    search_fields = ('device__asset_tag', 'employee__employee_id', 'employee__first_name', 'employee__last_name')
     readonly_fields = ('created_at', 'updated_at', 'days_assigned', 'is_overdue')
     date_hierarchy = 'assigned_date'
     
     fieldsets = (
         ('Assignment Details', {
-            'fields': ('device', 'user', 'assigned_by', 'assigned_date', 'expected_return_date', 'status')
-        }),
-        ('Condition Tracking', {
-            'fields': ('condition_at_assignment', 'condition_at_return')
+            'fields': ('device', 'employee', 'assigned_by', 'assigned_date', 'expected_return_date', 'status')
         }),
         ('Additional Information', {
             'fields': ('purpose', 'location', 'notes', 'return_notes')
@@ -33,28 +30,6 @@ class AssignmentAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(MaintenanceRequest)
-class MaintenanceRequestAdmin(admin.ModelAdmin):
-    list_display = ('device', 'title', 'priority', 'status', 'requested_by', 'assigned_to', 'requested_date')
-    list_filter = ('status', 'priority', 'requested_date', 'device__device_model__category')
-    search_fields = ('device__asset_tag', 'title', 'description', 'requested_by__username')
-    readonly_fields = ('created_at', 'updated_at')
-    date_hierarchy = 'requested_date'
-    
-    fieldsets = (
-        ('Request Details', {
-            'fields': ('device', 'title', 'description', 'priority', 'status', 'requested_by', 'assigned_to')
-        }),
-        ('Timeline', {
-            'fields': ('requested_date', 'approved_date', 'started_date', 'completed_date')
-        }),
-        ('Cost Information', {
-            'fields': ('estimated_cost', 'actual_cost', 'vendor')
-        }),
-        ('Resolution', {
-            'fields': ('resolution_notes', 'parts_replaced')
-        })
-    )
 
 
 @admin.register(DeviceReservation)

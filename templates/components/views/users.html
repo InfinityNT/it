@@ -1,0 +1,99 @@
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon bg-success">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Users Management</h1>
+            <p class="page-description">Manage system users and their access permissions</p>
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <button class="btn btn-primary"
+                hx-get="{% url 'add-user-modal' %}"
+                hx-target="#dynamicModalContent"
+                hx-swap="innerHTML"
+                data-bs-toggle="modal"
+                data-bs-target="#dynamicModal">
+            <i class="bi bi-plus-lg"></i> Add User
+        </button>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="filters-container">
+            <!-- Search Input -->
+            <div class="filter-item filter-search">
+                <input type="text" class="form-control" placeholder="Search users..."
+                       hx-get="{% url 'api-user-list-html' %}"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#users-table"
+                       name="search">
+            </div>
+
+            <!-- Role Filter -->
+            <div class="filter-item filter-select">
+                <select class="form-select"
+                        hx-get="{% url 'api-user-list-html' %}"
+                        hx-trigger="change"
+                        hx-target="#users-table"
+                        name="role">
+                    <option value="">All Roles</option>
+                    <option value="admin">Administrator</option>
+                    <option value="manager">Manager</option>
+                    <option value="user">User</option>
+                </select>
+            </div>
+
+            <!-- Department Filter -->
+            <div class="filter-item filter-category">
+                <input type="text" class="form-control" placeholder="Department..."
+                       hx-get="{% url 'api-user-list-html' %}"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#users-table"
+                       name="department">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="filter-item filter-actions">
+                <div class="filter-button-group">
+                    <button class="btn btn-outline-secondary" onclick="alert('Export coming soon!')">
+                        <i class="bi bi-download"></i>
+                        <span class="btn-text">Export</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Users Cards -->
+<div class="card">
+    <div class="card-body">
+        <div id="users-table" hx-get="{% url 'api-user-list-html' %}" hx-trigger="load">
+            <div class="d-flex justify-content-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Modal (placeholder) -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>User details and editing functionality will be implemented here.</p>
+            </div>
+        </div>
+    </div>
+</div>

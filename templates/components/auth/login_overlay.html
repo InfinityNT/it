@@ -1,0 +1,59 @@
+<!-- Login Overlay - Pure CSS, No Bootstrap -->
+<div id="login-overlay" class="login-overlay">
+    <div class="login-modal">
+        <div class="login-modal-content">
+            <!-- Header -->
+            <div class="login-header">
+                <div class="login-icon">💻</div>
+                <h1 class="login-title">IT Device Management</h1>
+                <p class="login-subtitle">Sign in to your account</p>
+            </div>
+
+            <!-- Login Form -->
+            <div class="login-form-container">
+                <form id="login-form" 
+                      hx-post="/api/auth/login/" 
+                      hx-target="#login-form" 
+                      hx-swap="outerHTML">
+                    
+                    {% csrf_token %}
+                    
+                    <!-- Username Field -->
+                    <div class="input-group">
+                        <label for="username" class="input-label">Username</label>
+                        <input type="text" 
+                               id="username" 
+                               name="username" 
+                               class="input-field"
+                               placeholder="Enter your username"
+                               required
+                               autocomplete="username">
+                    </div>
+                    
+                    <!-- Password Field -->
+                    <div class="input-group">
+                        <label for="password" class="input-label">Password</label>
+                        <input type="password" 
+                               id="password" 
+                               name="password" 
+                               class="input-field"
+                               placeholder="Enter your password"
+                               required
+                               autocomplete="current-password">
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="login-button">
+                        <span class="button-text">Sign In</span>
+                        <div class="loading-spinner" style="display: none;">⏳</div>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Help Text -->
+            <div class="login-help">
+                <p class="help-text">Default credentials: <strong>admin</strong> / <strong>admin123</strong></p>
+            </div>
+        </div>
+    </div>
+</div>

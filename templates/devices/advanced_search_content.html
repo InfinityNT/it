@@ -1,0 +1,202 @@
+{% load static %}
+<!-- Modern Page Header -->
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon">
+            <i class="bi bi-search"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Advanced Search</h1>
+            <p class="page-description">Search and filter devices with powerful multi-criteria queries</p>
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <button class="btn btn-outline-secondary me-2" onclick="clearAllFilters()">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Clear All
+        </button>
+        <button class="btn btn-primary" onclick="exportResults()">
+            <i class="bi bi-download me-1"></i>
+            Export Results
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Search Filters -->
+    <div class="col-lg-3">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-funnel"></i>
+                    Search Filters
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="advancedSearchForm">
+                    {% csrf_token %}
+                    <!-- Text Search -->
+                    <div class="mb-3">
+                        <label for="searchQuery" class="form-label">Search Text</label>
+                        <input type="text" class="form-control" id="searchQuery" name="search" 
+                               placeholder="Asset tag, serial number, user...">
+                    </div>
+
+                    <!-- Device Status -->
+                    <div class="mb-3">
+                        <label class="form-label">Device Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_available" name="status" value="available">
+                            <label class="form-check-label" for="status_available">Available</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_assigned" name="status" value="assigned">
+                            <label class="form-check-label" for="status_assigned">Assigned</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="status_retired" name="status" value="retired">
+                            <label class="form-check-label" for="status_retired">Retired</label>
+                        </div>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="mb-3">
+                        <label for="categoryFilter" class="form-label">Category</label>
+                        <select class="form-select" id="categoryFilter" name="category">
+                            <option value="">All Categories</option>
+                            <option value="Laptop">Laptop</option>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Monitor">Monitor</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Printer">Printer</option>
+                            <option value="Networking">Networking</option>
+                            <option value="Storage">Storage</option>
+                        </select>
+                    </div>
+
+                    <!-- Manufacturer Filter -->
+                    <div class="mb-3">
+                        <label for="manufacturerFilter" class="form-label">Manufacturer</label>
+                        <select class="form-select" id="manufacturerFilter" name="manufacturer">
+                            <option value="">All Manufacturers</option>
+                            <option value="Dell">Dell</option>
+                            <option value="HP">HP</option>
+                            <option value="Lenovo">Lenovo</option>
+                            <option value="Apple">Apple</option>
+                            <option value="Microsoft">Microsoft</option>
+                            <option value="ASUS">ASUS</option>
+                            <option value="Samsung">Samsung</option>
+                        </select>
+                    </div>
+
+                    <!-- Assignment Date Range -->
+                    <div class="mb-3">
+                        <label class="form-label">Assignment Date Range</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="assigned_date_from" placeholder="From">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="assigned_date_to" placeholder="To">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Filter -->
+                    <div class="mb-3">
+                        <label for="locationFilter" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="locationFilter" name="location"
+                               placeholder="Building, floor, room...">
+                    </div>
+
+                    <!-- Search Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i>
+                            Search
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearAllFilters()">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Filters -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i>
+                    Quick Filters
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-success btn-sm" onclick="quickFilter('available')" id="quick-available">
+                        <i class="bi bi-check-circle"></i>
+                        Available Devices
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="quickFilter('assigned')" id="quick-assigned">
+                        <i class="bi bi-person-check"></i>
+                        Assigned Devices
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="quickFilter('overdue')" id="quick-overdue">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Overdue Returns
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="col-lg-9">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-list"></i>
+                    Search Results
+                    <span id="resultCount" class="badge bg-primary ms-2">0</span>
+                </h6>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="toggleView('grid')" id="gridViewBtn">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary active" onclick="toggleView('list')" id="listViewBtn">
+                        <i class="bi bi-list"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Loading State -->
+                <div id="loadingState" class="text-center py-5" style="display: none;">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <div>Searching devices...</div>
+                </div>
+
+                <!-- Results Container -->
+                <div id="searchResults">
+                    <!-- Initial state -->
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-search display-1 mb-3"></i>
+                        <h5>Ready to Search</h5>
+                        <p>Use the filters on the left to find devices or try a quick filter.</p>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <nav id="paginationNav" style="display: none;">
+                    <ul class="pagination justify-content-center mt-4" id="paginationList">
+                        <!-- Pagination will be generated here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{% static 'devices/css/advanced_search.css'  %}">
+<script src="{% static 'devices/js/advanced_search.js'  %}"></script>

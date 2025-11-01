@@ -4,9 +4,9 @@ from .models import Department, JobTitle, Employee
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'manager', 'location', 'is_active', 'created_at')
+    list_display = ('name', 'code', 'manager_employee_id', 'location', 'is_active', 'created_at')
     list_filter = ('is_active', 'location', 'created_at')
-    search_fields = ('name', 'code', 'description', 'budget_code')
+    search_fields = ('name', 'code', 'description', 'budget_code', 'manager_employee_id')
     readonly_fields = ('created_at',)
 
 
@@ -20,15 +20,18 @@ class JobTitleAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('employee_id', 'user', 'department', 'job_title', 'employment_status', 'hire_date')
+    list_display = ('employee_id', 'get_full_name', 'email', 'department', 'job_title', 'employment_status', 'has_system_access', 'hire_date')
     list_filter = ('employment_status', 'department', 'job_title', 'hire_date', 'office_location')
-    search_fields = ('employee_id', 'user__username', 'user__first_name', 'user__last_name', 'user__email')
-    readonly_fields = ('created_at', 'updated_at', 'is_active_employee')
+    search_fields = ('employee_id', 'first_name', 'last_name', 'email', 'work_email')
+    readonly_fields = ('created_at', 'updated_at', 'is_active_employee', 'has_system_access')
     date_hierarchy = 'hire_date'
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('user', 'employee_id', 'department', 'job_title', 'manager')
+            'fields': ('employee_id', 'first_name', 'last_name', 'email', 'system_user')
+        }),
+        ('Organizational Information', {
+            'fields': ('department', 'job_title', 'position', 'manager_employee_id')
         }),
         ('Employment Details', {
             'fields': ('hire_date', 'termination_date', 'employment_status')
@@ -43,7 +46,16 @@ class EmployeeAdmin(admin.ModelAdmin):
             'fields': ('cost_center', 'emergency_contact_name', 'emergency_contact_phone', 'notes')
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at', 'is_active_employee'),
+            'fields': ('created_at', 'updated_at', 'is_active_employee', 'has_system_access'),
             'classes': ('collapse',)
         })
     )
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+    get_full_name.short_description = 'Full Name'
+    
+    def has_system_access(self, obj):
+        return obj.has_system_access
+    has_system_access.boolean = True
+    has_system_access.short_description = 'System Access'

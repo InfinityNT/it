@@ -1,0 +1,227 @@
+{% load static %}
+<!-- Modern Page Header -->
+<div class="page-header success">
+    <div class="page-header-content">
+        <div class="page-header-icon">
+            <i class="bi bi-people"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Employee Management</h1>
+            <p class="page-description">Manage employee records, departments, and organizational structure</p>
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <a href="#"
+           hx-get="{% url 'add-employee' %}"
+           hx-target="#dynamicModalContent"
+           hx-swap="innerHTML"
+           data-bs-toggle="modal"
+           data-bs-target="#dynamicModal"
+           class="btn btn-success">
+            <i class="bi bi-plus me-1"></i>
+            Add Employee
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="filters-container">
+            <!-- Search Input -->
+            <div class="filter-item filter-search">
+                <input type="text" class="form-control" placeholder="Search employees..."
+                       hx-get="/employees/api/employees/"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#employees-table"
+                       name="search">
+            </div>
+
+            <!-- Department Filter -->
+            <div class="filter-item filter-select">
+                <select class="form-select"
+                        hx-get="/employees/api/employees/"
+                        hx-trigger="change"
+                        hx-target="#employees-table"
+                        name="department">
+                    <option value="">All Departments</option>
+                    <option value="it">IT</option>
+                    <option value="hr">HR</option>
+                    <option value="finance">Finance</option>
+                    <option value="marketing">Marketing</option>
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-item filter-select">
+                <select class="form-select"
+                        hx-get="/employees/api/employees/"
+                        hx-trigger="change"
+                        hx-target="#employees-table"
+                        name="status">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="on_leave">On Leave</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="filter-item filter-actions">
+                <div class="filter-button-group">
+                    {% if user.can_modify_employees %}
+                    <button class="btn btn-outline-secondary" id="bulkActionsBtn" onclick="toggleBulkMode()" disabled>
+                        <i class="bi bi-check2-square"></i>
+                        <span class="btn-text">Bulk Actions</span>
+                    </button>
+                    {% endif %}
+                    {% if user.can_generate_reports %}
+                    <button class="btn btn-outline-secondary" onclick="exportEmployees()">
+                        <i class="bi bi-download"></i>
+                        <span class="btn-text">Export</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employees List -->
+<div id="employees-table">
+    {% if employees %}
+    <!-- Bulk Select Header - Hidden by default -->
+    <div id="bulk-select-header" class="mb-3" style="display: none;">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="selectAllEmployees" onchange="bulkManager.toggleSelectAll()">
+            <label class="form-check-label fw-bold" for="selectAllEmployees">
+                Select All Employees
+            </label>
+        </div>
+    </div>
+
+    <!-- Employee Cards Grid -->
+    <div class="card-grid">
+        {% for employee in employees %}
+        <div class="item-card employee-card status-{{ employee.employment_status }}">
+            <!-- Card Header -->
+            <div class="item-card-header">
+                <div class="item-card-header-content">
+                    <div class="item-card-header-left">
+                        <input type="checkbox" class="item-card-checkbox employee-checkbox bulk-select-cell" value="{{ employee.id }}" onchange="bulkManager.updateSelection()" style="display: none;">
+                        <h6 class="item-card-title">
+                            {{ employee.get_full_name }}
+                            {% if employee.has_system_access %}
+                                <i class="bi bi-person-check text-success" title="Has system access"></i>
+                            {% endif %}
+                        </h6>
+                    </div>
+                    <div class="item-card-header-right">
+                        <span class="badge bg-{% if employee.employment_status == 'active' %}success{% elif employee.employment_status == 'inactive' %}secondary{% else %}warning{% endif %}">
+                            {{ employee.get_employment_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="item-card-body">
+                <div class="item-card-field">
+                    <span class="item-card-label"><i class="bi bi-hash me-1"></i>Employee ID:</span>
+                    <span class="item-card-value">{{ employee.employee_id }}</span>
+                </div>
+
+                <div class="item-card-field">
+                    <span class="item-card-label"><i class="bi bi-building me-1"></i>Department:</span>
+                    <span class="item-card-value">{{ employee.department.name|default:"N/A" }}</span>
+                </div>
+
+                <div class="item-card-field">
+                    <span class="item-card-label"><i class="bi bi-briefcase me-1"></i>Job Title:</span>
+                    <span class="item-card-value">{{ employee.job_title.title|default:"N/A" }}</span>
+                </div>
+
+                <div class="item-card-field">
+                    <span class="item-card-label"><i class="bi bi-calendar-check me-1"></i>Hire Date:</span>
+                    <span class="item-card-value">{{ employee.hire_date|date:"M d, Y" }}</span>
+                </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="item-card-footer">
+                <a href="{% url 'employee-detail' employee.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye me-1"></i>View
+                </a>
+                <a href="{% url 'employee-edit' employee.id %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-people display-1 text-muted"></i>
+        <h3 class="mt-3">No Employees Found</h3>
+        <p class="text-muted">No employees match your current filters.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Include standardized bulk operations modal -->
+{% include 'components/forms/bulk_operations_modal.html' %}
+
+<!-- Employee Modal (placeholder) -->
+<div class="modal fade" id="employeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Employee Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Employee details and editing functionality will be implemented here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Pass user permissions to JavaScript
+    window.userPermissions = {
+        can_modify_employees: {% if user.can_modify_employees %}true{% else %}false{% endif %},
+        can_view_employees: {% if user.can_view_employees %}true{% else %}false{% endif %},
+        can_manage_system: {% if user.can_manage_system_settings %}true{% else %}false{% endif %}
+    };
+</script>
+<script src="{% static 'employees/js/employees.js' %}"></script>
+
+<!-- HTMX SPA Re-initialization -->
+<script>
+    (function() {
+        // Reset initialization flag to allow re-init
+        window.employeesInitialized = false;
+
+        // Initialize with a small delay to ensure script is loaded
+        function tryInitialize() {
+            if (typeof initializeEmployeesPage === 'function') {
+                initializeEmployeesPage();
+                console.log('Employees page initialized');
+            } else {
+                console.warn('initializeEmployeesPage not yet available, retrying...');
+                setTimeout(tryInitialize, 50);
+            }
+        }
+
+        // Start initialization
+        tryInitialize();
+
+        // Re-initialize on HTMX content swap (when navigating back to this page)
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'content-area' && document.querySelector('#employees-table')) {
+                window.employeesInitialized = false;
+                tryInitialize();
+            }
+        });
+    })();
+</script>

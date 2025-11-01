@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User, AuditLog, SystemSettings
+from .models import User, AuditLog, SystemSettings, Location
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -11,8 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
-            'role', 'employee_id', 'department', 'phone', 'location',
-            'is_active_employee', 'assigned_devices_count', 'date_joined'
+            'groups', 'linked_employee', 'assigned_devices_count', 'date_joined'
         ]
         read_only_fields = ['id', 'date_joined', 'full_name', 'assigned_devices_count']
     
@@ -20,7 +19,10 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.get_full_name()
     
     def get_assigned_devices_count(self, obj):
-        return obj.assigned_devices.filter(status='assigned').count()
+        # Check if user has linked employee and count their assigned devices
+        if obj.linked_employee:
+            return obj.linked_employee.assigned_devices.filter(status='assigned').count()
+        return 0
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -31,33 +33,37 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username', 'email', 'first_name', 'last_name', 'password', 'password_confirm',
-            'role', 'employee_id', 'department', 'phone', 'location', 'is_active_employee'
+            'groups', 'linked_employee'
         ]
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("Passwords don't match")
         
-        # Role validation based on current user
+        # Group validation based on current user
         current_user = self.context['request'].user
-        target_role = attrs.get('role', 'viewer')
+        target_groups = attrs.get('groups', [])
         
-        # Staff users cannot create superuser or staff roles
-        if current_user.is_staff_role and target_role in ['superuser', 'staff']:
-            raise serializers.ValidationError("You don't have permission to assign this role")
-        
-        # Only superusers can create other superusers
-        if target_role == 'superuser' and not current_user.is_superuser_role:
-            raise serializers.ValidationError("Only IT Managers can create other IT Manager accounts")
+        # Check if current user can assign the requested groups
+        for group in target_groups:
+            # Users without system management cannot assign groups with system management permissions
+            if not current_user.can_manage_system_settings and group.permissions.filter(codename='can_manage_system').exists():
+                raise serializers.ValidationError("You don't have permission to assign this group")
         
         return attrs
     
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
+        groups = validated_data.pop('groups', [])
         user = User.objects.create(**validated_data)
         user.set_password(password)
         user.save()
+        
+        # Assign groups
+        if groups:
+            user.groups.set(groups)
+        
         return user
 
 
@@ -99,3 +105,10 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         model = SystemSettings
         fields = '__all__'
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ['id', 'name', 'code', 'description', 'address', 'building', 'floor', 'is_active']
+        read_only_fields = ['id']

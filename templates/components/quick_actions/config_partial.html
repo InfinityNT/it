@@ -1,0 +1,59 @@
+{% for action in available_actions %}
+<div class="row mb-3 action-item" data-action-code="{{ action.code }}">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="{{ action.icon }} text-muted" style="font-size: 1.25rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="mb-1">{{ action.display_name }}</h6>
+                <small class="text-muted">
+                    {% if action.code == 'add_device' %}
+                        Quickly add new devices to the inventory
+                    {% elif action.code == 'assign_device' %}
+                        Assign devices to employees
+                    {% elif action.code == 'return_device' %}
+                        Process device returns
+                    {% elif action.code == 'quick_search' %}
+                        Search devices and employees
+                    {% elif action.code == 'add_user' %}
+                        Add new system users
+                    {% elif action.code == 'add_employee' %}
+                        Add new employees to the system
+                    {% elif action.code == 'manage_employees' %}
+                        View and manage employee records
+                    {% elif action.code == 'generate_report' %}
+                        Generate inventory and assignment reports
+                    {% elif action.code == 'approvals' %}
+                        View pending approval requests
+                    {% elif action.code == 'bulk_operations' %}
+                        Perform bulk operations on devices
+                    {% else %}
+                        {{ action.display_name }}
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="form-check form-switch">
+            <input class="form-check-input action-toggle" 
+                   type="checkbox" 
+                   id="action-{{ action.code }}" 
+                   data-action-code="{{ action.code }}"
+                   {% if action.is_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="action-{{ action.code }}">
+                {% if action.is_enabled %}Enabled{% else %}Disabled{% endif %}
+            </label>
+        </div>
+    </div>
+</div>
+<hr class="my-3">
+{% endfor %}
+
+{% if not available_actions %}
+<div class="text-center py-4">
+    <i class="bi bi-info-circle text-muted" style="font-size: 2rem;"></i>
+    <p class="text-muted mt-2">No quick actions available for your current role.</p>
+</div>
+{% endif %}

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dmp_django
+    image: dmp-django:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot-reload in development
+      - .:/app
+      # Persist database
+      - ./data:/app/data
+      # Persist static files
+      - ./staticfiles:/app/staticfiles
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,testserver
+      - CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+    env_file:
+      - .env
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000
+                      --workers 2
+                      --reload
+                      --access-logfile -
+                      --error-logfile -
+                      --log-level debug
+                      DMP.wsgi:application"
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: dmp_network

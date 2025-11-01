@@ -1,12 +1,12 @@
 from rest_framework import serializers
-from .models import Assignment, MaintenanceRequest, DeviceReservation
+from .models import Assignment, DeviceReservation
 from devices.serializers import DeviceSerializer
 from core.serializers import UserSerializer
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
     device_display = serializers.CharField(source='device.__str__', read_only=True)
-    user_display = serializers.CharField(source='user.get_full_name', read_only=True)
+    employee_display = serializers.CharField(source='employee.get_full_name', read_only=True)
     assigned_by_display = serializers.CharField(source='assigned_by.get_full_name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     is_overdue = serializers.ReadOnlyField()
@@ -16,25 +16,25 @@ class AssignmentSerializer(serializers.ModelSerializer):
         model = Assignment
         fields = '__all__'
         read_only_fields = [
-            'id', 'created_at', 'updated_at', 'device_display', 'user_display',
+            'id', 'created_at', 'updated_at', 'device_display', 'employee_display',
             'assigned_by_display', 'status_display', 'is_overdue', 'days_assigned'
         ]
 
 
 class AssignmentListSerializer(serializers.ModelSerializer):
     device_display = serializers.CharField(source='device.__str__', read_only=True)
-    user_display = serializers.CharField(source='user.get_full_name', read_only=True)
+    employee_display = serializers.CharField(source='employee.get_full_name', read_only=True)
     assigned_by_display = serializers.CharField(source='assigned_by.get_full_name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     is_overdue = serializers.ReadOnlyField()
     device = serializers.PrimaryKeyRelatedField(read_only=True)
-    
+
     class Meta:
         model = Assignment
         fields = [
-            'id', 'device', 'user', 'assigned_date', 'expected_return_date', 
-            'actual_return_date', 'status', 'condition_at_assignment', 'condition_at_return',
-            'device_display', 'user_display', 'assigned_by_display', 'status_display', 'is_overdue'
+            'id', 'device', 'employee', 'assigned_date', 'expected_return_date',
+            'actual_return_date', 'status',
+            'device_display', 'employee_display', 'assigned_by_display', 'status_display', 'is_overdue'
         ]
 
 
@@ -42,41 +42,15 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
         fields = [
-            'device', 'user', 'expected_return_date', 'condition_at_assignment',
+            'device', 'employee', 'expected_return_date',
             'purpose', 'location', 'notes', 'requires_approval'
         ]
-    
+
     def create(self, validated_data):
         validated_data['assigned_by'] = self.context['request'].user
         return super().create(validated_data)
 
 
-class MaintenanceRequestSerializer(serializers.ModelSerializer):
-    device_display = serializers.CharField(source='device.__str__', read_only=True)
-    requested_by_display = serializers.CharField(source='requested_by.get_full_name', read_only=True)
-    assigned_to_display = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
-    
-    class Meta:
-        model = MaintenanceRequest
-        fields = '__all__'
-        read_only_fields = [
-            'id', 'created_at', 'updated_at', 'requested_date', 'device_display',
-            'requested_by_display', 'assigned_to_display', 'status_display', 'priority_display'
-        ]
-
-
-class MaintenanceRequestCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MaintenanceRequest
-        fields = [
-            'device', 'title', 'description', 'priority', 'estimated_cost'
-        ]
-    
-    def create(self, validated_data):
-        validated_data['requested_by'] = self.context['request'].user
-        return super().create(validated_data)
 
 
 class DeviceReservationSerializer(serializers.ModelSerializer):

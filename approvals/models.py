@@ -9,9 +9,9 @@ class ApprovalRequest(models.Model):
     
     REQUEST_TYPES = [
         ('device_assignment', 'Device Assignment'),
+        ('device_return', 'Device Return'),
         ('device_transfer', 'Device Transfer'),
         ('bulk_operation', 'Bulk Operation'),
-        ('high_value_assignment', 'High Value Assignment'),
         ('extended_assignment', 'Extended Assignment'),
     ]
     
@@ -113,6 +113,8 @@ class ApprovalRequest(models.Model):
         """Execute the action that was approved"""
         if self.request_type == 'device_assignment':
             self._execute_device_assignment()
+        elif self.request_type == 'device_return':
+            self._execute_device_return()
         elif self.request_type == 'bulk_operation':
             self._execute_bulk_operation()
         # Add more execution logic as needed
@@ -121,20 +123,21 @@ class ApprovalRequest(models.Model):
         """Execute a device assignment"""
         try:
             from assignments.models import Assignment
+            from employees.models import Employee
             data = self.request_data
             
             device = Device.objects.get(id=data['device_id'])
-            user = User.objects.get(id=data['user_id'])
+            employee = Employee.objects.get(id=data['employee_id'])
             
             # Update device
-            device.assigned_to = user
+            device.assigned_to = employee
             device.status = 'assigned'
             device.save()
             
             # Create assignment record
             Assignment.objects.create(
                 device=device,
-                user=user,
+                employee=employee,
                 assigned_by=self.approved_by or self.requested_by,
                 expected_return_date=data.get('expected_return_date'),
                 notes=f"Approved assignment - {self.approval_notes}",
@@ -147,10 +150,52 @@ class ApprovalRequest(models.Model):
             DeviceHistory.objects.create(
                 device=device,
                 action='assigned',
-                new_user=user,
+                new_employee=employee,
                 new_status='assigned',
                 previous_status='available',
                 notes=f'Assignment approved via request #{self.id}',
+                created_by=self.approved_by or self.requested_by
+            )
+            
+        except Exception as e:
+            # Log error and update request
+            self.approval_notes += f"\nExecution error: {str(e)}"
+            self.save()
+    
+    def _execute_device_return(self):
+        """Execute a device return"""
+        try:
+            from assignments.models import Assignment
+            data = self.request_data
+            
+            # Get the assignment
+            assignment = Assignment.objects.get(id=data['assignment_id'])
+            device = assignment.device
+            
+            # Return the device
+            assignment.return_device(
+                returned_by=self.approved_by or self.requested_by,
+                condition=data.get('condition_at_return', device.condition),
+                notes=data.get('comprehensive_notes', f"Return approved via request #{self.id}")
+            )
+            
+            # Update device status based on next action if specified
+            next_action = data.get('next_action')
+            if next_action == 'retired':
+                device.status = 'retired'
+            else:
+                device.status = 'available'
+            device.save()
+            
+            # Create history record
+            from devices.models import DeviceHistory
+            DeviceHistory.objects.create(
+                device=device,
+                action='returned',
+                previous_employee=assignment.employee,
+                previous_status='assigned',
+                new_status=device.status,
+                notes=f'Return approved via request #{self.id}',
                 created_by=self.approved_by or self.requested_by
             )
             
@@ -231,10 +276,11 @@ class ApprovalRule(models.Model):
             if device_value > conditions['max_device_value']:
                 return False
         
-        # Check user role
-        if 'requester_roles' in conditions:
-            if request.requested_by.role not in conditions['requester_roles']:
-                return False
+        # Check user permissions (more flexible than groups)
+        if 'required_permissions' in conditions:
+            for permission in conditions['required_permissions']:
+                if not request.requested_by.has_perm(permission):
+                    return False
         
         # Check assignment duration
         if 'max_assignment_days' in conditions:

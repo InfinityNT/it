@@ -1,0 +1,375 @@
+{% load static %}
+<!-- Modern Page Header -->
+<div class="page-header info">
+    <div class="page-header-content">
+        <div class="page-header-icon">
+            <i class="bi bi-graph-up"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Reports & Analytics</h1>
+            <p class="page-description">Comprehensive insights and analytics for IT asset management and operations</p>
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <button class="btn btn-info" onclick="exportAllReports()">
+            <i class="bi bi-download me-1"></i>
+            Export All Reports
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4" id="summary-cards" 
+     hx-get="/reports/api/summary/" 
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <!-- Loading placeholders -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row g-0 align-items-center">
+                    <div class="col me-2">
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                            Total Asset Value
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-dark">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-6"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-currency-dollar fs-2 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row g-0 align-items-center">
+                    <div class="col me-2">
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                            Utilization Rate
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-dark">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-4"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-percent fs-2 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row g-0 align-items-center">
+                    <div class="col me-2">
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                            Avg Assignment Duration
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-dark">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-5"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-clock fs-2 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row g-0 align-items-center">
+                    <div class="col me-2">
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                            Warranty Expiring
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-dark">
+                            <span class="placeholder-glow">
+                                <span class="placeholder col-3"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle fs-2 text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Reports -->
+<div class="row">
+    <!-- Device Distribution Chart -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-primary">Device Distribution by Category</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('deviceDistribution')">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="deviceDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Overview Chart -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-primary">Device Status Overview</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('statusOverview')">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="statusOverviewChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Assignment Trends -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-primary">Assignment Trends (Last 12 Months)</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('assignmentTrends')">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="assignmentTrendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Users -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-primary">Top Device Users</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportTable('topUsers')">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="topUsersTable">
+                    <div class="d-flex justify-content-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Reports -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Detailed Reports
+                </h6>
+                <button class="btn btn-outline-primary btn-sm" onclick="window.open('/reports/custom/', 'custom_report', 'width=1000,height=800,scrollbars=yes')">
+                    <i class="bi bi-gear me-1"></i>
+                    Custom Report
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card border-left-primary h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-circle bg-primary text-white me-3">
+                                        <i class="bi bi-list-check"></i>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">Device Inventory Report</h6>
+                                </div>
+                                <p class="card-text text-muted flex-grow-1">Complete list of all devices with specifications, status, and location information.</p>
+                                <button class="btn btn-primary btn-sm align-self-start" onclick="generateReport('inventory')">
+                                    <i class="bi bi-file-text me-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card border-left-success h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-circle bg-success text-white me-3">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">Assignment History Report</h6>
+                                </div>
+                                <p class="card-text text-muted flex-grow-1">Historical data of all device assignments, returns, and transfer records.</p>
+                                <button class="btn btn-success btn-sm align-self-start" onclick="generateReport('assignments')">
+                                    <i class="bi bi-file-text me-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card border-left-info h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-circle bg-info text-white me-3">
+                                        <i class="bi bi-graph-up"></i>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">Utilization Analysis</h6>
+                                </div>
+                                <p class="card-text text-muted flex-grow-1">Device usage patterns and optimization recommendations for better resource allocation.</p>
+                                <button class="btn btn-info btn-sm align-self-start" onclick="generateReport('utilization')">
+                                    <i class="bi bi-file-text me-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card border-left-warning h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-circle bg-warning text-white me-3">
+                                        <i class="bi bi-tools"></i>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">Maintenance Report</h6>
+                                </div>
+                                <p class="card-text text-muted flex-grow-1">Devices requiring maintenance, warranty status, and upcoming service schedules.</p>
+                                <button class="btn btn-warning btn-sm align-self-start" onclick="generateReport('maintenance')">
+                                    <i class="bi bi-file-text me-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card border-left-danger h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-circle bg-danger text-white me-3">
+                                        <i class="bi bi-currency-dollar"></i>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">Cost Analysis Report</h6>
+                                </div>
+                                <p class="card-text text-muted flex-grow-1">Financial analysis including total cost of ownership, depreciation, and budget planning.</p>
+                                <button class="btn btn-danger btn-sm align-self-start" onclick="generateReport('cost')">
+                                    <i class="bi bi-file-text me-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card border-left-dark h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-circle bg-dark text-white me-3">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <h6 class="card-title mb-0 fw-bold">User Activity Report</h6>
+                                </div>
+                                <p class="card-text text-muted flex-grow-1">User behavior, device usage patterns, and employee equipment preferences.</p>
+                                <button class="btn btn-dark btn-sm align-self-start" onclick="generateReport('user-activity')">
+                                    <i class="bi bi-file-text me-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Format Selection Modal -->
+<div class="modal fade" id="formatSelectionModal" tabindex="-1" aria-labelledby="formatSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="formatSelectionModalLabel">
+                    <i class="bi bi-file-earmark-arrow-down me-2"></i>
+                    Select Download Format
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Report Type:</label>
+                    <div id="selectedReportType" class="text-primary fs-6"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Choose Format:</label>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadFormat" id="formatCSV" value="csv" checked>
+                                <label class="form-check-label" for="formatCSV">
+                                    <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>
+                                    <strong>CSV (Excel Compatible)</strong>
+                                    <br><small class="text-muted">Spreadsheet format, opens in Excel or Google Sheets</small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadFormat" id="formatPDF" value="pdf">
+                                <label class="form-check-label" for="formatPDF">
+                                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                    <strong>PDF Report</strong>
+                                    <br><small class="text-muted">Professional document format, printable</small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadFormat" id="formatJSON" value="json">
+                                <label class="form-check-label" for="formatJSON">
+                                    <i class="bi bi-file-earmark-code text-info me-2"></i>
+                                    <strong>JSON Data</strong>
+                                    <br><small class="text-muted">Structured data format for developers</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="proceedWithDownload()">
+                    <i class="bi bi-download me-1"></i>Download Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="{% static 'reports/css/reports.css'  %}">
+<script src="{% static 'reports/js/reports.js'  %}"></script>

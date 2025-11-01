@@ -17,6 +17,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,4 +27,12 @@ urlpatterns = [
     path("assignments/", include("assignments.urls")),
     path("approvals/", include("approvals.urls")),
     path("employees/", include("employees.urls")),
+    path("reports/", include("reports.urls")),
 ]
+
+# Serve static files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # For production with DEBUG=False, we need to explicitly serve static files
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -1,0 +1,373 @@
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon {% if can_manage_system %}bg-danger{% else %}bg-primary{% endif %}">
+            <i class="bi bi-gear-fill"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">
+                {% if can_manage_system %}
+                    Manage system configuration, features, and security settings
+                {% else %}
+                    Manage your profile, password, and quick actions
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+{% if can_manage_system %}
+<!-- System Settings (Admin Only) -->
+<div class="row">
+    <!-- General Settings -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-gear me-2"></i>General Settings
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="generalSettingsForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="systemName" class="form-label">System Name</label>
+                        <input type="text" class="form-control" id="systemName" value="{{ current_settings.system_name|default:'IT Device Management' }}" placeholder="Enter system name">
+                        <div class="form-text">Displayed in page titles and headers</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adminEmail" class="form-label">Administrator Email</label>
+                        <input type="email" class="form-control" id="adminEmail" value="{{ current_settings.admin_email|default:'admin@company.com' }}" placeholder="admin@example.com">
+                        <div class="form-text">Receives system notifications and alerts</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone">
+                            <option value="UTC" {% if current_settings.timezone == 'UTC' or not current_settings.timezone %}selected{% endif %}>UTC</option>
+                            <option value="America/New_York" {% if current_settings.timezone == 'America/New_York' %}selected{% endif %}>America/New_York</option>
+                            <option value="America/Chicago" {% if current_settings.timezone == 'America/Chicago' %}selected{% endif %}>America/Chicago</option>
+                            <option value="America/Los_Angeles" {% if current_settings.timezone == 'America/Los_Angeles' %}selected{% endif %}>America/Los_Angeles</option>
+                            <option value="Europe/London" {% if current_settings.timezone == 'Europe/London' %}selected{% endif %}>Europe/London</option>
+                            <option value="Asia/Tokyo" {% if current_settings.timezone == 'Asia/Tokyo' %}selected{% endif %}>Asia/Tokyo</option>
+                        </select>
+                        <div class="form-text">Used for timestamps and scheduling</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Save General Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Toggles -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-toggles me-2"></i>Feature Settings
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="enableApprovals" {% if current_settings.enable_approvals == 'True' or not current_settings.enable_approvals %}checked{% endif %}>
+                    <label class="form-check-label" for="enableApprovals">
+                        <strong>Approval Workflows</strong>
+                        <div class="form-text">Require approval for assignments</div>
+                    </label>
+                </div>
+                <button type="button" id="saveFeatureSettings" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i>Save Feature Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security & Database -->
+<div class="row">
+    <!-- Security Settings -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-shield-lock me-2"></i>Security Settings
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+                    <input type="number" class="form-control" id="sessionTimeout" value="{{ current_settings.session_timeout|default:'30' }}" min="5" max="480">
+                    <div class="form-text">Auto-logout after inactivity period</div>
+                </div>
+                <div class="mb-3">
+                    <label for="passwordPolicy" class="form-label">Password Policy</label>
+                    <select class="form-select" id="passwordPolicy">
+                        <option value="standard" {% if current_settings.password_policy == 'standard' or not current_settings.password_policy %}selected{% endif %}>Standard (8+ characters)</option>
+                        <option value="strong" {% if current_settings.password_policy == 'strong' %}selected{% endif %}>Strong (12+ chars, mixed case, numbers, symbols)</option>
+                        <option value="custom" {% if current_settings.password_policy == 'custom' %}selected{% endif %}>Custom Policy</option>
+                    </select>
+                    <div class="form-text">Minimum password requirements</div>
+                </div>
+                <div class="mb-3">
+                    <label for="passwordExpiry" class="form-label">Password Expiry (days)</label>
+                    <input type="number" class="form-control" id="passwordExpiry" value="{{ current_settings.password_expiry|default:'90' }}" min="0" max="365">
+                    <div class="form-text">0 = never expires</div>
+                </div>
+                <button type="button" id="saveSecuritySettings" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i>Save Security Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup & Database -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Backup & Database
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Last Backup</label>
+                    <p class="form-control-plaintext text-muted">Today at 2:00 AM</p>
+                </div>
+                <div class="mb-3">
+                    <label for="backupFrequency" class="form-label">Backup Frequency</label>
+                    <select class="form-select" id="backupFrequency">
+                        <option selected>Daily</option>
+                        <option>Weekly</option>
+                        <option>Manual Only</option>
+                    </select>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="runBackup()">
+                        <i class="bi bi-download me-1"></i>Create Backup Now
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="checkDataIntegrity()">
+                        <i class="bi bi-database-check me-1"></i>Check Data Integrity
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-info-circle me-2"></i>System Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong><i class="bi bi-app me-1"></i>Version:</strong><br>
+                        <span class="text-muted">1.0.0</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong><i class="bi bi-database me-1"></i>Database:</strong><br>
+                        <span class="text-muted">SQLite</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong><i class="bi bi-code-square me-1"></i>Python:</strong><br>
+                        <span class="text-muted">3.12.7</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong><i class="bi bi-bootstrap me-1"></i>Django:</strong><br>
+                        <span class="text-muted">5.2.1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Profile Settings (Regular Users) -->
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-person me-2"></i>Profile Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'profile' %}" hx-post="{% url 'profile' %}" hx-swap="none">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" placeholder="Enter first name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" placeholder="Enter last name">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" placeholder="email@example.com">
+                        <div class="form-text">Used for notifications and password reset</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Save Profile Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Password Change -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-key me-2"></i>Change Password
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Update your password to keep your account secure.</p>
+                <button type="button"
+                        class="btn btn-warning"
+                        hx-get="{% url 'password-change' %}"
+                        hx-target="#dynamicModalContent"
+                        hx-swap="innerHTML"
+                        data-bs-toggle="modal"
+                        data-bs-target="#dynamicModal">
+                    <i class="bi bi-key me-1"></i>Change Password
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Actions Configuration -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-lightning me-2"></i>Quick Actions Configuration
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Customize which quick actions appear in your sidebar. Only actions you have permission to use are available.
+                </p>
+
+                <div id="actions-list"
+                     hx-get="/fragments/quick-actions/config/"
+                     hx-trigger="load"
+                     hx-swap="innerHTML">
+                    <!-- Loading placeholder -->
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-muted" role="status">
+                            <span class="visually-hidden">Loading quick actions...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Info Sidebar -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-shield-lock me-2"></i>Account Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Username</label>
+                    <p class="form-control-plaintext">{{ user.username }}</p>
+                    <small class="text-muted">Username cannot be changed</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Access Level</label>
+                    <p class="form-control-plaintext">
+                        {% if user.is_superuser %}
+                            <span class="badge bg-danger">Superuser</span>
+                        {% elif user.can_manage_system_settings %}
+                            <span class="badge bg-primary">System Manager</span>
+                        {% elif user.can_modify_devices %}
+                            <span class="badge bg-info">Device Manager</span>
+                        {% elif user.can_view_devices %}
+                            <span class="badge bg-secondary">Viewer</span>
+                        {% else %}
+                            <span class="badge bg-secondary">User</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if user.groups.all %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Groups</label>
+                    <p class="form-control-plaintext">
+                        {% for group in user.groups.all %}
+                            <span class="badge bg-light text-dark me-1">{{ group.name }}</span>
+                        {% endfor %}
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if user.linked_employee %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Employee Record</label>
+                    <p class="form-control-plaintext">
+                        <span class="badge bg-info">{{ user.linked_employee.employee_id }}</span><br>
+                        <small class="text-muted">{{ user.linked_employee.department.name }}</small>
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Member Since</label>
+                    <p class="form-control-plaintext">{{ user.date_joined|date:"M d, Y" }}</p>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label fw-bold">Last Login</label>
+                    <p class="form-control-plaintext">{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Status -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 fw-bold text-success">
+                    <i class="bi bi-check-circle me-2"></i>Account Status
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        <strong>Account Active</strong>
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-envelope-check-fill text-success me-2"></i>
+                        <strong>Email Verified</strong>
+                    </li>
+                    {% if user.password_change_required %}
+                    <li class="mb-2">
+                        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                        <strong>Password Change Required</strong>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

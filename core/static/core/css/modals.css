@@ -1,0 +1,128 @@
+/* ==========================================
+   MODERN MODAL & CARD TITLE STYLING
+   ========================================== */
+
+/* Modal Title Base Styling */
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Modal Title Icons */
+.modal-title i {
+    font-size: 1.25rem;
+    color: #007bff;
+    flex-shrink: 0;
+}
+
+/* Modal Header Styling */
+.modal-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-bottom: 2px solid #e9ecef;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-header .btn-close {
+    padding: 0.5rem;
+    margin: -0.25rem -0.25rem -0.25rem auto;
+}
+
+/* Card Title Styling */
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.card-header .card-title {
+    margin-bottom: 0;
+}
+
+.card-title i {
+    color: #007bff;
+    margin-right: 0.5rem;
+}
+
+/* Card Header Styling Enhancement */
+.card-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem 1.25rem;
+}
+
+/* General H5 Styling (for standalone usage) */
+h5 {
+    font-weight: 600;
+    color: #2d3748;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+}
+
+/* Info Card Titles (used in device/employee detail modals) */
+.info-card-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+/* Modal Body Enhancements */
+.modal-body {
+    padding: 1.5rem;
+    color: #4a5568;
+}
+
+.modal-body h6 {
+    font-weight: 600;
+    color: #2d3748;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Modal Footer Styling */
+.modal-footer {
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+    .modal-title {
+        font-size: 1.125rem;
+    }
+
+    .modal-header {
+        padding: 1rem 1.25rem;
+    }
+
+    .modal-body {
+        padding: 1.25rem;
+    }
+}
+
+/* Animation for Modal Headers */
+@keyframes modalHeaderSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal.show .modal-header {
+    animation: modalHeaderSlide 0.3s ease-out;
+}

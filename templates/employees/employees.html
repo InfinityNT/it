@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div hx-get="{% url 'employees' %}"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+    <div class="text-center p-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading employees...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

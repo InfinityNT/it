@@ -1,0 +1,121 @@
+{% load static %}
+
+{% if approvals %}
+<!-- Approval Cards Grid -->
+<div class="card-grid">
+    {% for approval in approvals %}
+    <div class="item-card approval-card status-{{ approval.status }} priority-{{ approval.priority }}" onclick="viewApproval({{ approval.id }})" style="cursor: pointer;">
+        <!-- Card Header -->
+        <div class="item-card-header">
+            <div class="item-card-header-content">
+                <div class="item-card-header-left">
+                    <h6 class="item-card-title">{{ approval.title }}</h6>
+                </div>
+                <div class="item-card-header-right">
+                    {% if approval.priority == 'urgent' %}
+                        <span class="badge bg-danger">{{ approval.get_priority_display }}</span>
+                    {% elif approval.priority == 'high' %}
+                        <span class="badge bg-warning">{{ approval.get_priority_display }}</span>
+                    {% elif approval.priority == 'medium' %}
+                        <span class="badge bg-primary">{{ approval.get_priority_display }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ approval.get_priority_display }}</span>
+                    {% endif %}
+
+                    {% if approval.status == 'pending' %}
+                        <span class="badge bg-warning">
+                            <i class="bi bi-clock"></i> {{ approval.get_status_display }}
+                        </span>
+                    {% elif approval.status == 'approved' %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> {{ approval.get_status_display }}
+                        </span>
+                    {% elif approval.status == 'rejected' %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-x-circle"></i> {{ approval.get_status_display }}
+                        </span>
+                    {% elif approval.status == 'auto_approved' %}
+                        <span class="badge bg-info">
+                            <i class="bi bi-robot"></i> {{ approval.get_status_display }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="item-card-body">
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-tag me-1"></i>Type:</span>
+                <span class="item-card-value">
+                    <span class="badge bg-info">{{ approval.get_request_type_display }}</span>
+                </span>
+            </div>
+
+            {% if approval.devices.exists %}
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-laptop me-1"></i>Devices:</span>
+                <span class="item-card-value">
+                    <small class="text-muted">
+                        {% for device in approval.devices.all %}{{ device.asset_tag }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </small>
+                </span>
+            </div>
+            {% endif %}
+
+            {% if user_role == 'IT_Managers' %}
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-person me-1"></i>Requested By:</span>
+                <span class="item-card-value">
+                    <strong>{{ approval.requested_by.get_full_name }}</strong>
+                    <br><small class="text-muted">{{ approval.requested_by.username }}</small>
+                </span>
+            </div>
+            {% endif %}
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-calendar me-1"></i>Created:</span>
+                <span class="item-card-value">
+                    {{ approval.created_at|date:"M d, Y" }}
+                    <small class="text-muted">{{ approval.created_at|date:"g:i A" }}</small>
+                    {% if approval.status == 'pending' %}
+                        <br><small class="text-muted">{{ approval.days_pending }} day{{ approval.days_pending|pluralize }} ago</small>
+                    {% endif %}
+                    {% if approval.is_expired %}
+                        <br><small class="text-danger">Expired</small>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Card Footer -->
+        <div class="item-card-footer" onclick="event.stopPropagation();">
+            {% if approval.status == 'pending' %}
+                {% if user_role == 'IT_Managers' %}
+                    <button class="btn btn-sm btn-success" onclick="showApprovalModal({{ approval.id }}, 'approve')">
+                        <i class="bi bi-check me-1"></i>Approve
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="showApprovalModal({{ approval.id }}, 'reject')">
+                        <i class="bi bi-x me-1"></i>Reject
+                    </button>
+                {% elif user_role == 'IT_Staff' %}
+                    <small class="text-muted">
+                        <i class="bi bi-clock"></i> Awaiting IT Admin approval
+                    </small>
+                {% endif %}
+            {% else %}
+                <button class="btn btn-sm btn-outline-primary" onclick="viewApproval({{ approval.id }})">
+                    <i class="bi bi-eye me-1"></i>View
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-check-circle display-1 mb-3"></i>
+    <h5>No approval requests found</h5>
+    <p>All caught up! No pending approvals match your current filters.</p>
+</div>
+{% endif %}

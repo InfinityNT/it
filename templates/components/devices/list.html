@@ -1,0 +1,185 @@
+{% if devices %}
+<!-- Bulk Select Header - Hidden by default -->
+<div id="bulk-select-header" class="mb-3" style="display: none;">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="selectAllDevices" onchange="toggleSelectAll()">
+        <label class="form-check-label fw-bold" for="selectAllDevices">
+            Select All Devices
+        </label>
+    </div>
+</div>
+
+<!-- Device Cards Grid -->
+<div class="card-grid">
+    {% for device in devices %}
+    <div class="item-card device-card status-{{ device.status }}">
+        <!-- Card Header -->
+        <div class="item-card-header">
+            <div class="item-card-header-content">
+                <div class="item-card-header-left">
+                    <input type="checkbox" class="item-card-checkbox device-checkbox bulk-select-cell" value="{{ device.id }}" onchange="updateBulkActions()" style="display: none;">
+                    <h6 class="item-card-title">{{ device.asset_tag }}</h6>
+                </div>
+                <div class="item-card-header-right">
+                    {% if device.status == 'available' %}
+                        <span class="badge bg-success">{{ device.get_status_display }}</span>
+                    {% elif device.status == 'assigned' %}
+                        <span class="badge bg-warning">{{ device.get_status_display }}</span>
+                    {% elif device.status == 'retired' %}
+                        <span class="badge bg-secondary">{{ device.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ device.get_status_display }}</span>
+                    {% endif %}
+
+                    {% if device.condition == 'new' %}
+                        <span class="badge bg-primary">{{ device.get_condition_display }}</span>
+                    {% elif device.condition == 'excellent' %}
+                        <span class="badge bg-success">{{ device.get_condition_display }}</span>
+                    {% elif device.condition == 'good' %}
+                        <span class="badge bg-info">{{ device.get_condition_display }}</span>
+                    {% elif device.condition == 'fair' %}
+                        <span class="badge bg-warning">{{ device.get_condition_display }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ device.get_condition_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="item-card-body">
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-upc-scan me-1"></i>Serial Number:</span>
+                <span class="item-card-value">{{ device.serial_number }}</span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-laptop me-1"></i>Device Model:</span>
+                <span class="item-card-value">{{ device.device_model }}</span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-tag me-1"></i>Category:</span>
+                <span class="item-card-value">{{ device.device_model.category.name }}</span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-person me-1"></i>Assigned To:</span>
+                <span class="item-card-value">
+                    {% if device.assigned_to %}
+                        <strong>{{ device.assigned_to.get_full_name }}</strong>
+                        <br><small class="text-muted">{{ device.assigned_to.email }}</small>
+                        {% if device.assigned_date %}
+                            <br><small class="text-muted">Since {{ device.assigned_date|date:"M d, Y" }}</small>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">Unassigned</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="item-card-field">
+                <span class="item-card-label"><i class="bi bi-geo-alt me-1"></i>Location:</span>
+                <span class="item-card-value">
+                    {% if device.location %}
+                        {{ device.location }}
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Card Footer -->
+        <div class="item-card-footer">
+            <!-- View Details - Available to all users with device view permission -->
+            {% if user.can_view_devices %}
+            <a href="#"
+               hx-get="{% url 'device-detail-page' device_id=device.id %}"
+               hx-target="#dynamicModalContent"
+               hx-swap="innerHTML"
+               data-bs-toggle="modal"
+               data-bs-target="#dynamicModal"
+               class="btn btn-sm btn-outline-primary"
+               title="View Details">
+                <i class="bi bi-eye me-1"></i>View
+            </a>
+            {% endif %}
+
+            <!-- Assignment/Return Actions - Only for users with assignment permission -->
+            {% if user.can_assign_devices %}
+                {% if device.status == 'available' %}
+                    <button type="button" class="btn btn-sm btn-outline-success"
+                            onclick="window.showAssignModal({{ device.id }})" title="Assign Device">
+                        <i class="bi bi-person-plus me-1"></i>Assign
+                    </button>
+                {% elif device.status == 'assigned' %}
+                    <button type="button" class="btn btn-sm btn-outline-warning"
+                            onclick="showUnassignModal({{ device.id }})" title="Return Device">
+                        <i class="bi bi-arrow-return-left me-1"></i>Return
+                    </button>
+                {% endif %}
+            {% endif %}
+
+            <!-- Edit Device - Only for users with device modification permission -->
+            {% if user.can_modify_devices %}
+            <a href="#"
+               hx-get="{% url 'edit-device' device_id=device.id %}"
+               hx-target="#dynamicModalContent"
+               hx-swap="innerHTML"
+               data-bs-toggle="modal"
+               data-bs-target="#dynamicModal"
+               class="btn btn-sm btn-outline-secondary"
+               title="Edit Device">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Devices pagination">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-laptop display-1 text-muted"></i>
+    <h3 class="mt-3">No Devices Found</h3>
+    <p class="text-muted">No devices match your current filters.</p>
+    {% if user.can_modify_devices %}
+    <a href="{% url 'add-device' %}" class="btn btn-primary">
+        <i class="bi bi-plus"></i>
+        Add Your First Device
+    </a>
+    {% endif %}
+</div>
+{% endif %}

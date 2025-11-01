@@ -1,19 +1,23 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.core.exceptions import ValidationError
 from django.db import models
 from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .models import Device, DeviceCategory, DeviceModel, DeviceHistory
+from .models import Device, DeviceCategory, DeviceManufacturer, DeviceVendor, DeviceModel, DeviceHistory
 from .serializers import (
     DeviceSerializer, DeviceCreateSerializer, DeviceCategorySerializer,
-    DeviceModelSerializer, DeviceHistorySerializer, DeviceAssignSerializer,
-    DeviceUnassignSerializer
+    DeviceManufacturerSerializer, DeviceVendorSerializer, DeviceModelSerializer, 
+    DeviceHistorySerializer, DeviceAssignSerializer, DeviceUnassignSerializer
 )
-from core.models import User
+from core.models import User, Location
+from core.serializers import LocationSerializer
+from employees.models import Employee
+from core.decorators import permission_required_redirect
 
 
 def get_spec_display_mapping():
@@ -45,7 +49,7 @@ def get_spec_display_mapping():
         'ModelNumber': 'Model Number',
         'PartNumber': 'Part Number',
         'Capacity': 'Capacity',
-        'PowerConsumption': 'Power Consumption',
+        'PowerSupply': 'Power Supply',
         
         # Legacy/common alternative names
         'cpu': 'CPU',
@@ -68,7 +72,7 @@ def get_spec_display_mapping():
         'serial': 'Serial Number',
         'model': 'Model Number',
         'part': 'Part Number',
-        'power': 'Power Consumption',
+        'power': 'Power Supply',
         'manufacturer': 'Manufacturer',
         'brand': 'Manufacturer',
     }
@@ -102,8 +106,6 @@ def device_list_api_view(request):
         'device_model__category',
         'device_model',
         'assigned_to'
-    ).prefetch_related(
-        'assignments'  # For assignment-related data
     )
     
     # Apply filters
@@ -118,6 +120,7 @@ def device_list_api_view(request):
     if search:
         queryset = queryset.filter(
             models.Q(asset_tag__icontains=search) |
+            models.Q(hostname__icontains=search) |
             models.Q(serial_number__icontains=search) |
             models.Q(device_model__manufacturer__icontains=search) |
             models.Q(device_model__model_name__icontains=search)
@@ -125,7 +128,7 @@ def device_list_api_view(request):
     
     devices = queryset.order_by('asset_tag')
     context = {'devices': devices}
-    return render(request, 'devices/device_list.html', context)
+    return render(request, 'components/devices/list.html', context)
 
 
 # JSON API Views
@@ -151,6 +154,7 @@ class DeviceListCreateView(generics.ListCreateAPIView):
         if search:
             queryset = queryset.filter(
                 models.Q(asset_tag__icontains=search) |
+                models.Q(hostname__icontains=search) |
                 models.Q(serial_number__icontains=search) |
                 models.Q(device_model__manufacturer__icontains=search) |
                 models.Q(device_model__model_name__icontains=search)
@@ -168,6 +172,18 @@ class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
 class DeviceCategoryListView(generics.ListCreateAPIView):
     queryset = DeviceCategory.objects.filter(is_active=True)
     serializer_class = DeviceCategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class DeviceManufacturerListView(generics.ListCreateAPIView):
+    queryset = DeviceManufacturer.objects.filter(is_active=True)
+    serializer_class = DeviceManufacturerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class DeviceVendorListView(generics.ListCreateAPIView):
+    queryset = DeviceVendor.objects.filter(is_active=True)
+    serializer_class = DeviceVendorSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
@@ -189,20 +205,15 @@ def assign_device_view(request, device_id):
     
     serializer = DeviceAssignSerializer(data=request.data)
     if serializer.is_valid():
-        user_id = serializer.validated_data['user_id']
-        user = User.objects.get(id=user_id)
+        employee_id = serializer.validated_data.get('employee_id') or serializer.validated_data.get('user_id')
+        employee = Employee.objects.get(id=employee_id)
         expected_return_date = serializer.validated_data.get('expected_return_date')
         notes = serializer.validated_data.get('notes', '')
         
         # Check if assignment needs approval
         needs_approval = False
         assignment_days = 30  # Default
-        
-        # High-value device (over $1000)
-        device_value = float(device.purchase_price) if device.purchase_price else 0
-        if device_value > 1000:
-            needs_approval = True
-        
+
         # Extended assignment (over 90 days)
         if expected_return_date:
             from datetime import datetime
@@ -214,29 +225,28 @@ def assign_device_view(request, device_id):
                     needs_approval = True
             except ValueError:
                 pass
-        
-        # Role-based approval (non-admin users for certain device types)
-        if request.user.role not in ['admin', 'manager'] and device.device_model.category.name in ['Server', 'Networking']:
+
+        # Permission-based approval (users without advanced assignment permissions for certain device types)
+        if not request.user.has_perm('devices.can_assign_advanced_devices') and device.device_model.category.name in ['Server', 'Networking']:
             needs_approval = True
-        
+
         if needs_approval:
             # Create approval request instead of direct assignment
             from approvals.views import create_approval_request
-            
+
             request_data = {
                 'device_id': device_id,
-                'user_id': user_id,
+                'employee_id': employee_id,
                 'expected_return_date': expected_return_date,
                 'notes': notes,
-                'device_value': device_value,
                 'assignment_days': assignment_days
             }
-            
-            title = f"Assign {device.asset_tag} to {user.get_full_name()}"
-            description = f"Request to assign device {device.asset_tag} ({device.device_model}) to {user.get_full_name()}"
+
+            title = f"Assign {device.asset_tag} to {employee.get_full_name()}"
+            description = f"Request to assign device {device.asset_tag} ({device.device_model}) to {employee.get_full_name()}"
             if notes:
                 description += f"\n\nNotes: {notes}"
-            
+
             approval_request = create_approval_request(
                 request_type='device_assignment',
                 title=title,
@@ -244,19 +254,19 @@ def assign_device_view(request, device_id):
                 request_data=request_data,
                 requested_by=request.user,
                 devices=[device],
-                priority='high' if device_value > 1000 else 'medium'
+                priority='medium'
             )
-            
+
             return Response({
                 'message': 'Assignment request created and sent for approval',
                 'approval_request_id': approval_request.id,
                 'requires_approval': True
             })
-        
+
         else:
             # Direct assignment without approval
             # Update device
-            device.assigned_to = user
+            device.assigned_to = employee
             device.status = 'assigned'
             device.save()
             
@@ -264,18 +274,17 @@ def assign_device_view(request, device_id):
             from assignments.models import Assignment
             Assignment.objects.create(
                 device=device,
-                user=user,
+                employee=employee,
                 assigned_by=request.user,
                 expected_return_date=expected_return_date,
-                notes=notes,
-                condition_at_assignment=device.condition
+                notes=notes
             )
             
             # Create history record
             DeviceHistory.objects.create(
                 device=device,
                 action='assigned',
-                new_user=user,
+                new_employee=employee,
                 new_status='assigned',
                 previous_status='available',
                 notes=notes,
@@ -299,27 +308,24 @@ def unassign_device_view(request, device_id):
     
     serializer = DeviceUnassignSerializer(data=request.data)
     if serializer.is_valid():
-        previous_user = device.assigned_to
+        previous_employee = device.assigned_to
         
         # Update device
         device.assigned_to = None
         device.status = 'available'
-        if serializer.validated_data.get('condition'):
-            device.condition = serializer.validated_data['condition']
         device.save()
-        
+
         # Update assignment record
         from assignments.models import Assignment
         assignment = Assignment.objects.filter(
-            device=device, 
-            user=previous_user, 
+            device=device,
+            employee=previous_employee,
             status='active'
         ).first()
-        
+
         if assignment:
             assignment.return_device(
                 returned_by=request.user,
-                condition=serializer.validated_data.get('condition'),
                 notes=serializer.validated_data.get('notes')
             )
         
@@ -327,7 +333,7 @@ def unassign_device_view(request, device_id):
         DeviceHistory.objects.create(
             device=device,
             action='unassigned',
-            previous_user=previous_user,
+            previous_employee=previous_employee,
             new_status='available',
             previous_status='assigned',
             notes=serializer.validated_data.get('notes', ''),
@@ -340,25 +346,37 @@ def unassign_device_view(request, device_id):
 
 
 # Frontend Views
-@login_required
+@permission_required_redirect('devices.can_view_devices', message='You do not have permission to view devices.')
 def devices_view(request):
     """Devices management view"""
-    return render(request, 'devices/devices.html')
+    # If HTMX request, return content fragment
+    if request.headers.get('HX-Request'):
+        return render(request, 'devices/devices_content.html')
+    # If direct access, return full page
+    else:
+        return render(request, 'devices/devices.html')
 
 
 @login_required
 def device_detail_view(request, device_id):
     """Device detail view"""
     device = get_object_or_404(Device, id=device_id)
-    
+
     # Format specifications for display
     formatted_specs = format_specifications(device.device_model.specifications)
-    
+
     context = {
         'device': device,
         'formatted_specs': formatted_specs
     }
-    return render(request, 'devices/device_detail.html', context)
+
+    # If HTMX request, return modal template
+    if request.headers.get('HX-Request'):
+        return render(request, 'devices/device_detail_modal.html', context)
+    # Otherwise redirect to devices page (SPA architecture)
+    else:
+        messages.info(request, 'Please use the device list to view device details.')
+        return redirect('devices')
 
 
 @login_required
@@ -368,17 +386,18 @@ def device_history_view(request, device_id):
     
     # Get assignment history for this device
     from assignments.models import Assignment
-    assignments = Assignment.objects.filter(device=device).select_related('user', 'assigned_by', 'approved_by').order_by('-assigned_date')
+    assignments = Assignment.objects.filter(device=device).select_related('employee', 'assigned_by', 'approved_by').order_by('-assigned_date')
     
     context = {
         'device': device,
         'assignments': assignments
     }
-    return render(request, 'devices/device_history.html', context)
+    messages.info(request, 'Device history is available through the device details modal.')
+    return redirect('devices')
 
 
 @ensure_csrf_cookie
-@login_required
+@permission_required_redirect('devices.can_modify_devices', message='You do not have permission to add devices.')
 def add_device_view(request):
     """Add new device view"""
     if request.method == 'POST':
@@ -387,50 +406,62 @@ def add_device_view(request):
             try:
                 from django.db import models
                 
-                # Get or create category
-                category_name = request.POST.get('category')
-                category, _ = DeviceCategory.objects.get_or_create(
-                    name=category_name,
-                    defaults={'description': f'{category_name} devices'}
-                )
+                # Get selected device model
+                device_model_id = request.POST.get('device_model')
+                device_model = DeviceModel.objects.get(id=device_model_id)
                 
-                # Get or create device model
-                manufacturer = request.POST.get('manufacturer')
-                model_name = request.POST.get('model_name')
-                
-                # Handle specifications
+                # Handle additional specifications (optional)
                 spec_keys = request.POST.getlist('spec_key[]')
                 spec_values = request.POST.getlist('spec_value[]')
                 custom_spec_keys = request.POST.getlist('custom_spec_key[]')
-                specifications = {}
+                additional_specifications = {}
                 
                 for i, (key, value) in enumerate(zip(spec_keys, spec_values)):
                     if key.strip() and value.strip():
                         if key == 'Custom':
                             # Use custom specification name if provided
                             if i < len(custom_spec_keys) and custom_spec_keys[i].strip():
-                                specifications[custom_spec_keys[i].strip()] = value.strip()
+                                additional_specifications[custom_spec_keys[i].strip()] = value.strip()
                         else:
-                            specifications[key.strip()] = value.strip()
+                            additional_specifications[key.strip()] = value.strip()
                 
-                device_model, _ = DeviceModel.objects.get_or_create(
-                    category=category,
-                    manufacturer=manufacturer,
-                    model_name=model_name,
-                    defaults={'specifications': specifications}
-                )
+                # Merge additional specs with existing model specs
+                if additional_specifications:
+                    combined_specs = device_model.specifications.copy()
+                    combined_specs.update(additional_specifications)
+                    # We could save these as device-specific specs, but for now we'll just use the model specs
                 
+                # Extract specifications from form
+                specifications = {}
+                if request.POST.get('spec_cpu'):
+                    specifications['CPUModel'] = request.POST.get('spec_cpu').strip()
+                if request.POST.get('spec_ram'):
+                    specifications['RAM'] = request.POST.get('spec_ram').strip()
+                if request.POST.get('spec_storage'):
+                    specifications['Storage'] = request.POST.get('spec_storage').strip()
+                if request.POST.get('spec_gpu'):
+                    specifications['GPU'] = request.POST.get('spec_gpu').strip()
+                if request.POST.get('spec_display'):
+                    specifications['Display'] = request.POST.get('spec_display').strip()
+                if request.POST.get('spec_os'):
+                    specifications['OperatingSystem'] = request.POST.get('spec_os').strip()
+
+                # Update device model specifications if different
+                if specifications and specifications != device_model.specifications:
+                    device_model.specifications.update(specifications)
+                    device_model.save()
+
                 # Create device
                 device = Device.objects.create(
                     asset_tag=request.POST.get('asset_tag'),
+                    hostname=request.POST.get('hostname', ''),
                     serial_number=request.POST.get('serial_number'),
                     device_model=device_model,
                     status=request.POST.get('status', 'available'),
-                    condition=request.POST.get('condition', 'new'),
-                    purchase_date=request.POST.get('purchase_date') or None,
-                    purchase_price=request.POST.get('purchase_price') or None,
-                    warranty_expiry=request.POST.get('warranty_expiry') or None,
-                    vendor=request.POST.get('vendor', ''),
+                    usage_type=request.POST.get('usage_type', 'individual'),
+                    shared_usage=request.POST.get('shared_usage') or None,
+                    ip_address=request.POST.get('ip_address') or None,
+                    mac_address=request.POST.get('mac_address') or None,
                     location=request.POST.get('location', ''),
                     notes=request.POST.get('notes', ''),
                     created_by=request.user
@@ -445,8 +476,10 @@ def add_device_view(request):
                     created_by=request.user
                 )
                 
-                response = JsonResponse({'message': 'Device added successfully'})
-                response['HX-Redirect'] = '/devices/'
+                # Return success and trigger modal close + page refresh
+                response = HttpResponse(status=204)  # No content - triggers hx-trigger
+                response['HX-Trigger'] = 'deviceAdded'  # Custom event
+                response['HX-Refresh'] = 'true'  # Refresh the page
                 return response
                 
             except Exception as e:
@@ -457,12 +490,30 @@ def add_device_view(request):
             return redirect('devices')
     
     categories = DeviceCategory.objects.filter(is_active=True)
-    context = {'categories': categories}
-    return render(request, 'devices/add_device.html', context)
+    manufacturers = DeviceManufacturer.objects.filter(is_active=True)
+    vendors = DeviceVendor.objects.filter(is_active=True)
+    locations = Location.objects.filter(is_active=True).order_by('name')
+    device_models = DeviceModel.objects.filter(is_active=True).select_related('category').order_by('manufacturer', 'model_name')
+    context = {
+        'categories': categories,
+        'manufacturers': manufacturers,
+        'vendors': vendors,
+        'locations': locations,
+        'device_models': device_models
+    }
+
+    # If HTMX request, return modal template
+    if request.headers.get('HX-Request'):
+        return render(request, 'devices/add_device_modal.html', context)
+    # Non-HTMX requests redirect to devices page (SPA architecture)
+    else:
+        messages.info(request, 'Please use the Add Device button to add new devices.')
+        return redirect('devices')
 
 
 @ensure_csrf_cookie
 @login_required
+@permission_required('devices.can_modify_devices', raise_exception=True)
 def edit_device_view(request, device_id):
     """Edit device view"""
     device = get_object_or_404(Device, id=device_id)
@@ -471,62 +522,52 @@ def edit_device_view(request, device_id):
         if request.headers.get('HX-Request'):
             # Handle HTMX form submission
             try:
-                # Update basic device info
+                # Update ONLY the fields that are in the edit form
+                # Don't touch other fields to avoid unique constraint violations
                 device.asset_tag = request.POST.get('asset_tag')
+                device.hostname = request.POST.get('hostname', '')
                 device.serial_number = request.POST.get('serial_number')
                 device.status = request.POST.get('status')
-                device.condition = request.POST.get('condition')
-                device.purchase_date = request.POST.get('purchase_date') or None
-                device.purchase_price = request.POST.get('purchase_price') or None
-                device.warranty_expiry = request.POST.get('warranty_expiry') or None
-                device.vendor = request.POST.get('vendor', '')
-                device.location = request.POST.get('location', '')
-                device.barcode = request.POST.get('barcode', '')
                 device.notes = request.POST.get('notes', '')
-                
-                # Handle device model changes
-                category_name = request.POST.get('category')
-                manufacturer = request.POST.get('manufacturer')
-                model_name = request.POST.get('model_name')
-                
-                # Get or create category
-                category, _ = DeviceCategory.objects.get_or_create(
-                    name=category_name,
-                    defaults={'description': f'{category_name} devices'}
-                )
-                
-                # Handle specifications
+
+                # Handle device model changes (only if provided in form)
+                device_model_id = request.POST.get('device_model')
+                if device_model_id and device_model_id.strip():
+                    try:
+                        device_model = DeviceModel.objects.get(id=int(device_model_id))
+                        device.device_model = device_model
+                    except (ValueError, DeviceModel.DoesNotExist):
+                        pass  # Keep existing device model if invalid ID provided
+
+                # Handle additional specifications (these could be device-specific)
                 spec_keys = request.POST.getlist('spec_key[]')
                 spec_values = request.POST.getlist('spec_value[]')
                 custom_spec_keys = request.POST.getlist('custom_spec_key[]')
-                specifications = {}
-                
+                additional_specifications = {}
+
                 for i, (key, value) in enumerate(zip(spec_keys, spec_values)):
                     if key.strip() and value.strip():
                         if key == 'Custom':
                             # Use custom specification name if provided
                             if i < len(custom_spec_keys) and custom_spec_keys[i].strip():
-                                specifications[custom_spec_keys[i].strip()] = value.strip()
+                                additional_specifications[custom_spec_keys[i].strip()] = value.strip()
                         else:
-                            specifications[key.strip()] = value.strip()
-                
-                # Get or create device model
-                device_model, _ = DeviceModel.objects.get_or_create(
-                    category=category,
-                    manufacturer=manufacturer,
-                    model_name=model_name,
-                    defaults={'specifications': specifications}
-                )
-                
-                # Update specifications if model already exists
-                if specifications:
-                    device_model.specifications = specifications
-                    device_model.save()
-                
-                device.device_model = device_model
+                            additional_specifications[key.strip()] = value.strip()
+
+                # For now, we'll just use the model's specifications
+                # In the future, we could add device-specific specifications
+
+                # Validate the device
+                # Exclude device_model since it's not in the edit form
+                # All other fields are either in the form or haven't been modified
+                device.full_clean(exclude=['device_model'])
+
+                print(f"Device validation passed, attempting save...")
                 device.save()
-                
+                print(f"Device saved successfully: {device.id}")
+
                 # Create history record
+                print(f"Creating device history record...")
                 DeviceHistory.objects.create(
                     device=device,
                     action='updated',
@@ -534,33 +575,74 @@ def edit_device_view(request, device_id):
                     notes=f'Device updated by {request.user.get_full_name()}',
                     created_by=request.user
                 )
-                
-                response = JsonResponse({'message': 'Device updated successfully'})
-                response['HX-Redirect'] = f'/devices/{device.id}/'
+                print(f"Device history created successfully")
+
+                # Return success and trigger modal close + page refresh
+                print(f"Returning success response")
+                response = HttpResponse(status=204)  # No content - triggers hx-trigger
+                response['HX-Trigger'] = 'deviceUpdated'  # Custom event
+                response['HX-Refresh'] = 'true'  # Refresh the page
                 return response
-                
+
+            except ValidationError as ve:
+                # Handle validation errors from full_clean()
+                error_msg = []
+                if hasattr(ve, 'message_dict'):
+                    for field, errors in ve.message_dict.items():
+                        error_msg.append(f"{field}: {', '.join(errors)}")
+                else:
+                    error_msg = [str(ve)]
+                return JsonResponse({
+                    'error': 'Validation failed',
+                    'details': error_msg
+                }, status=400)
             except Exception as e:
-                return JsonResponse({'error': str(e)}, status=400)
+                import traceback
+                error_details = {
+                    'error': str(e),
+                    'type': type(e).__name__,
+                    'traceback': traceback.format_exc()
+                }
+                print(f"Edit device error: {error_details}")  # Log to console
+                return JsonResponse({'error': str(e), 'type': type(e).__name__}, status=400)
         else:
             # Handle regular form submission
             messages.success(request, 'Device updated successfully')
             return redirect('device-detail-page', device_id=device.id)
     
     categories = DeviceCategory.objects.filter(is_active=True)
+    manufacturers = DeviceManufacturer.objects.filter(is_active=True)
+    vendors = DeviceVendor.objects.filter(is_active=True)
+    locations = Location.objects.filter(is_active=True).order_by('name')
+    device_models = DeviceModel.objects.filter(is_active=True).select_related('category').order_by('manufacturer', 'model_name')
     formatted_specs = format_specifications(device.device_model.specifications)
     
     context = {
         'device': device,
         'categories': categories,
+        'manufacturers': manufacturers,
+        'vendors': vendors,
+        'locations': locations,
+        'device_models': device_models,
         'formatted_specs': formatted_specs
     }
-    return render(request, 'devices/edit_device.html', context)
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'devices/edit_device_modal.html', context)
+    else:
+        messages.info(request, 'Please use the Edit button from the device list.')
+        return redirect('devices')
 
 
 @login_required
 def advanced_search_view(request):
     """Advanced search page"""
-    return render(request, 'devices/advanced_search.html')
+    # If HTMX request, return content fragment
+    if request.headers.get('HX-Request'):
+        return render(request, 'devices/advanced_search_content.html')
+    # If direct access, return full page
+    else:
+        return render(request, 'devices/advanced_search.html')
 
 
 @api_view(['GET'])
@@ -583,6 +665,7 @@ def advanced_search_api(request):
     if search_query:
         queryset = queryset.filter(
             models.Q(asset_tag__icontains=search_query) |
+            models.Q(hostname__icontains=search_query) |
             models.Q(serial_number__icontains=search_query) |
             models.Q(device_model__manufacturer__icontains=search_query) |
             models.Q(device_model__model_name__icontains=search_query) |
@@ -590,6 +673,11 @@ def advanced_search_api(request):
             models.Q(assigned_to__last_name__icontains=search_query) |
             models.Q(assigned_to__email__icontains=search_query) |
             models.Q(location__icontains=search_query) |
+            models.Q(building__icontains=search_query) |
+            models.Q(room__icontains=search_query) |
+            models.Q(hostname__icontains=search_query) |
+            models.Q(ip_address__icontains=search_query) |
+            models.Q(mac_address__icontains=search_query) |
             models.Q(notes__icontains=search_query)
         )
     
@@ -607,40 +695,19 @@ def advanced_search_api(request):
     manufacturer = request.GET.get('manufacturer')
     if manufacturer:
         queryset = queryset.filter(device_model__manufacturer=manufacturer)
-    
-    # Condition filter
-    condition = request.GET.get('condition')
-    if condition:
-        queryset = queryset.filter(condition=condition)
-    
+
     # Location filter
     location = request.GET.get('location')
     if location:
         queryset = queryset.filter(location__icontains=location)
-    
+
     # Date range filters
-    purchase_date_from = request.GET.get('purchase_date_from')
-    purchase_date_to = request.GET.get('purchase_date_to')
-    if purchase_date_from:
-        queryset = queryset.filter(purchase_date__gte=purchase_date_from)
-    if purchase_date_to:
-        queryset = queryset.filter(purchase_date__lte=purchase_date_to)
-    
     assigned_date_from = request.GET.get('assigned_date_from')
     assigned_date_to = request.GET.get('assigned_date_to')
     if assigned_date_from:
         queryset = queryset.filter(assigned_date__gte=assigned_date_from)
     if assigned_date_to:
         queryset = queryset.filter(assigned_date__lte=assigned_date_to)
-    
-    # Warranty status filter
-    warranty_status = request.GET.get('warranty_status')
-    if warranty_status == 'active':
-        from django.utils import timezone
-        queryset = queryset.filter(warranty_expiry__gt=timezone.now().date())
-    elif warranty_status == 'expired':
-        from django.utils import timezone
-        queryset = queryset.filter(warranty_expiry__lte=timezone.now().date())
     
     # Export functionality
     if request.GET.get('export') == 'csv':
@@ -649,25 +716,21 @@ def advanced_search_api(request):
         
         writer = csv.writer(response)
         writer.writerow([
-            'Asset Tag', 'Serial Number', 'Category', 'Manufacturer', 'Model',
-            'Status', 'Condition', 'Assigned To', 'Location', 'Purchase Date',
-            'Purchase Price', 'Warranty Expiry'
+            'Asset Tag', 'Hostname', 'Serial Number', 'Category', 'Manufacturer', 'Model',
+            'Status', 'Assigned To', 'Location'
         ])
-        
+
         for device in queryset:
             writer.writerow([
                 device.asset_tag,
+                device.hostname,
                 device.serial_number,
                 device.device_model.category.name,
                 device.device_model.manufacturer,
                 device.device_model.model_name,
                 device.get_status_display(),
-                device.get_condition_display(),
                 device.assigned_to.get_full_name() if device.assigned_to else '',
-                device.location,
-                device.purchase_date.strftime('%Y-%m-%d') if device.purchase_date else '',
-                f'${device.purchase_price}' if device.purchase_price else '',
-                device.warranty_expiry.strftime('%Y-%m-%d') if device.warranty_expiry else ''
+                device.location
             ])
         
         return response
@@ -685,19 +748,16 @@ def advanced_search_api(request):
         result = {
             'id': device.id,
             'asset_tag': device.asset_tag,
+            'hostname': device.hostname,
             'serial_number': device.serial_number,
             'manufacturer': device.device_model.manufacturer,
             'model_name': device.device_model.model_name,
             'category': device.device_model.category.name,
             'status': device.status,
             'status_display': device.get_status_display(),
-            'condition': device.condition,
-            'condition_display': device.get_condition_display(),
             'assigned_to': device.assigned_to.get_full_name() if device.assigned_to else None,
             'assigned_date': device.assigned_date.isoformat() if device.assigned_date else None,
             'location': device.location,
-            'purchase_date': device.purchase_date.isoformat() if device.purchase_date else None,
-            'warranty_expiry': device.warranty_expiry.isoformat() if device.warranty_expiry else None,
         }
         results.append(result)
     
@@ -712,6 +772,18 @@ def advanced_search_api(request):
             'page_size': page_size
         }
     })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def device_model_detail_api(request, model_id):
+    """API endpoint to retrieve device model with specifications"""
+    try:
+        model = DeviceModel.objects.get(id=model_id, is_active=True)
+        serializer = DeviceModelSerializer(model)
+        return Response(serializer.data)
+    except DeviceModel.DoesNotExist:
+        return Response({'error': 'Device model not found'}, status=404)
 
 
 @api_view(['POST'])
@@ -778,37 +850,17 @@ def bulk_operations_view(request):
                     created_by=request.user
                 )
                 updated_count += 1
-        
-        elif operation == 'update_condition':
-            new_condition = request.data.get('new_condition')
-            if not new_condition or new_condition not in dict(Device.CONDITION_CHOICES):
-                return Response({'error': 'Valid condition is required'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-            
-            for device in devices:
-                old_condition = device.condition
-                device.condition = new_condition
-                device.save()
-                
-                # Create history record
-                DeviceHistory.objects.create(
-                    device=device,
-                    action='bulk_updated',
-                    notes=f'Bulk condition update from "{old_condition}" to "{new_condition}" by {request.user.get_full_name()}',
-                    created_by=request.user
-                )
-                updated_count += 1
-        
+
         elif operation == 'assign_devices':
-            user_id = request.data.get('user_id')
-            if not user_id:
-                return Response({'error': 'User ID is required for assignment'}, 
+            employee_id = request.data.get('employee_id') or request.data.get('user_id')
+            if not employee_id:
+                return Response({'error': 'Employee ID is required for assignment'}, 
                                status=status.HTTP_400_BAD_REQUEST)
             
             try:
-                assign_to_user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                return Response({'error': 'User not found'}, 
+                assign_to_employee = Employee.objects.get(id=employee_id)
+            except Employee.DoesNotExist:
+                return Response({'error': 'Employee not found'}, 
                                status=status.HTTP_404_NOT_FOUND)
             
             expected_return_date = request.data.get('expected_return_date')
@@ -820,7 +872,7 @@ def bulk_operations_view(request):
                     continue
                 
                 # Update device
-                device.assigned_to = assign_to_user
+                device.assigned_to = assign_to_employee
                 device.status = 'assigned'
                 device.save()
                 
@@ -828,18 +880,17 @@ def bulk_operations_view(request):
                 from assignments.models import Assignment
                 Assignment.objects.create(
                     device=device,
-                    user=assign_to_user,
+                    employee=assign_to_employee,
                     assigned_by=request.user,
                     expected_return_date=expected_return_date,
-                    notes=notes,
-                    condition_at_assignment=device.condition
+                    notes=notes
                 )
                 
                 # Create history record
                 DeviceHistory.objects.create(
                     device=device,
                     action='assigned',
-                    new_user=assign_to_user,
+                    new_employee=assign_to_employee,
                     new_status='assigned',
                     previous_status='available',
                     notes=f'Bulk assignment by {request.user.get_full_name()}: {notes}',
@@ -848,35 +899,31 @@ def bulk_operations_view(request):
                 updated_count += 1
         
         elif operation == 'unassign_devices':
-            return_condition = request.data.get('condition')
             notes = request.data.get('notes', '')
-            
+
             for device in devices:
                 if device.status != 'assigned':
                     errors.append(f'Device {device.asset_tag} is not currently assigned')
                     continue
-                
-                previous_user = device.assigned_to
-                
+
+                previous_employee = device.assigned_to
+
                 # Update device
                 device.assigned_to = None
                 device.status = 'available'
-                if return_condition:
-                    device.condition = return_condition
                 device.save()
-                
+
                 # Update assignment record
                 from assignments.models import Assignment
                 assignment = Assignment.objects.filter(
                     device=device,
-                    user=previous_user,
+                    employee=previous_employee,
                     status='active'
                 ).first()
-                
+
                 if assignment:
                     assignment.return_device(
                         returned_by=request.user,
-                        condition=return_condition,
                         notes=notes
                     )
                 
@@ -884,10 +931,46 @@ def bulk_operations_view(request):
                 DeviceHistory.objects.create(
                     device=device,
                     action='unassigned',
-                    previous_user=previous_user,
+                    previous_employee=previous_employee,
                     new_status='available',
                     previous_status='assigned',
                     notes=f'Bulk unassignment by {request.user.get_full_name()}: {notes}',
+                    created_by=request.user
+                )
+                updated_count += 1
+        
+        elif operation == 'update_specifications':
+            spec_updates = request.data.get('spec_updates')
+            if not spec_updates:
+                return Response({'error': 'Specification updates are required'}, 
+                               status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                import json
+                spec_data = json.loads(spec_updates)
+                if not isinstance(spec_data, dict):
+                    raise ValueError("Specifications must be a JSON object")
+            except (json.JSONDecodeError, ValueError) as e:
+                return Response({'error': f'Invalid JSON format: {str(e)}'}, 
+                               status=status.HTTP_400_BAD_REQUEST)
+            
+            for device in devices:
+                # Get current specs or empty dict
+                current_specs = device.device_model.specifications or {}
+                
+                # Merge with new specs
+                updated_specs = current_specs.copy()
+                updated_specs.update(spec_data)
+                
+                # Update device model specifications
+                device.device_model.specifications = updated_specs
+                device.device_model.save()
+                
+                # Create history record
+                DeviceHistory.objects.create(
+                    device=device,
+                    action='bulk_updated',
+                    notes=f'Bulk specification update by {request.user.get_full_name()}: {spec_updates}',
                     created_by=request.user
                 )
                 updated_count += 1
@@ -911,3 +994,15 @@ def bulk_operations_view(request):
     except Exception as e:
         return Response({'error': f'Bulk operation failed: {str(e)}'}, 
                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def location_list_api(request):
+    """API endpoint for getting locations for bulk operations"""
+    try:
+        locations = Location.objects.all()
+        serializer = LocationSerializer(locations, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

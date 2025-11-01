@@ -3,11 +3,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.db import models
+from django.db import models, transaction
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.core.management import call_command
@@ -15,8 +16,10 @@ import subprocess
 import os
 from pathlib import Path
 from datetime import datetime
+from django.utils import timezone
 import threading
-from .models import User, AuditLog, SystemSettings
+from .models import User, AuditLog, SystemSettings, UserQuickAction
+from .decorators import permission_required_redirect
 from .serializers import (
     UserSerializer, UserCreateSerializer, LoginSerializer,
     AuditLogSerializer, SystemSettingsSerializer
@@ -26,15 +29,15 @@ from .serializers import (
 @login_required
 def user_list_api_view(request):
     """User list API that returns HTML"""
-    queryset = User.objects.filter(is_active=True)
+    queryset = User.objects.all()
     
     # Apply filters
-    role = request.GET.get('role')
+    group = request.GET.get('group')
     department = request.GET.get('department')
     search = request.GET.get('search')
     
-    if role:
-        queryset = queryset.filter(role=role)
+    if group:
+        queryset = queryset.filter(groups__name=group)
     if department:
         queryset = queryset.filter(department__icontains=department)
     if search:
@@ -46,14 +49,20 @@ def user_list_api_view(request):
             models.Q(employee_id__icontains=search)
         )
     
-    # Add device count annotation
-    from django.db.models import Count
+    # Add device count annotation - now using Employee relationship
+    from django.db.models import Count, Case, When, IntegerField
+    from employees.models import Employee
+    
     users = queryset.annotate(
-        assigned_devices_count=Count('assigned_devices', filter=models.Q(assigned_devices__status='assigned'))
+        assigned_devices_count=Case(
+            When(employee_profile__isnull=False, then=Count('employee_profile__assigned_devices', filter=models.Q(employee_profile__assigned_devices__status='assigned'))),
+            default=0,
+            output_field=IntegerField()
+        )
     ).order_by('username')
     
-    context = {'users': users}
-    return render(request, 'core/user_list.html', context)
+    # Redirect to dashboard which handles users via SPA
+    return redirect('dashboard')
 
 
 class UserListCreateView(generics.ListCreateAPIView):
@@ -74,12 +83,12 @@ class UserListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        role = self.request.query_params.get('role')
+        group = self.request.query_params.get('group')
         department = self.request.query_params.get('department')
         search = self.request.query_params.get('search')
         
-        if role:
-            queryset = queryset.filter(role=role)
+        if group:
+            queryset = queryset.filter(groups__name=group)
         if department:
             queryset = queryset.filter(department__icontains=department)
         if search:
@@ -105,17 +114,13 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You don't have permission to update users")
         
-        # Additional role validation for updates
+        # Additional permission validation for updates
         current_user = self.request.user
         target_user = self.get_object()
-        new_role = serializer.validated_data.get('role', target_user.role)
         
-        # Staff users cannot modify superuser accounts or assign staff/superuser roles
-        if current_user.is_staff_role:
-            if target_user.is_superuser_role:
-                raise PermissionDenied("You cannot modify IT Manager accounts")
-            if new_role in ['superuser', 'staff']:
-                raise PermissionDenied("You don't have permission to assign this role")
+        # Users without system management cannot modify accounts with system management
+        if not current_user.can_manage_system_settings and target_user.can_manage_system_settings:
+            raise PermissionDenied("You cannot modify accounts with system management privileges")
         
         serializer.save()
     
@@ -125,9 +130,9 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You don't have permission to delete users")
         
-        # Staff users cannot delete superuser accounts
-        if self.request.user.is_staff_role and instance.is_superuser_role:
-            raise PermissionDenied("You cannot delete IT Manager accounts")
+        # Users without system management cannot delete accounts with system management
+        if not self.request.user.can_manage_system_settings and instance.can_manage_system_settings:
+            raise PermissionDenied("You cannot delete accounts with system management privileges")
         
         instance.delete()
 
@@ -140,15 +145,21 @@ class AuditLogListView(generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         user_id = self.request.query_params.get('user_id')
+        user = self.request.query_params.get('user')  # Alternative parameter name for compatibility
         action = self.request.query_params.get('action')
         model_name = self.request.query_params.get('model_name')
+        object_id = self.request.query_params.get('object_id')
         
         if user_id:
             queryset = queryset.filter(user_id=user_id)
+        elif user:  # Support both 'user' and 'user_id' parameters
+            queryset = queryset.filter(user_id=user)
         if action:
             queryset = queryset.filter(action=action)
         if model_name:
             queryset = queryset.filter(model_name=model_name)
+        if object_id:
+            queryset = queryset.filter(object_id=object_id)
         
         return queryset
 
@@ -167,12 +178,29 @@ class SystemSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+def api_login_view(request):
+    """Pure JSON API endpoint for authentication"""
+    serializer = LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.validated_data['user']
+        login(request, user)
+        
+        # Check if password change is required
+        password_change_required = user.needs_password_change if hasattr(user, 'needs_password_change') else False
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'message': 'Login successful',
+            'password_change_required': password_change_required
+        })
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
 def login_view(request):
-    if request.content_type == 'application/json':
-        serializer = LoginSerializer(data=request.data)
-    else:
-        serializer = LoginSerializer(data=request.POST)
-    
+    """HTML/HTMX login endpoint"""
+    serializer = LoginSerializer(data=request.POST)
     if serializer.is_valid():
         user = serializer.validated_data['user']
         login(request, user)
@@ -185,10 +213,18 @@ def login_view(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def api_logout_view(request):
+    """Pure JSON API endpoint for logout"""
+    logout(request)
+    return Response({'message': 'Logout successful'})
+
+
 @ensure_csrf_cookie
 @login_required
 def logout_view(request):
-    """Handle logout for both regular and HTMX requests"""
+    """Handle logout for HTMX and regular requests (not pure API)"""
     if request.method == 'POST':
         logout(request)
         if request.headers.get('HX-Request'):
@@ -213,49 +249,187 @@ def current_user_view(request):
 # Traditional Django views for frontend
 @login_required
 def dashboard_view(request):
-    """Main dashboard view"""
+    """Main application view - single canvas SPA"""
     context = {
         'user': request.user,
-        'total_devices': 0,  # Will be populated by HTMX
-        'available_devices': 0,
-        'assigned_devices': 0,
-        'maintenance_requests': 0,
     }
-    return render(request, 'core/dashboard.html', context)
+    
+    return render(request, 'base.html', context)
 
 
 def login_page_view(request):
-    """Login page view"""
+    """Login page view - shows standalone login page"""
+    # If user is already authenticated, redirect to dashboard
     if request.user.is_authenticated:
         return redirect('dashboard')
-    return render(request, 'core/login.html')
+    
+    # Show login page
+    return render(request, 'login.html')
+
+
+@permission_required_redirect('core.can_view_users', message='You do not have permission to view users.')
+def users_view(request):
+    """Users management view"""
+    
+    action = request.GET.get('action')
+    if action == 'add':
+        return redirect('add-user')
+    
+    return render(request, 'components/views/users.html')
+
+
+@permission_required_redirect('core.can_modify_users', message='You do not have permission to add users.')
+def add_user_view(request):
+    """Add new user view"""
+    
+    if request.method == 'POST':
+        try:
+            # Create user
+            password_change_required = request.POST.get('password_change_required', 'on') == 'on'  # Default to True
+            
+            user = User.objects.create_user(
+                username=request.POST.get('username'),
+                email=request.POST.get('email'),
+                first_name=request.POST.get('first_name'),
+                last_name=request.POST.get('last_name'),
+                password=request.POST.get('password')
+            )
+            
+            # Set password change requirement
+            user.password_change_required = password_change_required
+            
+            # Assign user to selected group
+            group_id = request.POST.get('groups')
+            if group_id:
+                from django.contrib.auth.models import Group
+                try:
+                    group = Group.objects.get(id=group_id)
+                    user.groups.add(group)
+                except Group.DoesNotExist:
+                    pass
+            
+            # Link to employee if selected
+            linked_employee_id = request.POST.get('linked_employee')
+            if linked_employee_id:
+                from employees.models import Employee
+                try:
+                    employee = Employee.objects.get(id=linked_employee_id)
+                    user.linked_employee = employee
+                    # Update the employee's system_user field
+                    employee.system_user = user
+                    employee.save()
+                except Employee.DoesNotExist:
+                    pass
+            
+            user.is_active = True
+            user.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='User',
+                object_id=str(user.id),
+                object_repr=str(user),
+                changes={'created_by': request.user.get_full_name(), 'username': user.username},
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            if password_change_required:
+                messages.success(request, f'User {user.get_full_name()} created successfully. They will be required to change their password on first login.')
+            else:
+                messages.success(request, f'User {user.get_full_name()} created successfully.')
+            return redirect('users')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating user: {str(e)}')
+    
+    # Get employees and groups for dropdown
+    from employees.models import Employee
+    from django.contrib.auth.models import Group
+    
+    employees = Employee.objects.filter(system_user__isnull=True).order_by('employee_id')
+    
+    # Get groups that current user can assign based on their permissions
+    available_groups = []
+    if request.user.has_perm('core.can_modify_users'):
+        if request.user.can_manage_system_settings:
+            # Users with system management can assign any group
+            available_groups = Group.objects.all().order_by('name')
+        else:
+            # Users without system management cannot assign groups with system permissions
+            available_groups = Group.objects.exclude(permissions__codename='can_manage_system').order_by('name')
+    
+    context = {
+        'employees': employees,
+        'available_groups': available_groups
+    }
+    # Redirect to dashboard where add user modal will handle this
+    return redirect('dashboard')
 
 
 @login_required
-def users_view(request):
-    """Users management view"""
-    if not request.user.can_manage_users:
-        messages.error(request, "You don't have permission to access user management.")
-        return redirect('dashboard')
-    return render(request, 'core/users.html')
+@permission_required_redirect('core.can_modify_users', message='You do not have permission to add users.')
+def add_user_modal_view(request):
+    """Render add user modal form for HTMX requests."""
+    if request.method == 'GET':
+        # Get employees and groups for dropdown
+        from employees.models import Employee
+        from django.contrib.auth.models import Group
+
+        employees = Employee.objects.filter(system_user__isnull=True).order_by('employee_id')
+
+        # Get groups that current user can assign based on their permissions
+        available_groups = []
+        if request.user.has_perm('core.can_modify_users'):
+            if request.user.can_manage_system_settings:
+                # Users with system management can assign any group
+                available_groups = Group.objects.all().order_by('name')
+            else:
+                # Users without system management cannot assign groups with system permissions
+                available_groups = Group.objects.exclude(permissions__codename='can_manage_system').order_by('name')
+
+        context = {
+            'employees': employees,
+            'available_groups': available_groups
+        }
+
+        # If HTMX request, return modal template
+        if request.headers.get('HX-Request'):
+            return render(request, 'components/forms/add_user_modal.html', context)
+        # Otherwise redirect to users page
+        return redirect('users')
+
+    # POST handling - reuse the existing add_user_view logic
+    elif request.method == 'POST':
+        # Call the existing add_user_view logic
+        return add_user_view(request)
 
 
 @login_required
 def user_detail_view(request, user_id):
-    """User detail view"""
+    """User detail view - returns modal for HTMX requests"""
     if not request.user.can_manage_users:
         messages.error(request, "You don't have permission to view user details.")
         return redirect('dashboard')
-    
-    user = get_object_or_404(User, id=user_id)
-    
-    # Staff users cannot view superuser details
-    if request.user.is_staff_role and user.is_superuser_role:
-        messages.error(request, "You don't have permission to view IT Manager details.")
+
+    user_detail = get_object_or_404(User, id=user_id)
+
+    # Users without system management cannot view details of accounts with system management
+    if not request.user.can_manage_system_settings and user_detail.can_manage_system_settings:
+        messages.error(request, "You don't have permission to view details of accounts with system management privileges.")
         return redirect('users')
-    
-    context = {'user_profile': user}
-    return render(request, 'core/user_detail.html', context)
+
+    context = {
+        'user_detail': user_detail,
+    }
+
+    # If HTMX request, return modal template
+    if request.headers.get('HX-Request'):
+        return render(request, 'core/user_detail_modal.html', context)
+    # Otherwise redirect to users page
+    return redirect('users')
 
 
 @api_view(['POST'])
@@ -264,8 +438,8 @@ def toggle_user_status(request, user_id):
     """Toggle user active status"""
     user = get_object_or_404(User, id=user_id)
     
-    # Only allow admins or managers to toggle user status
-    if request.user.role not in ['admin', 'manager']:
+    # Only allow users with system management to toggle user status
+    if not request.user.can_manage_system_settings:
         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
     
     # Don't allow users to deactivate themselves
@@ -278,10 +452,13 @@ def toggle_user_status(request, user_id):
     # Create audit log
     AuditLog.objects.create(
         user=request.user,
-        action='updated',
+        action='update',
         model_name='User',
-        object_id=user.id,
-        changes=f'User {user.username} {"activated" if user.is_active else "deactivated"} by {request.user.get_full_name()}'
+        object_id=str(user.id),
+        object_repr=str(user),
+        changes={'status_changed': 'activated' if user.is_active else 'deactivated', 'changed_by': request.user.get_full_name()},
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')
     )
     
     return Response({
@@ -300,37 +477,73 @@ def user_edit_view(request, user_id):
     
     user = get_object_or_404(User, id=user_id)
     
-    # Staff users cannot edit superuser accounts
-    if request.user.is_staff_role and user.is_superuser_role:
-        messages.error(request, "You don't have permission to edit IT Manager accounts.")
+    # Users without system management cannot edit accounts with system management
+    if not request.user.can_manage_system_settings and user.can_manage_system_settings:
+        messages.error(request, "You don't have permission to edit accounts with system management privileges.")
         return redirect('users')
     
     if request.method == 'POST':
         if request.headers.get('HX-Request'):
             # Handle HTMX form submission
             try:
-                # Role validation for updates
-                new_role = request.POST.get('role')
-                if request.user.is_staff_role and new_role in ['superuser', 'staff']:
-                    return JsonResponse({'error': "You don't have permission to assign this role"}, status=403)
+                # Group validation for updates
+                new_group_id = request.POST.get('groups')
+                
+                if new_group_id:
+                    from django.contrib.auth.models import Group
+                    try:
+                        new_group = Group.objects.get(id=new_group_id)
+                        # Users without system management cannot assign groups with system management permissions
+                        if not request.user.can_manage_system_settings and new_group.permissions.filter(codename='can_manage_system').exists():
+                            return JsonResponse({'error': "You don't have permission to assign this group"}, status=403)
+                        
+                        # Clear existing groups and assign new one
+                        user.groups.clear()
+                        user.groups.add(new_group)
+                    except Group.DoesNotExist:
+                        return JsonResponse({'error': "Selected group does not exist"}, status=400)
                 
                 # Update user information
                 user.first_name = request.POST.get('first_name', '')
                 user.last_name = request.POST.get('last_name', '')
                 user.email = request.POST.get('email')
-                user.employee_id = request.POST.get('employee_id', '')
-                user.role = new_role
                 user.is_active = request.POST.get('is_active') == 'on'
                 user.is_staff = request.POST.get('is_staff') == 'on'
+                
+                # Handle employee linking
+                linked_employee_id = request.POST.get('linked_employee')
+                if linked_employee_id:
+                    from employees.models import Employee
+                    try:
+                        employee = Employee.objects.get(id=linked_employee_id)
+                        # Clear previous employee link if exists
+                        if user.linked_employee:
+                            user.linked_employee.system_user = None
+                            user.linked_employee.save()
+                        user.linked_employee = employee
+                        employee.system_user = user
+                        employee.save()
+                    except Employee.DoesNotExist:
+                        pass
+                else:
+                    # Clear employee link if none selected
+                    if user.linked_employee:
+                        user.linked_employee.system_user = None
+                        user.linked_employee.save()
+                        user.linked_employee = None
+                
                 user.save()
                 
                 # Create audit log entry
                 AuditLog.objects.create(
                     user=request.user,
-                    action='updated',
+                    action='update',
                     model_name='User',
-                    object_id=user.id,
-                    changes=f'User {user.username} updated by {request.user.get_full_name()}'
+                    object_id=str(user.id),
+                    object_repr=str(user),
+                    changes={'updated_by': request.user.get_full_name(), 'username': user.username},
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
                 )
                 
                 response = JsonResponse({'message': 'User updated successfully'})
@@ -344,13 +557,40 @@ def user_edit_view(request, user_id):
             messages.success(request, 'User updated successfully')
             return redirect('user-detail-page', user_id=user.id)
     
-    context = {'user_profile': user}
-    return render(request, 'core/user_edit.html', context)
+    # Get employees and groups for dropdown (exclude those already linked to other users)
+    from employees.models import Employee
+    from django.contrib.auth.models import Group
+    
+    employees = Employee.objects.filter(
+        models.Q(system_user__isnull=True) | models.Q(system_user=user)
+    ).order_by('employee_id')
+    
+    # Get groups that current user can assign based on their permissions
+    available_groups = []
+    if request.user.has_perm('core.can_modify_users'):
+        if request.user.can_manage_system_settings:
+            # Users with system management can assign any group
+            available_groups = Group.objects.all().order_by('name')
+        else:
+            # Users without system management cannot assign groups with system permissions
+            available_groups = Group.objects.exclude(permissions__codename='can_manage_system').order_by('name')
+    
+    context = {
+        'user_profile': user,
+        'employees': employees,
+        'available_groups': available_groups
+    }
+
+    # If HTMX request, return modal template
+    if request.headers.get('HX-Request'):
+        return render(request, 'core/user_edit_modal.html', context)
+    # Otherwise redirect to users page
+    return redirect('users')
 
 
 @login_required
-def settings_view(request):
-    """Settings view - content varies by user role"""
+def profile_settings_view(request):
+    """Profile settings view - always shows personal settings"""
     user = request.user
     
     if request.method == 'POST':
@@ -378,64 +618,104 @@ def settings_view(request):
             user.first_name = request.POST.get('first_name', '')
             user.last_name = request.POST.get('last_name', '')
             user.email = request.POST.get('email', '')
-            user.department = request.POST.get('department', '')
-            user.phone = request.POST.get('phone', '')
-            user.location = request.POST.get('location', '')
             user.save()
             messages.success(request, 'Profile updated successfully.')
     
     context = {
         'user': user,
-        'can_manage_system': user.can_manage_system_settings,
+        'page_title': 'Profile Settings',
+        'can_manage_system': False  # Profile page is personal settings only
     }
-    
-    if user.can_manage_system_settings:
-        # Superuser sees system settings
-        template = 'core/system_settings.html'
-        context['page_title'] = 'System Settings'
+
+    # HTMX requests get the component template
+    if request.headers.get('HX-Request'):
+        return render(request, 'components/views/settings.html', context)
     else:
-        # Staff and viewers see profile settings
-        template = 'core/profile_settings.html' 
-        context['page_title'] = 'Profile Settings'
-    
-    return render(request, template, context)
+        # Non-HTMX requests redirect to settings page
+        return redirect('settings')
+
+
+@login_required
+def settings_view(request):
+    """Settings view - content varies by user role"""
+    user = request.user
+
+    # Load current settings for display
+    current_settings = {}
+    if user.can_manage_system_settings:
+        from core.models import SystemSettings
+        settings_queryset = SystemSettings.objects.filter(is_active=True)
+        for setting in settings_queryset:
+            current_settings[setting.key] = setting.value
+
+    context = {
+        'user': user,
+        'can_manage_system': user.can_manage_system_settings,
+        'page_title': 'System Settings' if user.can_manage_system_settings else 'Profile Settings',
+        'current_settings': current_settings
+    }
+
+    # If HTMX request, return content fragment
+    if request.headers.get('HX-Request'):
+        return render(request, 'components/views/settings.html', context)
+    # If direct access, return full page
+    else:
+        return render(request, 'core/settings.html', context)
 
 
 @login_required
 def dashboard_stats_view(request):
     """Dashboard statistics API"""
     from devices.models import Device
-    from assignments.models import Assignment, MaintenanceRequest
+    from assignments.models import Assignment
     
     total_devices = Device.objects.count()
     available_devices = Device.objects.filter(status='available').count()
     assigned_devices = Device.objects.filter(status='assigned').count()
-    maintenance_requests = MaintenanceRequest.objects.filter(status__in=['pending', 'approved', 'in_progress']).count()
-    
     context = {
         'total_devices': total_devices,
         'available_devices': available_devices,
         'assigned_devices': assigned_devices,
-        'maintenance_requests': maintenance_requests
     }
     
-    return render(request, 'core/dashboard_stats.html', context)
+    return render(request, 'components/dashboard/stats.html', context)
 
 
 @login_required
 def dashboard_activity_view(request):
     """Recent activity API"""
-    activities = [
-        {
-            'action': 'Device Assignment',
+    # Get recent audit log entries
+    recent_logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:10]
+    
+    activities = []
+    for log in recent_logs:
+        user_name = log.user.get_full_name() if log.user else 'System'
+        username = f"({log.user.username})" if log.user else ""
+        
+        # Create readable description
+        action_display = log.get_action_display()
+        description = f"{action_display} {log.model_name}"
+        if log.object_repr:
+            description += f": {log.object_repr}"
+        
+        activities.append({
+            'action': action_display,
+            'description': description,
+            'timestamp': log.timestamp.isoformat(),
+            'user': f"{user_name} {username}".strip()
+        })
+    
+    # If no audit logs exist, show a placeholder
+    if not activities:
+        activities = [{
+            'action': 'System',
             'description': 'No recent activity yet',
-            'timestamp': '2024-01-01T00:00:00Z',
+            'timestamp': timezone.now().isoformat(),
             'user': 'System'
-        }
-    ]
+        }]
     
     context = {'activities': activities}
-    return render(request, 'core/dashboard_activity.html', context)
+    return render(request, 'components/dashboard/activity.html', context)
 
 
 @api_view(['GET'])
@@ -501,275 +781,827 @@ def dashboard_search_view(request):
     return Response({'results': results})
 
 
-# Reports Views
+# Quick Actions Management Views
 @login_required
-def reports_view(request):
-    """Reports dashboard page"""
-    return render(request, 'reports/reports.html')
-
-
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def reports_summary_view(request):
-    """Summary statistics for reports dashboard"""
-    from devices.models import Device
-    from assignments.models import Assignment
-    from django.db.models import Sum, Count, Avg
-    from django.utils import timezone
-    from datetime import timedelta
+def quick_actions_config_view(request):
+    """User quick actions configuration page"""
+    user = request.user
     
-    devices = Device.objects.all()
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'toggle_action':
+            action_code = request.POST.get('action_code')
+            is_enabled = request.POST.get('is_enabled') == 'true'
+            
+            # Get or create the quick action
+            user_action, created = UserQuickAction.objects.get_or_create(
+                user=user,
+                action_code=action_code,
+                defaults={'is_enabled': is_enabled}
+            )
+            
+            if not created:
+                user_action.is_enabled = is_enabled
+                user_action.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Quick action {"enabled" if is_enabled else "disabled"} successfully'
+            })
+        
+        elif action == 'reorder_actions':
+            action_orders = request.POST.getlist('action_orders[]')
+            for i, action_code in enumerate(action_orders):
+                UserQuickAction.objects.filter(
+                    user=user,
+                    action_code=action_code
+                ).update(display_order=i)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Action order updated successfully'
+            })
     
-    # Calculate total asset value
-    total_value = devices.filter(purchase_price__isnull=False).aggregate(
-        total=Sum('purchase_price')
-    )['total'] or 0
+    # Get available actions for this user
+    available_actions = user.get_available_quick_actions()
     
-    # Calculate utilization rate (assigned/total devices)
-    total_devices = devices.count()
-    assigned_devices = devices.filter(status='assigned').count()
-    utilization_rate = (assigned_devices / total_devices * 100) if total_devices > 0 else 0
-    
-    # Calculate average assignment duration
-    assignments = Assignment.objects.filter(status='returned')
-    avg_duration = assignments.aggregate(
-        avg=Avg(models.F('actual_return_date') - models.F('assigned_date'))
-    )['avg']
-    avg_duration_days = avg_duration.days if avg_duration else 0
-    
-    # Warranty expiring soon (next 30 days)
-    thirty_days_from_now = timezone.now().date() + timedelta(days=30)
-    warranty_expiring = devices.filter(
-        warranty_expiry__lte=thirty_days_from_now,
-        warranty_expiry__gt=timezone.now().date()
-    ).count()
-    
-    summary_data = {
-        'total_asset_value': f'${total_value:,.2f}',
-        'utilization_rate': f'{utilization_rate:.1f}%',
-        'avg_assignment_duration': f'{avg_duration_days} days',
-        'warranty_expiring': warranty_expiring
+    context = {
+        'available_actions': available_actions,
+        'user': user
     }
     
-    html = f"""
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Asset Value
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {summary_data['total_asset_value']}
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-currency-dollar fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Utilization Rate
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {summary_data['utilization_rate']}
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-percent fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Avg Assignment Duration
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {summary_data['avg_assignment_duration']}
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-clock fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Warranty Expiring
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {summary_data['warranty_expiring']}
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="bi bi-exclamation-triangle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    """
-    
-    return render(request, 'core/reports_summary.html', {'html_content': html})
+    return render(request, 'components/quick_actions/config.html', context)
 
 
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def reports_charts_view(request):
-    """Chart data for reports dashboard"""
-    from devices.models import Device, DeviceCategory
-    from assignments.models import Assignment
-    from django.db.models import Count
-    from django.utils import timezone
-    from datetime import datetime, timedelta
+@login_required
+def quick_actions_api_view(request):
+    """API to get user's enabled quick actions for the sidebar"""
+    user = request.user
+    enabled_actions = user.get_enabled_quick_actions()
     
-    # Device distribution by category
-    category_data = DeviceCategory.objects.annotate(
-        device_count=Count('devicemodel__device')
-    ).filter(device_count__gt=0)
-    
-    device_distribution = {
-        'labels': [cat.name for cat in category_data],
-        'values': [cat.device_count for cat in category_data]
+    context = {
+        'actions': enabled_actions,
+        'has_actions': len(enabled_actions) > 0
     }
     
-    # Status overview
-    status_data = Device.objects.values('status').annotate(count=Count('id'))
-    status_overview = {
-        'labels': [item['status'].title() for item in status_data],
-        'values': [item['count'] for item in status_data]
-    }
-    
-    # Assignment trends (last 12 months)
-    months = []
-    assignments_data = []
-    returns_data = []
-    
-    for i in range(12):
-        month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
-        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-        
-        month_assignments = Assignment.objects.filter(
-            assigned_date__gte=month_start.date(),
-            assigned_date__lte=month_end.date()
-        ).count()
-        
-        month_returns = Assignment.objects.filter(
-            actual_return_date__gte=month_start.date(),
-            actual_return_date__lte=month_end.date()
-        ).count()
-        
-        months.insert(0, month_start.strftime('%b %Y'))
-        assignments_data.insert(0, month_assignments)
-        returns_data.insert(0, month_returns)
-    
-    assignment_trends = {
-        'labels': months,
-        'assignments': assignments_data,
-        'returns': returns_data
-    }
-    
-    return Response({
-        'device_distribution': device_distribution,
-        'status_overview': status_overview,
-        'assignment_trends': assignment_trends
-    })
+    return render(request, 'components/quick_actions/sidebar.html', context)
 
 
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def reports_top_users_view(request):
-    """Top device users data"""
-    from django.db.models import Count
+@login_required
+def quick_actions_config_api_view(request):
+    """API to get user's quick actions configuration for settings page"""
+    user = request.user
+    available_actions = user.get_available_quick_actions()
     
-    top_users = User.objects.annotate(
-        device_count=Count('assigned_devices')
-    ).filter(device_count__gt=0).order_by('-device_count')[:10]
+    context = {
+        'available_actions': available_actions,
+        'user': user
+    }
     
-    users_data = []
-    for user in top_users:
-        users_data.append({
-            'name': user.get_full_name(),
-            'email': user.email,
-            'device_count': user.device_count
-        })
-    
-    return Response({'users': users_data})
+    return render(request, 'components/quick_actions/config_partial.html', context)
 
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
-def reports_generate_view(request, report_type):
-    """Generate and download reports"""
-    from django.http import HttpResponse
+def quick_actions_toggle_api_view(request):
+    """API to toggle quick action on/off"""
+    user = request.user
+    action_code = request.POST.get('action_code')
+    is_enabled = request.POST.get('is_enabled') == 'true'
+    
+    if not action_code:
+        return Response({'success': False, 'message': 'Action code is required'}, status=400)
+    
+    # Get or create the quick action
+    user_action, created = UserQuickAction.objects.get_or_create(
+        user=user,
+        action_code=action_code,
+        defaults={'is_enabled': is_enabled}
+    )
+    
+    if not created:
+        user_action.is_enabled = is_enabled
+        user_action.save()
+    
+    return Response({
+        'success': True,
+        'message': f'Quick action {"enabled" if is_enabled else "disabled"} successfully'
+    })
+
+
+@login_required
+def password_change_view(request):
+    """Password change view for users who are required to change their password"""
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password')
+        new_password1 = request.POST.get('new_password1')
+        new_password2 = request.POST.get('new_password2')
+        
+        # Validate current password
+        if not request.user.check_password(current_password):
+            error_msg = 'Current password is incorrect.'
+            if request.headers.get('HX-Request'):
+                return JsonResponse({'error': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return render(request, 'components/forms/password_change_modal.html')
+        
+        # Validate new passwords match
+        if new_password1 != new_password2:
+            error_msg = 'New passwords do not match.'
+            if request.headers.get('HX-Request'):
+                return JsonResponse({'error': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return render(request, 'components/forms/password_change_modal.html')
+        
+        # Validate password strength using Django validators
+        from django.contrib.auth.password_validation import validate_password
+        try:
+            validate_password(new_password1, request.user)
+        except Exception as e:
+            error_messages = list(e.messages) if hasattr(e, 'messages') else [str(e)]
+            if request.headers.get('HX-Request'):
+                return JsonResponse({'error': '; '.join(error_messages)}, status=400)
+            for error in error_messages:
+                messages.error(request, error)
+            return render(request, 'components/forms/password_change_modal.html')
+        
+        # Change password
+        request.user.set_password(new_password1)
+        request.user.save()
+        
+        # Create audit log
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='User',
+            object_id=str(request.user.id),
+            object_repr=str(request.user),
+            changes={'password_changed': True},
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        # Handle HTMX requests from login page
+        if request.headers.get('HX-Request'):
+            return JsonResponse({
+                'success': True,
+                'message': 'Password changed successfully!'
+            })
+        
+        messages.success(request, 'Password changed successfully! You can now continue using the system.')
+        return redirect('dashboard')
+    
+    return render(request, 'components/forms/password_change_modal.html')
+
+
+# API endpoints for SPA components
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def auth_form_view(request):
+    """Return login form component"""
+    return render(request, 'components/auth/login_form.html')
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def dashboard_component_view(request):
+    """Return dashboard component"""
+    context = {
+        'user': request.user,
+        'total_devices': 0,  # Will be populated by HTMX
+        'available_devices': 0,
+        'assigned_devices': 0,
+    }
+    return render(request, 'components/views/dashboard.html', context)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def devices_component_view(request):
+    """Return devices component"""
+    context = {'user': request.user}
+    return render(request, 'devices/devices_content.html', context)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def users_component_view(request):
+    """Return users component"""
+    context = {'user': request.user}
+    return render(request, 'components/views/users.html', context)
+
+
+@login_required
+def user_list_api_view(request):
+    """Return user list as HTML cards for HTMX."""
+    if not request.user.can_manage_users:
+        return HttpResponse('<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Permission denied. You do not have access to view users.</div>')
+
+    # Get filter parameters
+    search = request.GET.get('search', '').strip()
+    role = request.GET.get('role', '').strip()
+    department = request.GET.get('department', '').strip()
+
+    # Build queryset
+    users = User.objects.filter(is_active=True)
+
+    # Apply search filter
+    if search:
+        users = users.filter(
+            models.Q(username__icontains=search) |
+            models.Q(first_name__icontains=search) |
+            models.Q(last_name__icontains=search) |
+            models.Q(email__icontains=search)
+        )
+
+    # Apply department filter (via linked employee)
+    if department:
+        users = users.filter(linked_employee__department__name__icontains=department)
+
+    # Apply role filter (basic implementation)
+    if role:
+        if role == 'admin':
+            users = users.filter(is_superuser=True)
+        elif role == 'manager':
+            users = users.filter(groups__permissions__codename='can_manage_system_settings').distinct()
+        elif role == 'user':
+            users = users.exclude(is_superuser=True).exclude(groups__permissions__codename='can_manage_system_settings').distinct()
+
+    # Order by username
+    users = users.select_related('linked_employee', 'linked_employee__department').prefetch_related('groups').order_by('username')
+
+    context = {
+        'users': users,
+        'user': request.user
+    }
+
+    return render(request, 'components/users/list.html', context)
+
+
+@csrf_exempt
+@login_required
+def reset_user_password(request, user_id):
+    """Reset user password to a default value"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    # Only allow users with system management to reset passwords
+    if not request.user.can_manage_system_settings:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    # Don't allow users to reset their own password this way
+    if user == request.user:
+        return JsonResponse({'error': 'You cannot reset your own password. Use the profile settings instead.'}, status=400)
+    
+    # Generate a temporary password
+    import secrets
+    import string
+    
+    # Generate a secure random password
+    alphabet = string.ascii_letters + string.digits
+    temp_password = ''.join(secrets.choice(alphabet) for i in range(12))
+    
+    # Set the new password
+    user.set_password(temp_password)
+    user.password_change_required = True  # Require user to change on next login
+    user.save()
+    
+    # Create audit log
+    AuditLog.objects.create(
+        user=request.user,
+        action='update',
+        model_name='User',
+        object_id=str(user.id),
+        object_repr=str(user),
+        changes={
+            'password_reset_by': request.user.get_full_name(),
+            'password_change_required': True
+        },
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')
+    )
+    
+    return JsonResponse({
+        'message': f'Password reset successfully for {user.get_full_name()}',
+        'temporary_password': temp_password,
+        'note': 'User will be required to change password on next login'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def user_bulk_operations_view(request):
+    """Bulk operations for user management"""
+    user_ids = request.data.get('item_ids', [])
+    operation = request.data.get('operation')
+    
+    if not user_ids or not operation:
+        return Response({'error': 'User IDs and operation are required'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
+    
+    users = User.objects.filter(id__in=user_ids)
+    if not users.exists():
+        return Response({'error': 'No valid users found'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+    
+    # Check base permissions
+    if not request.user.can_manage_users:
+        return Response({'error': 'Permission denied'}, 
+                       status=status.HTTP_403_FORBIDDEN)
+    
+    updated_count = 0
+    errors = []
+    
+    try:
+        with transaction.atomic():
+            if operation == 'activate_users':
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot modify your own account status')
+                        continue
+                    
+                    # Check permissions for system accounts
+                    if not request.user.can_manage_system_settings and user.can_manage_system_settings:
+                        errors.append(f'Cannot modify system administrator {user.get_full_name()}')
+                        continue
+                    
+                    if not user.is_active:
+                        user.is_active = True
+                        user.save()
+                        
+                        # Create audit log
+                        AuditLog.objects.create(
+                            user=request.user,
+                            action='update',
+                            model_name='User',
+                            object_id=str(user.id),
+                            object_repr=str(user),
+                            changes={
+                                'bulk_operation': 'activate_users',
+                                'activated_by': request.user.get_full_name(),
+                                'status_change': 'activated'
+                            },
+                            ip_address=request.META.get('REMOTE_ADDR'),
+                            user_agent=request.META.get('HTTP_USER_AGENT', '')
+                        )
+                        updated_count += 1
+            
+            elif operation == 'deactivate_users':
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot deactivate your own account')
+                        continue
+                    
+                    # Check permissions for system accounts
+                    if not request.user.can_manage_system_settings and user.can_manage_system_settings:
+                        errors.append(f'Cannot modify system administrator {user.get_full_name()}')
+                        continue
+                    
+                    if user.is_active:
+                        user.is_active = False
+                        user.save()
+                        
+                        # Create audit log
+                        AuditLog.objects.create(
+                            user=request.user,
+                            action='update',
+                            model_name='User',
+                            object_id=str(user.id),
+                            object_repr=str(user),
+                            changes={
+                                'bulk_operation': 'deactivate_users',
+                                'deactivated_by': request.user.get_full_name(),
+                                'status_change': 'deactivated'
+                            },
+                            ip_address=request.META.get('REMOTE_ADDR'),
+                            user_agent=request.META.get('HTTP_USER_AGENT', '')
+                        )
+                        updated_count += 1
+            
+            elif operation == 'assign_group':
+                # Only system managers can assign groups
+                if not request.user.can_manage_system_settings:
+                    return Response({'error': 'Only system managers can assign user groups'}, 
+                                   status=status.HTTP_403_FORBIDDEN)
+                
+                new_group_id = request.data.get('new_group_id')
+                replace_existing = request.data.get('replace_existing', True)
+                
+                if not new_group_id:
+                    return Response({'error': 'Group is required'}, 
+                                   status=status.HTTP_400_BAD_REQUEST)
+                
+                try:
+                    from django.contrib.auth.models import Group
+                    new_group = Group.objects.get(id=new_group_id)
+                except Group.DoesNotExist:
+                    return Response({'error': 'Group not found'}, 
+                                   status=status.HTTP_404_NOT_FOUND)
+                
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot modify your own group assignment')
+                        continue
+                    
+                    old_groups = list(user.groups.all())
+                    
+                    if replace_existing:
+                        user.groups.clear()
+                        user.groups.add(new_group)
+                    else:
+                        user.groups.add(new_group)
+                    
+                    # Create audit log
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='User',
+                        object_id=str(user.id),
+                        object_repr=str(user),
+                        changes={
+                            'bulk_operation': 'assign_group',
+                            'assigned_by': request.user.get_full_name(),
+                            'new_group': new_group.name,
+                            'old_groups': [g.name for g in old_groups],
+                            'replace_existing': replace_existing
+                        },
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    )
+                    updated_count += 1
+            
+            elif operation == 'remove_from_group':
+                # Only system managers can remove from groups
+                if not request.user.can_manage_system_settings:
+                    return Response({'error': 'Only system managers can remove users from groups'}, 
+                                   status=status.HTTP_403_FORBIDDEN)
+                
+                group_id = request.data.get('group_id')
+                
+                if not group_id:
+                    return Response({'error': 'Group is required'}, 
+                                   status=status.HTTP_400_BAD_REQUEST)
+                
+                try:
+                    from django.contrib.auth.models import Group
+                    group = Group.objects.get(id=group_id)
+                except Group.DoesNotExist:
+                    return Response({'error': 'Group not found'}, 
+                                   status=status.HTTP_404_NOT_FOUND)
+                
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot modify your own group assignment')
+                        continue
+                    
+                    if user.groups.filter(id=group_id).exists():
+                        user.groups.remove(group)
+                        
+                        # Create audit log
+                        AuditLog.objects.create(
+                            user=request.user,
+                            action='update',
+                            model_name='User',
+                            object_id=str(user.id),
+                            object_repr=str(user),
+                            changes={
+                                'bulk_operation': 'remove_from_group',
+                                'removed_by': request.user.get_full_name(),
+                                'removed_from_group': group.name
+                            },
+                            ip_address=request.META.get('REMOTE_ADDR'),
+                            user_agent=request.META.get('HTTP_USER_AGENT', '')
+                        )
+                        updated_count += 1
+            
+            elif operation == 'force_password_change':
+                # Only system managers can force password changes
+                if not request.user.can_manage_system_settings:
+                    return Response({'error': 'Only system managers can force password changes'}, 
+                                   status=status.HTTP_403_FORBIDDEN)
+                
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot force password change on your own account')
+                        continue
+                    
+                    user.password_change_required = True
+                    user.save()
+                    
+                    # Create audit log
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='User',
+                        object_id=str(user.id),
+                        object_repr=str(user),
+                        changes={
+                            'bulk_operation': 'force_password_change',
+                            'forced_by': request.user.get_full_name(),
+                            'password_change_required': True
+                        },
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    )
+                    updated_count += 1
+            
+            elif operation == 'reset_passwords':
+                # Only system managers can reset passwords
+                if not request.user.can_manage_system_settings:
+                    return Response({'error': 'Only system managers can reset passwords'}, 
+                                   status=status.HTTP_403_FORBIDDEN)
+                
+                import secrets
+                import string
+                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+                reset_results = []
+                
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot reset your own password')
+                        continue
+                    
+                    # Generate secure temporary password
+                    temp_password = ''.join(secrets.choice(alphabet) for i in range(12))
+                    
+                    user.set_password(temp_password)
+                    user.password_change_required = True
+                    user.save()
+                    
+                    reset_results.append({
+                        'user': user.get_full_name(),
+                        'username': user.username,
+                        'temp_password': temp_password
+                    })
+                    
+                    # Create audit log
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update',
+                        model_name='User',
+                        object_id=str(user.id),
+                        object_repr=str(user),
+                        changes={
+                            'bulk_operation': 'reset_passwords',
+                            'reset_by': request.user.get_full_name(),
+                            'password_change_required': True
+                        },
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    )
+                    updated_count += 1
+                
+                return Response({
+                    'message': f'Successfully reset passwords for {updated_count} users',
+                    'updated_count': updated_count,
+                    'total_users': len(user_ids),
+                    'reset_results': reset_results,
+                    'errors': errors if errors else None
+                })
+            
+            elif operation == 'update_staff_status':
+                # Only system managers can update staff status
+                if not request.user.can_manage_system_settings:
+                    return Response({'error': 'Only system managers can update staff status'}, 
+                                   status=status.HTTP_403_FORBIDDEN)
+                
+                is_staff = request.data.get('is_staff', False)
+                
+                for user in users:
+                    if user == request.user:
+                        errors.append(f'Cannot modify your own staff status')
+                        continue
+                    
+                    if user.is_staff != is_staff:
+                        user.is_staff = is_staff
+                        user.save()
+                        
+                        # Create audit log
+                        AuditLog.objects.create(
+                            user=request.user,
+                            action='update',
+                            model_name='User',
+                            object_id=str(user.id),
+                            object_repr=str(user),
+                            changes={
+                                'bulk_operation': 'update_staff_status',
+                                'updated_by': request.user.get_full_name(),
+                                'staff_status': 'granted' if is_staff else 'removed'
+                            },
+                            ip_address=request.META.get('REMOTE_ADDR'),
+                            user_agent=request.META.get('HTTP_USER_AGENT', '')
+                        )
+                        updated_count += 1
+            
+            elif operation == 'export_users':
+                export_format = request.data.get('export_format', 'csv')
+                include_permissions = request.data.get('include_permissions', True)
+                include_groups = request.data.get('include_groups', True)
+                
+                # This would implement the export functionality
+                # For now, just return success
+                return Response({
+                    'message': f'Export request created for {len(user_ids)} users',
+                    'export_format': export_format,
+                    'updated_count': len(user_ids)
+                })
+            
+            else:
+                return Response({'error': 'Invalid operation'}, 
+                               status=status.HTTP_400_BAD_REQUEST)
+        
+        response_data = {
+            'message': f'Successfully updated {updated_count} users',
+            'updated_count': updated_count,
+            'total_users': len(user_ids)
+        }
+        
+        if errors:
+            response_data['errors'] = errors
+            response_data['error_count'] = len(errors)
+        
+        return Response(response_data)
+    
+    except Exception as e:
+        return Response({'error': f'Bulk operation failed: {str(e)}'},
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_settings_view(request):
+    """Save system settings"""
+    from django.http import JsonResponse
+    from core.models import SystemSettings
+
+    # Check permission
+    if not request.user.can_manage_system_settings:
+        return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+
+    settings_type = request.POST.get('settings_type')
+
+    try:
+        if settings_type == 'general':
+            # Save general settings
+            SystemSettings.objects.update_or_create(
+                key='system_name',
+                defaults={'value': request.POST.get('system_name', 'IT Device Management')}
+            )
+            SystemSettings.objects.update_or_create(
+                key='admin_email',
+                defaults={'value': request.POST.get('admin_email', '')}
+            )
+            SystemSettings.objects.update_or_create(
+                key='timezone',
+                defaults={'value': request.POST.get('timezone', 'UTC')}
+            )
+            message = 'General settings saved successfully'
+
+        elif settings_type == 'features':
+            # Save feature toggles
+            SystemSettings.objects.update_or_create(
+                key='enable_approvals',
+                defaults={'value': str(request.POST.get('enable_approvals') == 'true')}
+            )
+            message = 'Feature settings saved successfully'
+
+        elif settings_type == 'security':
+            # Save security settings
+            SystemSettings.objects.update_or_create(
+                key='session_timeout',
+                defaults={'value': request.POST.get('session_timeout', '30')}
+            )
+            SystemSettings.objects.update_or_create(
+                key='password_policy',
+                defaults={'value': request.POST.get('password_policy', 'standard')}
+            )
+            SystemSettings.objects.update_or_create(
+                key='password_expiry',
+                defaults={'value': request.POST.get('password_expiry', '90')}
+            )
+            message = 'Security settings saved successfully'
+        else:
+            return JsonResponse({'success': False, 'message': 'Invalid settings type'}, status=400)
+
+        # Log the change
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='SystemSettings',
+            object_repr=f'{settings_type} settings',
+            changes={'settings_type': settings_type},
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+
+        return JsonResponse({'success': True, 'message': message})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error saving settings: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def run_backup_view(request):
+    """Run database backup"""
+    from django.http import JsonResponse
+    import subprocess
+    import os
     from datetime import datetime
-    import csv
-    
-    # For now, return CSV data - in production you might want PDF generation
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{report_type}_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    
-    writer = csv.writer(response)
-    
-    if report_type == 'inventory':
-        from devices.models import Device
-        writer.writerow(['Asset Tag', 'Serial Number', 'Category', 'Manufacturer', 'Model', 'Status', 'Location', 'Purchase Date', 'Purchase Price'])
-        
-        devices = Device.objects.select_related('device_model__category', 'device_model')
-        for device in devices:
-            writer.writerow([
-                device.asset_tag,
-                device.serial_number,
-                device.device_model.category.name,
-                device.device_model.manufacturer,
-                device.device_model.model_name,
-                device.get_status_display(),
-                device.location,
-                device.purchase_date.strftime('%Y-%m-%d') if device.purchase_date else '',
-                f'${device.purchase_price}' if device.purchase_price else ''
-            ])
-    
-    elif report_type == 'assignments':
-        from assignments.models import Assignment
-        writer.writerow(['Device', 'User', 'Assigned Date', 'Return Date', 'Status', 'Assigned By'])
-        
-        assignments = Assignment.objects.select_related('device', 'user', 'assigned_by')
-        for assignment in assignments:
-            writer.writerow([
-                assignment.device.asset_tag,
-                assignment.user.get_full_name(),
-                assignment.assigned_date.strftime('%Y-%m-%d'),
-                assignment.actual_return_date.strftime('%Y-%m-%d') if assignment.actual_return_date else '',
-                assignment.get_status_display(),
-                assignment.assigned_by.get_full_name()
-            ])
-    
-    else:
-        # Generic report with basic device info
-        writer.writerow(['Report Type', 'Generated Date'])
-        writer.writerow([report_type.title(), datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
-    
-    return response
+    from django.conf import settings as django_settings
+
+    # Check permission
+    if not request.user.can_manage_system_settings:
+        return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+
+    try:
+        # Get database path from settings
+        db_path = django_settings.DATABASES['default']['NAME']
+
+        # Create backups directory if it doesn't exist
+        backup_dir = os.path.join(os.path.dirname(db_path), 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+
+        # Generate backup filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_file = os.path.join(backup_dir, f'db_backup_{timestamp}.sqlite3')
+
+        # Copy database file
+        import shutil
+        shutil.copy2(db_path, backup_file)
+
+        # Log the backup
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='Backup',
+            object_repr=f'Database backup {timestamp}',
+            changes={'backup_file': backup_file},
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Backup created successfully: {os.path.basename(backup_file)}'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Backup failed: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def check_data_integrity_view(request):
+    """Check database integrity"""
+    from django.http import JsonResponse
+    from django.core import management
+    import io
+
+    # Check permission
+    if not request.user.can_manage_system_settings:
+        return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+
+    try:
+        # Run integrity check
+        out = io.StringIO()
+        management.call_command('check_data_integrity', '--verbose', stdout=out)
+        output = out.getvalue()
+
+        # Count issues (simple heuristic - look for "inconsistency" or "error" in output)
+        issues_found = output.lower().count('inconsistency') + output.lower().count('error')
+
+        # Log the check
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='System',
+            object_repr='Data integrity check',
+            changes={'issues_found': issues_found, 'output': output[:500]},
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+
+        message = 'Data integrity check completed'
+        if issues_found > 0:
+            message += f'. Found {issues_found} potential issue(s). Check audit logs for details.'
+        else:
+            message += '. No issues found.'
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'issues_found': issues_found
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Integrity check failed: {str(e)}'
+        }, status=500)

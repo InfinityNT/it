@@ -5,20 +5,20 @@ from .models import User, AuditLog, SystemSettings
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'department', 'is_active_employee', 'is_staff')
-    list_filter = ('role', 'department', 'is_active_employee', 'is_staff', 'is_superuser', 'date_joined')
-    search_fields = ('username', 'first_name', 'last_name', 'email', 'employee_id')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'linked_employee', 'is_staff')
+    list_filter = ('is_staff', 'is_superuser', 'date_joined', 'groups')
+    search_fields = ('username', 'first_name', 'last_name', 'email')
     ordering = ('username',)
     
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Additional Info', {
-            'fields': ('role', 'employee_id', 'department', 'phone', 'location', 'is_active_employee')
+            'fields': ('linked_employee',)
         }),
     )
     
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ('Additional Info', {
-            'fields': ('role', 'employee_id', 'department', 'phone', 'location', 'is_active_employee')
+            'fields': ('linked_employee',)
         }),
     )
 

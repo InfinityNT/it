@@ -1,0 +1,40 @@
+.device-card {
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.grid-view .device-card {
+    height: 100%;
+}
+
+.list-view .device-item {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.list-view .device-item:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-tag {
+    display: inline-block;
+    background-color: #e9ecef;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    margin: 0.125rem;
+}
+
+.filter-tag .btn-close {
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}

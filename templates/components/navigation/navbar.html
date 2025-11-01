@@ -1,0 +1,150 @@
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+        <!-- Sidebar toggle button (for quick actions panel on mobile/tablet) -->
+        <button class="navbar-toggler sidebar-toggle-btn me-2" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle quick actions">
+            <i class="bi bi-lightning-fill toggle-icon"></i>
+        </button>
+
+        <!-- Brand -->
+        <a class="navbar-brand" href="{% url 'dashboard' %}"
+           hx-get="/api/views/dashboard/"
+           hx-target="#content-area"
+           hx-push-url="true"
+           hx-swap="innerHTML show:none">
+            {{ SYSTEM_NAME }}
+        </a>
+
+        <!-- Mobile menu toggle -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navigation Menu -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mx-auto navbar-nav-custom">
+                <!-- Dashboard -->
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="/api/views/dashboard/"
+                       hx-target="#content-area"
+                       hx-push-url="{% url 'dashboard' %}"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'dashboard' %}">
+                        Dashboard
+                    </a>
+                </li>
+
+                <!-- Devices -->
+                {% if user.can_view_devices %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="/api/views/devices/"
+                       hx-target="#content-area"
+                       hx-push-url="{% url 'devices' %}"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'devices' %}">
+                        Devices
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Advanced Search -->
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="{% url 'advanced-search' %}"
+                       hx-target="#content-area"
+                       hx-push-url="true"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'advanced-search' %}">
+                        Search
+                    </a>
+                </li>
+
+                <!-- Assignments -->
+                {% if user.can_view_assignments %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="{% url 'assignments' %}"
+                       hx-target="#content-area"
+                       hx-push-url="true"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'assignments' %}">
+                        Assignments
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Users -->
+                {% if user.can_manage_users %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="/api/views/users/"
+                       hx-target="#content-area"
+                       hx-push-url="{% url 'users' %}"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'users' %}">
+                        Users
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Employees -->
+                {% if user.can_view_employees %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="{% url 'employees' %}"
+                       hx-target="#content-area"
+                       hx-push-url="true"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'employees' %}">
+                        Employees
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Reports -->
+                {% if user.can_view_reports %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="{% url 'reports:reports' %}"
+                       hx-target="#content-area"
+                       hx-push-url="true"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'reports:reports' %}">
+                        Reports
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Approvals -->
+                {% if user.can_modify_assignments %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="{% url 'approvals' %}"
+                       hx-target="#content-area"
+                       hx-push-url="true"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'approvals' %}">
+                        Approvals
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Settings -->
+                {% if user.can_manage_system_settings %}
+                <li class="nav-item">
+                    <a class="nav-link"
+                       hx-get="{% url 'settings' %}"
+                       hx-target="#content-area"
+                       hx-push-url="true"
+                       hx-swap="innerHTML show:none"
+                       href="{% url 'settings' %}">
+                        Settings
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

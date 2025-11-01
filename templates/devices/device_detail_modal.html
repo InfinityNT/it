@@ -1,0 +1,212 @@
+{% load static %}
+<div class="modal-header">
+    <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Device Details</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Basic Information Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Basic Information</h6>
+                <div class="info-card-body">
+                    <div class="info-field">
+                        <span class="info-label">Asset Tag:</span>
+                        <span class="info-value">{{ device.asset_tag }}</span>
+                    </div>
+                    <div class="info-field">
+                        <span class="info-label">Hostname:</span>
+                        <span class="info-value">{{ device.hostname }}</span>
+                    </div>
+                    <div class="info-field">
+                        <span class="info-label">Serial Number:</span>
+                        <span class="info-value">{{ device.serial_number }}</span>
+                    </div>
+                    <div class="info-field">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value"><span class="badge bg-primary">{{ device.get_status_display }}</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <!-- Device Model Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Device Model</h6>
+                <div class="info-card-body">
+                    <div class="info-field">
+                        <span class="info-label">Category:</span>
+                        <span class="info-value">{{ device.device_model.category.name }}</span>
+                    </div>
+                    <div class="info-field">
+                        <span class="info-label">Manufacturer:</span>
+                        <span class="info-value">{{ device.device_model.manufacturer }}</span>
+                    </div>
+                    <div class="info-field">
+                        <span class="info-label">Model:</span>
+                        <span class="info-value">{{ device.device_model.model_name }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if formatted_specs %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <!-- Specifications Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Specifications</h6>
+                <div class="info-card-body">
+                    <div class="row">
+                        {% for key, value in formatted_specs.items %}
+                        <div class="col-md-6">
+                            <div class="info-field">
+                                <span class="info-label">{{ key }}:</span>
+                                <span class="info-value">{{ value }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <!-- Network Information Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Network Information</h6>
+                <div class="info-card-body">
+                    {% if device.ip_address %}
+                    <div class="info-field">
+                        <span class="info-label">IP Address:</span>
+                        <span class="info-value">{{ device.ip_address }}</span>
+                    </div>
+                    {% endif %}
+                    {% if device.mac_address %}
+                    <div class="info-field">
+                        <span class="info-label">MAC Address:</span>
+                        <span class="info-value">{{ device.mac_address }}</span>
+                    </div>
+                    {% endif %}
+                    {% if not device.ip_address and not device.mac_address %}
+                    <div class="text-muted small">No network information available</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <!-- Usage Information Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Usage Information</h6>
+                <div class="info-card-body">
+                    <div class="info-field">
+                        <span class="info-label">Usage Type:</span>
+                        <span class="info-value">{{ device.get_usage_type_display }}</span>
+                    </div>
+                    {% if device.shared_usage %}
+                    <div class="info-field">
+                        <span class="info-label">Shared Usage:</span>
+                        <span class="info-value">{{ device.get_shared_usage_display }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <!-- Location Information Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Location</h6>
+                <div class="info-card-body">
+                    {% if device.location %}
+                    <div class="info-field">
+                        <span class="info-label">Location:</span>
+                        <span class="info-value">{{ device.location }}</span>
+                    </div>
+                    {% else %}
+                    <div class="text-muted small">No location information available</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <!-- Assignment Information Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Assignment</h6>
+                <div class="info-card-body">
+                    {% if device.assigned_to %}
+                    <div class="info-field">
+                        <span class="info-label">Assigned To:</span>
+                        <span class="info-value">{{ device.assigned_to.get_full_name }}</span>
+                    </div>
+                    {% if device.assigned_date %}
+                    <div class="info-field">
+                        <span class="info-label">Assigned Date:</span>
+                        <span class="info-value">{{ device.assigned_date|date:"Y-m-d" }}</span>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-muted small">Not currently assigned</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <!-- Additional Information Card -->
+            <div class="info-card">
+                <h6 class="info-card-header">Additional Information</h6>
+                <div class="info-card-body">
+                    {% if device.barcode %}
+                    <div class="info-field">
+                        <span class="info-label">Barcode:</span>
+                        <span class="info-value">{{ device.barcode }}</span>
+                    </div>
+                    {% endif %}
+                    {% if device.notes %}
+                    <div class="info-field">
+                        <span class="info-label">Notes:</span>
+                        <span class="info-value">{{ device.notes }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="info-field">
+                        <span class="info-label">Created:</span>
+                        <span class="info-value">{{ device.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="info-field">
+                        <span class="info-label">Last Updated:</span>
+                        <span class="info-value">{{ device.updated_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    {% if device.created_by %}
+                    <div class="info-field">
+                        <span class="info-label">Created By:</span>
+                        <span class="info-value">{{ device.created_by.get_full_name }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    {% if user.can_modify_devices %}
+    <a href="#"
+       hx-get="{% url 'edit-device' device_id=device.id %}"
+       hx-target="#dynamicModalContent"
+       hx-swap="innerHTML"
+       class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    {% endif %}
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+</div>

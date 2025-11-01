@@ -1,0 +1,76 @@
+<!-- Quick Actions Sidebar -->
+<nav class="sidebar loaded" id="sidebarMenu">
+    <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+            <!-- User Profile Section -->
+            <li class="nav-item user-profile-section">
+                <a href="{% url 'profile' %}"
+                   hx-get="{% url 'profile' %}"
+                   hx-target="#content-area"
+                   hx-push-url="true"
+                   hx-swap="innerHTML show:none"
+                   class="nav-link user-profile">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-circle user-avatar"></i>
+                        <div class="user-info">
+                            <div class="user-name"><span class="nav-link-text">{{ user.get_full_name|default:user.username }}</span></div>
+                            <div class="user-role"><span class="nav-link-text">
+                                {% if user.can_manage_system_settings %}
+                                    System Manager
+                                {% elif user.can_modify_devices %}
+                                    Device Manager
+                                {% elif user.can_view_devices %}
+                                    Viewer
+                                {% else %}
+                                    User
+                                {% endif %}
+                            </span></div>
+                        </div>
+                    </div>
+                </a>
+            </li>
+
+            <!-- Dynamic Quick Actions Section -->
+            <div id="quick-actions-section"
+                 hx-get="/api/quick-actions/"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+                <!-- Loading placeholder -->
+                <li class="nav-item">
+                    <hr class="sidebar-divider">
+                </li>
+                <li class="nav-item quick-actions-header">
+                    <span class="nav-link-header">
+                        <i class="bi bi-lightning"></i>
+                        Quick Actions
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-muted" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <hr class="sidebar-divider">
+                </li>
+            </div>
+
+            <!-- Spacer to push logout to bottom -->
+            <li class="nav-item flex-grow-1"></li>
+
+            <!-- Logout at bottom -->
+            <li class="nav-item logout-section">
+                <hr class="sidebar-divider">
+                <form method="post" action="{% url 'logout' %}" class="nav-form" id="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link logout-btn" id="logout-btn">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span class="nav-link-text">Logout</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</nav>

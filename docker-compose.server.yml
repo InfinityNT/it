@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  it:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: it_django
+    environment:
+      # Django Core Settings
+      - DEBUG=0
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this-in-production}
+      - DJANGO_ALLOWED_HOSTS=it.emurh.com,localhost,127.0.0.1
+      - CSRF_TRUSTED_ORIGINS=https://it.emurh.com
+
+      # Security Settings
+      - SECURE_SSL_REDIRECT=True
+      - SECURE_HSTS_SECONDS=31536000
+      - SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+      - SECURE_HSTS_PRELOAD=True
+      - SESSION_COOKIE_SECURE=True
+      - CSRF_COOKIE_SECURE=True
+
+      # Session Configuration
+      - SESSION_COOKIE_AGE=43200
+      - SESSION_EXPIRE_AT_BROWSER_CLOSE=False
+      - SESSION_SAVE_EVERY_REQUEST=True
+
+      # Superuser (optional - for first deployment)
+      # - AUTO_CREATE_SUPERUSER=true
+      # - DJANGO_SUPERUSER_USERNAME=admin
+      # - DJANGO_SUPERUSER_EMAIL=admin@emurh.com
+      # - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
+
+      # Logging
+      - LOG_LEVEL=INFO
+
+    volumes:
+      # Persistent database storage
+      - it_database:/app/data
+      # Static files (served by Whitenoise, but persisted for safety)
+      - it_static:/app/staticfiles
+      # Media files (if you have uploads)
+      - it_media:/app/media
+
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # HTTP router (redirect to HTTPS)
+      - "traefik.http.routers.it-http.rule=Host(`it.emurh.com`)"
+      - "traefik.http.routers.it-http.entrypoints=web"
+      - "traefik.http.routers.it-http.middlewares=it-redirect"
+
+      # HTTPS router
+      - "traefik.http.routers.it-https.rule=Host(`it.emurh.com`)"
+      - "traefik.http.routers.it-https.entrypoints=websecure"
+      - "traefik.http.routers.it-https.tls.certresolver=myresolver"
+      - "traefik.http.routers.it-https.middlewares=it-headers"
+
+      # Service configuration
+      - "traefik.http.services.it.loadbalancer.server.port=8000"
+
+      # Middlewares
+      # HTTP to HTTPS redirect
+      - "traefik.http.middlewares.it-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.it-redirect.redirectscheme.permanent=true"
+
+      # Security headers
+      - "traefik.http.middlewares.it-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.it-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.it-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.it-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.it-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.it-headers.headers.stsPreload=true"
+
+    expose:
+      - "8000"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    restart: unless-stopped
+
+    networks:
+      - default
+
+volumes:
+  it_database:
+    driver: local
+  it_static:
+    driver: local
+  it_media:
+    driver: local
+
+networks:
+  default:
+    external: true
+    name: traefik_default

@@ -63,6 +63,9 @@ coverage.xml
 *.backup
 *.tmp
 *.temp
+backups/
+db_backup_*
+*.tar.gz
 
 # Build and distribution
 build/
@@ -73,11 +76,23 @@ wheels/
 
 # Docker
 docker-compose.override.yml
+docker-compose.yml
+docker-compose.*.yml
+
+# Environment templates (may contain sensitive defaults)
+.env.production
+.env.server
+.env.example.*
 
 # Sample/test data
 sample_*.csv
 test_data/
 
-# Documentation (project-specific instructions)
+# Documentation (project-specific instructions and internal notes)
 CLAUDE.md
+
+# Claude Code settings
+.claude/
 RESPONSIVE_CARDS_IMPLEMENTATION.md
+DEPLOYMENT.md
+CHANGELOG.md

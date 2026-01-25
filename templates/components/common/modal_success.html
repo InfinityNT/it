@@ -1,0 +1,14 @@
+<!-- Modal Success Message -->
+<div class="modal-header border-0">
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body text-center py-5">
+    <div class="mb-4">
+        <i class="bi {{ icon|default:'bi-check-circle-fill' }} {{ icon_color|default:'text-success' }}" style="font-size: 4rem;"></i>
+    </div>
+    <h4 class="mb-3">{{ title|default:'Success!' }}</h4>
+    <p class="text-muted mb-4">{{ message }}</p>
+    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+        <i class="bi bi-check me-1"></i>Done
+    </button>
+</div>

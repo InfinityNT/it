@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports - {{ SYSTEM_NAME }}{% endblock %}
 
 {% block content %}
-<div hx-get="{% url 'reports:reports' %}"
-     hx-trigger="load"
-     hx-swap="innerHTML">
-    <div class="text-center p-4">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading reports...</span>
-        </div>
-    </div>
-</div>
+{% include 'reports/reports_content.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'reports/js/reports.js' %}"></script>
 {% endblock %}

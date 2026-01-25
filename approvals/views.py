@@ -10,16 +10,9 @@ from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta, datetime
 
-from .models import ApprovalRequest, ApprovalRule, ApprovalComment
+from .models import ApprovalRequest, ApprovalComment
 from core.models import User
 from devices.models import Device
-
-
-def check_approval_rules(request_data):
-    """Check if a request matches any approval rules - Group-based system"""
-    # In group-based system, all requests need IT Admin approval
-    # No auto-approval rules - everything goes through IT Admin
-    return None
 
 
 def create_approval_request(request_type, title, description, request_data, requested_by, devices=None, priority='medium'):
@@ -66,12 +59,7 @@ def approvals_view(request):
         messages.error(request, 'You do not have permission to access approvals.')
         return redirect('dashboard')
 
-    # If HTMX request, return content fragment
-    if request.headers.get('HX-Request'):
-        return render(request, 'approvals/approvals_content.html')
-    # If direct access, return full page
-    else:
-        return render(request, 'approvals/approvals.html')
+    return render(request, 'approvals/approvals.html')
 
 
 @login_required
@@ -80,11 +68,11 @@ def approval_list_api_view(request):
     # Only users with assignment modification permissions can access approvals
     if not request.user.can_modify_assignments:
         return JsonResponse({'error': 'Access denied'}, status=403)
-    
+
     queryset = ApprovalRequest.objects.select_related(
         'requested_by', 'assigned_to', 'approved_by'
     ).prefetch_related('devices')
-    
+
     # Role-based filtering
     if request.user.can_modify_assignments and not request.user.can_manage_system_settings:
         # IT Staff can only see their own requests
@@ -92,27 +80,36 @@ def approval_list_api_view(request):
     elif request.user.can_manage_system_settings:
         # IT Admin can see all requests (they're all assigned to them)
         queryset = queryset.filter(assigned_to=request.user)
-    
+
     # Apply filters
     status_filter = request.GET.get('status')
     priority_filter = request.GET.get('priority')
     request_type_filter = request.GET.get('request_type')
-    
+
+    # Track if user has applied explicit filters
+    has_filters = bool(status_filter or priority_filter or request_type_filter)
+
     if status_filter:
         queryset = queryset.filter(status=status_filter)
     if priority_filter:
         queryset = queryset.filter(priority=priority_filter)
     if request_type_filter:
         queryset = queryset.filter(request_type=request_type_filter)
-    
+
     # Default to showing pending requests first
     if not status_filter:
         queryset = queryset.filter(status='pending')
-    
+
     approvals = queryset.order_by('-created_at')[:50]  # Limit for performance
+
+    # Check if database is empty
+    total_approvals = ApprovalRequest.objects.count() if not approvals.exists() else None
+
     context = {
         'approvals': approvals,
-        'user_role': 'IT_Managers' if request.user.can_manage_system_settings else ('IT_Staff' if request.user.can_modify_assignments else 'Viewers')
+        'user_role': 'IT_Managers' if request.user.can_manage_system_settings else ('IT_Staff' if request.user.can_modify_assignments else 'Viewers'),
+        'has_filters': has_filters,
+        'is_empty_database': total_approvals == 0 if total_approvals is not None else False,
     }
     return render(request, 'components/approvals/list.html', context)
 

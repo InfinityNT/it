@@ -4,9 +4,9 @@
  * Version: 2025-10-25-modal-fix - Return device modal standardized to dynamicModal
  */
 
-// Global variables accessible across all functions
-let bulkManager;
-let currentDeviceId = null;
+// Global variables accessible across all functions (use var to allow redeclaration across page scripts)
+var bulkManager;
+var currentDeviceId = null;
 
 // Critical functions defined globally so they're always available
 function showAssignModal(deviceId) {

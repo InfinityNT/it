@@ -249,12 +249,13 @@ def current_user_view(request):
 # Traditional Django views for frontend
 @login_required
 def dashboard_view(request):
-    """Main application view - single canvas SPA"""
+    """Dashboard view - main landing page after login"""
     context = {
         'user': request.user,
+        'is_dashboard': True,  # Hides sidebar, enables full-width dashboard
     }
-    
-    return render(request, 'base.html', context)
+
+    return render(request, 'dashboard.html', context)
 
 
 def login_page_view(request):
@@ -270,12 +271,12 @@ def login_page_view(request):
 @permission_required_redirect('core.can_view_users', message='You do not have permission to view users.')
 def users_view(request):
     """Users management view"""
-    
+
     action = request.GET.get('action')
     if action == 'add':
         return redirect('add-user')
-    
-    return render(request, 'components/views/users.html')
+
+    return render(request, 'core/users.html')
 
 
 @permission_required_redirect('core.can_modify_users', message='You do not have permission to add users.')
@@ -432,6 +433,50 @@ def user_detail_view(request, user_id):
     return redirect('users')
 
 
+@login_required
+def deactivate_user_modal_view(request, user_id):
+    """Render deactivate user confirmation modal for HTMX requests."""
+    # Check permission - only users with system management can deactivate users
+    if not request.user.can_manage_system_settings:
+        return HttpResponse(
+            '<div class="alert alert-danger">Permission denied. You do not have access to deactivate users.</div>',
+            status=403
+        )
+
+    target_user = get_object_or_404(User, id=user_id)
+
+    # Don't allow users to deactivate themselves
+    if target_user == request.user:
+        return render(request, 'components/forms/deactivate_user_modal.html', {
+            'error_message': 'You cannot deactivate your own account.'
+        })
+
+    context = {
+        'target_user': target_user,
+    }
+
+    return render(request, 'components/forms/deactivate_user_modal.html', context)
+
+
+@login_required
+def reactivate_user_modal_view(request, user_id):
+    """Render reactivate user confirmation modal for HTMX requests."""
+    # Check permission - only users with system management can reactivate users
+    if not request.user.can_manage_system_settings:
+        return HttpResponse(
+            '<div class="alert alert-danger">Permission denied. You do not have access to reactivate users.</div>',
+            status=403
+        )
+
+    target_user = get_object_or_404(User, id=user_id)
+
+    context = {
+        'target_user': target_user,
+    }
+
+    return render(request, 'components/forms/reactivate_user_modal.html', context)
+
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def toggle_user_status(request, user_id):
@@ -507,7 +552,6 @@ def user_edit_view(request, user_id):
                 user.first_name = request.POST.get('first_name', '')
                 user.last_name = request.POST.get('last_name', '')
                 user.email = request.POST.get('email')
-                user.is_active = request.POST.get('is_active') == 'on'
                 user.is_staff = request.POST.get('is_staff') == 'on'
                 
                 # Handle employee linking
@@ -624,15 +668,16 @@ def profile_settings_view(request):
     context = {
         'user': user,
         'page_title': 'Profile Settings',
-        'can_manage_system': False  # Profile page is personal settings only
+        'can_manage_system': False,  # Profile page is personal settings only
+        'available_actions': user.get_available_quick_actions()  # Include quick actions directly
     }
 
     # HTMX requests get the component template
     if request.headers.get('HX-Request'):
         return render(request, 'components/views/settings.html', context)
     else:
-        # Non-HTMX requests redirect to settings page
-        return redirect('settings')
+        # Non-HTMX requests get the full page
+        return render(request, 'core/settings.html', context)
 
 
 @login_required
@@ -718,6 +763,31 @@ def dashboard_activity_view(request):
     return render(request, 'components/dashboard/activity.html', context)
 
 
+@login_required
+def dashboard_quick_actions_view(request):
+    """API to get user's quick actions for dashboard grid"""
+    user = request.user
+    enabled_actions = user.get_enabled_quick_actions()
+
+    # Always include profile button as a quick action
+    from collections import namedtuple
+    QuickAction = namedtuple('QuickAction', ['code', 'display_name', 'icon', 'url', 'url_params'])
+    profile_action = QuickAction(
+        code='profile',
+        display_name='My Profile',
+        icon='bi bi-person-circle',
+        url='/profile/',
+        url_params=''
+    )
+
+    context = {
+        'actions': enabled_actions,
+        'profile_action': profile_action,
+    }
+
+    return render(request, 'components/dashboard/quick_actions_grid.html', context)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def dashboard_search_view(request):
@@ -783,58 +853,6 @@ def dashboard_search_view(request):
 
 # Quick Actions Management Views
 @login_required
-def quick_actions_config_view(request):
-    """User quick actions configuration page"""
-    user = request.user
-    
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        
-        if action == 'toggle_action':
-            action_code = request.POST.get('action_code')
-            is_enabled = request.POST.get('is_enabled') == 'true'
-            
-            # Get or create the quick action
-            user_action, created = UserQuickAction.objects.get_or_create(
-                user=user,
-                action_code=action_code,
-                defaults={'is_enabled': is_enabled}
-            )
-            
-            if not created:
-                user_action.is_enabled = is_enabled
-                user_action.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Quick action {"enabled" if is_enabled else "disabled"} successfully'
-            })
-        
-        elif action == 'reorder_actions':
-            action_orders = request.POST.getlist('action_orders[]')
-            for i, action_code in enumerate(action_orders):
-                UserQuickAction.objects.filter(
-                    user=user,
-                    action_code=action_code
-                ).update(display_order=i)
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Action order updated successfully'
-            })
-    
-    # Get available actions for this user
-    available_actions = user.get_available_quick_actions()
-    
-    context = {
-        'available_actions': available_actions,
-        'user': user
-    }
-    
-    return render(request, 'components/quick_actions/config.html', context)
-
-
-@login_required
 def quick_actions_api_view(request):
     """API to get user's enabled quick actions for the sidebar"""
     user = request.user
@@ -867,8 +885,8 @@ def quick_actions_config_api_view(request):
 def quick_actions_toggle_api_view(request):
     """API to toggle quick action on/off"""
     user = request.user
-    action_code = request.POST.get('action_code')
-    is_enabled = request.POST.get('is_enabled') == 'true'
+    action_code = request.data.get('action_code') or request.POST.get('action_code')
+    is_enabled = (request.data.get('is_enabled') or request.POST.get('is_enabled')) == 'true'
     
     if not action_code:
         return Response({'success': False, 'message': 'Action code is required'}, status=400)
@@ -972,6 +990,7 @@ def dashboard_component_view(request):
         'total_devices': 0,  # Will be populated by HTMX
         'available_devices': 0,
         'assigned_devices': 0,
+        'breadcrumbs_list': [],  # Dashboard is home, no breadcrumbs needed
     }
     return render(request, 'components/views/dashboard.html', context)
 
@@ -980,7 +999,12 @@ def dashboard_component_view(request):
 @permission_classes([permissions.IsAuthenticated])
 def devices_component_view(request):
     """Return devices component"""
-    context = {'user': request.user}
+    context = {
+        'user': request.user,
+        'breadcrumbs_list': [
+            {'name': 'Devices'},
+        ]
+    }
     return render(request, 'devices/devices_content.html', context)
 
 
@@ -988,7 +1012,12 @@ def devices_component_view(request):
 @permission_classes([permissions.IsAuthenticated])
 def users_component_view(request):
     """Return users component"""
-    context = {'user': request.user}
+    context = {
+        'user': request.user,
+        'breadcrumbs_list': [
+            {'name': 'Users'},
+        ]
+    }
     return render(request, 'components/views/users.html', context)
 
 
@@ -1003,8 +1032,11 @@ def user_list_api_view(request):
     role = request.GET.get('role', '').strip()
     department = request.GET.get('department', '').strip()
 
-    # Build queryset
-    users = User.objects.filter(is_active=True)
+    # Track if any filters are active
+    has_filters = bool(search or role or department)
+
+    # Build queryset - show all users, active first
+    users = User.objects.all()
 
     # Apply search filter
     if search:
@@ -1028,12 +1060,17 @@ def user_list_api_view(request):
         elif role == 'user':
             users = users.exclude(is_superuser=True).exclude(groups__permissions__codename='can_manage_system_settings').distinct()
 
-    # Order by username
-    users = users.select_related('linked_employee', 'linked_employee__department').prefetch_related('groups').order_by('username')
+    # Order by active status (active first), then username
+    users = users.select_related('linked_employee', 'linked_employee__department').prefetch_related('groups').order_by('-is_active', 'username')
+
+    # Check if database is empty (excluding current user who always exists)
+    total_users = User.objects.count() if not users.exists() else None
 
     context = {
         'users': users,
-        'user': request.user
+        'user': request.user,
+        'has_filters': has_filters,
+        'is_empty_database': total_users == 0 if total_users is not None else False,
     }
 
     return render(request, 'components/users/list.html', context)
@@ -1449,10 +1486,6 @@ def save_settings_view(request):
             SystemSettings.objects.update_or_create(
                 key='system_name',
                 defaults={'value': request.POST.get('system_name', 'IT Device Management')}
-            )
-            SystemSettings.objects.update_or_create(
-                key='admin_email',
-                defaults={'value': request.POST.get('admin_email', '')}
             )
             SystemSettings.objects.update_or_create(
                 key='timezone',

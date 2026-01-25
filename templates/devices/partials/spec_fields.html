@@ -1,0 +1,21 @@
+{% if spec_fields %}
+<div class="row">
+    {% for key, value, display_name in spec_fields %}
+    <div class="col-md-6 mb-3">
+        <label for="spec_{{ key }}" class="form-label">
+            {{ display_name }}
+        </label>
+        <input type="text" class="form-control"
+               id="spec_{{ key }}"
+               name="spec_{{ key }}"
+               value="{{ value }}"
+               placeholder="Enter {{ display_name|lower }}">
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-3">
+    <i class="bi bi-info-circle"></i>
+    No specification template available for this category
+</div>
+{% endif %}

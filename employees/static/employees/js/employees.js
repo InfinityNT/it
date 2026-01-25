@@ -12,14 +12,7 @@ function initializeEmployeesPage() {
     window.employeesInitialized = true;
 
     let bulkManager;
-    
-    // Initialize bulk operations when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeBulkOperations();
-        enableBulkActionsButton();
-        setupFilterHandlers();
-    });
-    
+
     function initializeBulkOperations() {
         // Configuration for employee bulk operations
         const bulkConfig = {

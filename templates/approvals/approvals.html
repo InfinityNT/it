@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Approvals - {{ SYSTEM_NAME }}{% endblock %}
 
 {% block content %}
-<div hx-get="{% url 'approvals' %}"
-     hx-trigger="load"
-     hx-swap="innerHTML">
-    <div class="text-center p-4">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading approvals...</span>
-        </div>
-    </div>
-</div>
+{% include 'approvals/approvals_content.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'approvals/js/approvals-new.js' %}"></script>
 {% endblock %}

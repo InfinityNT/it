@@ -1,0 +1,88 @@
+{% load static %}
+<!-- Quick Actions Grid for Dashboard -->
+<!-- Displays user's enabled quick actions as large icon cards -->
+
+{% if actions or profile_action %}
+<div class="quick-actions-cards">
+    <!-- Profile Action (always shown first) -->
+    {% if profile_action %}
+    <div class="quick-action-card" data-action="profile">
+        <a href="{{ profile_action.url }}" class="quick-action-link">
+            <div class="quick-action-icon">
+                <i class="{{ profile_action.icon }}"></i>
+            </div>
+            <span class="quick-action-label">{{ profile_action.display_name }}</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- User's configured quick actions -->
+    {% for action in actions %}
+    <div class="quick-action-card" data-action="{{ action.code }}">
+        {% if action.code == 'add_device' or action.code == 'assign_device' or action.code == 'return_device' or action.code == 'add_employee' or action.code == 'add_user' %}
+        <!-- Modal-based actions -->
+        <a href="#"
+           class="quick-action-link"
+           hx-get="{{ action.url }}{{ action.url_params|default:'' }}"
+           hx-target="#dynamicModalContent"
+           hx-swap="innerHTML"
+           data-bs-toggle="modal"
+           data-bs-target="#dynamicModal">
+            <div class="quick-action-icon">
+                <i class="{{ action.icon }}"></i>
+            </div>
+            <span class="quick-action-label">{{ action.display_name }}</span>
+        </a>
+        {% else %}
+        <!-- Full-page navigation actions -->
+        <a href="{{ action.url }}{{ action.url_params|default:'' }}" class="quick-action-link">
+            <div class="quick-action-icon">
+                <i class="{{ action.icon }}"></i>
+            </div>
+            <span class="quick-action-label">{{ action.display_name }}</span>
+        </a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Dismissible widget for no actions configured -->
+<div class="no-actions-widget" id="quickActionsWidget">
+    <button type="button" class="widget-close-btn" onclick="dismissQuickActionsWidget(false)" title="Dismiss">
+        <i class="bi bi-x"></i>
+    </button>
+    <div class="widget-content">
+        <i class="bi bi-lightning-charge"></i>
+        <div class="widget-text">
+            <p class="widget-title">No shortcuts configured</p>
+            <p class="widget-desc">Add quick actions for faster access to frequent tasks</p>
+        </div>
+        <a href="/settings/" class="btn btn-primary-dark btn-sm">
+            Configure
+        </a>
+    </div>
+    <button type="button" class="widget-dismiss-link" onclick="dismissQuickActionsWidget(true)">
+        Don't show again
+    </button>
+</div>
+
+<script>
+// Check if widget should be hidden (localStorage)
+(function() {
+    if (localStorage.getItem('hideQuickActionsWidget') === 'true') {
+        const widget = document.getElementById('quickActionsWidget');
+        if (widget) widget.style.display = 'none';
+    }
+})();
+
+function dismissQuickActionsWidget(permanent) {
+    const widget = document.getElementById('quickActionsWidget');
+    if (widget) {
+        widget.style.display = 'none';
+        if (permanent) {
+            localStorage.setItem('hideQuickActionsWidget', 'true');
+        }
+    }
+}
+</script>
+{% endif %}

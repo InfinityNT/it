@@ -19,7 +19,6 @@ class ApprovalRequest(models.Model):
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
-        ('auto_approved', 'Auto Approved'),
     ]
     
     PRIORITY_CHOICES = [
@@ -95,20 +94,7 @@ class ApprovalRequest(models.Model):
         
         # Create notification
         self._create_notification('rejected')
-    
-    def auto_approve(self):
-        """Auto-approve the request based on rules"""
-        self.status = 'auto_approved'
-        self.reviewed_at = timezone.now()
-        self.approval_notes = 'Auto-approved by system'
-        self.save()
-        
-        # Execute the approved action
-        self._execute_approved_action()
-        
-        # Create notification
-        self._create_notification('auto_approved')
-    
+
     def _execute_approved_action(self):
         """Execute the action that was approved"""
         if self.request_type == 'device_assignment':
@@ -232,63 +218,6 @@ class ApprovalRequest(models.Model):
         if self.status == 'pending':
             return (timezone.now() - self.created_at).days
         return 0
-
-
-class ApprovalRule(models.Model):
-    """Rules for automatic approval or assignment"""
-    
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-    
-    # Rule conditions (stored as JSON)
-    conditions = models.JSONField(default=dict, help_text="Conditions that trigger this rule")
-    
-    # Rule actions
-    auto_approve = models.BooleanField(default=False)
-    assign_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    priority_override = models.CharField(max_length=10, choices=ApprovalRequest.PRIORITY_CHOICES, blank=True)
-    
-    # Rule settings
-    is_active = models.BooleanField(default=True)
-    order = models.IntegerField(default=0, help_text="Order of rule evaluation")
-    
-    created_at = models.DateTimeField(default=timezone.now)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_approval_rules')
-    
-    class Meta:
-        ordering = ['order', 'name']
-    
-    def __str__(self):
-        return self.name
-    
-    def matches_request(self, request):
-        """Check if this rule matches the given approval request"""
-        conditions = self.conditions
-        
-        # Check request type
-        if 'request_types' in conditions:
-            if request.request_type not in conditions['request_types']:
-                return False
-        
-        # Check device value (for high-value assignments)
-        if 'max_device_value' in conditions:
-            device_value = request.request_data.get('device_value', 0)
-            if device_value > conditions['max_device_value']:
-                return False
-        
-        # Check user permissions (more flexible than groups)
-        if 'required_permissions' in conditions:
-            for permission in conditions['required_permissions']:
-                if not request.requested_by.has_perm(permission):
-                    return False
-        
-        # Check assignment duration
-        if 'max_assignment_days' in conditions:
-            assignment_days = request.request_data.get('assignment_days', 0)
-            if assignment_days > conditions['max_assignment_days']:
-                return False
-        
-        return True
 
 
 class ApprovalComment(models.Model):

@@ -61,7 +61,6 @@ class DeviceSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     usage_type_display = serializers.CharField(source='get_usage_type_display', read_only=True)
     shared_usage_display = serializers.CharField(source='get_shared_usage_display', read_only=True)
-    full_location = serializers.ReadOnlyField()
 
     def get_assigned_to_display(self, obj):
         """Get display name for assigned employee"""
@@ -76,14 +75,13 @@ class DeviceSerializer(serializers.ModelSerializer):
             'category', 'status', 'status_display',
             'usage_type', 'usage_type_display', 'shared_usage', 'shared_usage_display',
             'ip_address', 'mac_address',
-            'location', 'full_location',
             'assigned_to', 'assigned_to_display', 'assigned_date',
             'notes', 'barcode', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at', 'device_model_display', 'category',
             'assigned_to_display', 'status_display',
-            'usage_type_display', 'shared_usage_display', 'full_location'
+            'usage_type_display', 'shared_usage_display'
         ]
 
 
@@ -93,7 +91,6 @@ class DeviceCreateSerializer(serializers.ModelSerializer):
         fields = [
             'asset_tag', 'hostname', 'serial_number', 'device_model', 'status',
             'usage_type', 'shared_usage', 'ip_address', 'mac_address',
-            'location',
             'notes', 'barcode'
         ]
 

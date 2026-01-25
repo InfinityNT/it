@@ -1,61 +1,32 @@
-<div class="row">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">
-                            Total Devices
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ total_devices|default:0 }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-laptop fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+<!-- Dashboard Stats - Dark Theme -->
+<div class="stats-grid">
+    <div class="stat-card-dark stat-primary">
+        <div class="stat-icon-dark">
+            <i class="bi bi-laptop"></i>
+        </div>
+        <div class="stat-content-dark">
+            <div class="stat-value-dark">{{ total_devices|default:0 }}</div>
+            <div class="stat-label-dark">Total Devices</div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                            Available
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ available_devices|default:0 }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="stat-card-dark stat-success">
+        <div class="stat-icon-dark">
+            <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="stat-content-dark">
+            <div class="stat-value-dark">{{ available_devices|default:0 }}</div>
+            <div class="stat-label-dark">Available</div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">
-                            Assigned
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ assigned_devices|default:0 }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-person-check fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="stat-card-dark stat-warning">
+        <div class="stat-icon-dark">
+            <i class="bi bi-person-check"></i>
+        </div>
+        <div class="stat-content-dark">
+            <div class="stat-value-dark">{{ assigned_devices|default:0 }}</div>
+            <div class="stat-label-dark">Assigned</div>
         </div>
     </div>
 </div>

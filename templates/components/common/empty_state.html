@@ -1,0 +1,105 @@
+<!-- Empty State Component -->
+<!--
+Usage for FILTERED results (no matches):
+{ % include 'components/common/empty_state.html' with
+    icon='search'
+    title='No items match your filters'
+    message='Try adjusting your search criteria'
+    has_filters=True
+    clear_filters_action='clearFilters()' % }
+
+Usage for EMPTY database (nothing registered yet):
+{ % include 'components/common/empty_state.html' with
+    icon='inbox'
+    title='No items registered yet'
+    message='Get started by adding your first item'
+    action_text='Add Item'
+    action_hx_get='/add/' % }
+-->
+
+<div class="empty-state text-center py-5">
+    <div class="empty-state-icon mb-3">
+        <i class="bi bi-{{ icon|default:'inbox' }} display-1 text-muted"></i>
+    </div>
+
+    <h3 class="empty-state-title text-dark mb-2">
+        {{ title|default:'No items found' }}
+    </h3>
+
+    {% if message %}
+    <p class="empty-state-message text-muted mb-3">
+        {{ message }}
+    </p>
+    {% endif %}
+
+    {% if has_filters %}
+    <!-- Filtered state: show clear filters option -->
+    <p class="text-muted mb-3">
+        Try adjusting your filters or
+        <a href="#" onclick="{{ clear_filters_action|default:'clearFilters(); return false;' }}" class="text-primary">
+            clear all filters
+        </a>
+    </p>
+    {% endif %}
+
+    {% if action_text and not has_filters %}
+    <!-- Empty state: show action button (only when not filtered) -->
+    <div class="empty-state-action mt-4">
+        <a href="{{ action_url|default:'#' }}"
+           {% if action_hx_get %}
+           hx-get="{{ action_hx_get }}"
+           hx-target="{{ action_hx_target|default:'#dynamicModalContent' }}"
+           hx-swap="innerHTML"
+           data-bs-toggle="modal"
+           data-bs-target="#dynamicModal"
+           {% endif %}
+           class="btn btn-primary">
+            <i class="bi bi-{{ action_icon|default:'plus' }} me-1"></i>
+            {{ action_text }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.empty-state {
+    padding: 3rem 1.5rem;
+}
+
+.empty-state-icon i {
+    font-size: 4rem;
+    opacity: 0.3;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.empty-state-message {
+    font-size: 1rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-state-action .btn {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.empty-state-action .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.empty-state-action .btn i {
+    flex-shrink: 0;
+}
+</style>

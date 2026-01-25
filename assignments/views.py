@@ -26,13 +26,16 @@ from django.db import transaction
 def assignment_list_api_view(request):
     """Assignment list API that returns HTML"""
     queryset = Assignment.objects.all()
-    
+
     # Apply filters
     status_filter = request.GET.get('status')
     employee_filter = request.GET.get('employee')
     device_filter = request.GET.get('device')
     search = request.GET.get('search')
-    
+
+    # Track if any filters are active
+    has_filters = bool(status_filter or employee_filter or device_filter or search)
+
     if status_filter:
         queryset = queryset.filter(status=status_filter)
     if employee_filter:
@@ -46,10 +49,17 @@ def assignment_list_api_view(request):
             models.Q(employee__last_name__icontains=search) |
             models.Q(employee__email__icontains=search)
         )
-    
+
     assignments = queryset.select_related('device', 'employee', 'assigned_by').order_by('-assigned_date')
 
-    context = {'assignments': assignments}
+    # Check if database is empty
+    total_assignments = Assignment.objects.count() if not assignments.exists() else None
+
+    context = {
+        'assignments': assignments,
+        'has_filters': has_filters,
+        'is_empty_database': total_assignments == 0 if total_assignments is not None else False,
+    }
 
     # Use different template for employee-specific assignments
     if employee_filter:
@@ -98,12 +108,7 @@ class AssignmentDetailView(generics.RetrieveAPIView):
 @permission_required_redirect('assignments.can_view_assignments', message='You do not have permission to view assignments.')
 def assignments_view(request):
     """Assignments management view"""
-    # If HTMX request, return content fragment
-    if request.headers.get('HX-Request'):
-        return render(request, 'assignments/assignments_content.html')
-    # If direct access, return full page
-    else:
-        return render(request, 'assignments/assignments.html')
+    return render(request, 'assignments/assignments.html')
 
 
 @login_required

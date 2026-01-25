@@ -1,0 +1,73 @@
+{% load static %}
+
+<!-- Add Device Model Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-cpu me-2"></i>Add New Device Model
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <form method="post"
+          id="addDeviceModelForm"
+          hx-post="{% url 'add-device-model' %}"
+          hx-target="#dynamicModalContent"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category *</label>
+                    <select class="form-select" id="category" name="category" required
+                            hx-get="{% url 'get-spec-template' %}"
+                            hx-target="#specifications-container"
+                            hx-swap="innerHTML"
+                            hx-trigger="change">
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="manufacturer" class="form-label">Manufacturer *</label>
+                    <select class="form-select" id="manufacturer" name="manufacturer" required>
+                        <option value="">Select Manufacturer</option>
+                        {% for manufacturer in manufacturers %}
+                        <option value="{{ manufacturer.name }}">{{ manufacturer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="model_name" class="form-label">Model Name *</label>
+            <input type="text" class="form-control" id="model_name" name="model_name" required
+                   placeholder="e.g., MacBook Pro 14-inch (2023)">
+        </div>
+
+        <hr>
+        <h6 class="mb-3">
+            <i class="bi bi-list-check me-1"></i>Specifications
+            <small class="text-muted">(select category to load default fields)</small>
+        </h6>
+
+        <div id="specifications-container">
+            <!-- Default specs loaded here based on category -->
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-arrow-up-circle"></i>
+                Select a category to load specification fields
+            </div>
+        </div>
+    </form>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <button type="submit" form="addDeviceModelForm" class="btn btn-primary">
+        <i class="bi bi-check-lg me-1"></i>Create Device Model
+    </button>
+</div>

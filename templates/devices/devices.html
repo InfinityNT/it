@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Devices - {{ SYSTEM_NAME }}{% endblock %}
 
 {% block content %}
-<div hx-get="/api/views/devices/"
-     hx-trigger="load"
-     hx-swap="innerHTML">
-    <div class="text-center p-4">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading devices...</span>
-        </div>
-    </div>
-</div>
+{% include 'devices/devices_content.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'devices/js/devices-new.js' %}"></script>
 {% endblock %}

@@ -73,7 +73,7 @@
 <!-- Users Cards -->
 <div class="card">
     <div class="card-body">
-        <div id="users-table" hx-get="{% url 'api-user-list-html' %}" hx-trigger="load">
+        <div id="users-table" hx-get="{% url 'api-user-list-html' %}" hx-trigger="load, refresh">
             <div class="d-flex justify-content-center p-4">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>

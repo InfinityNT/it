@@ -149,15 +149,9 @@
 </div>
 
 {% else %}
-<div class="text-center py-5">
-    <i class="bi bi-person-lines-fill display-1 text-muted"></i>
-    <h4 class="mt-3">No Assignments Found</h4>
-    <p class="text-muted">No device assignments match your current filters.</p>
-    {% if user.can_modify_assignments %}
-    <a href="/devices/" class="btn btn-primary">
-        <i class="bi bi-plus"></i>
-        Assign a Device
-    </a>
+    {% if is_empty_database %}
+        {% include 'components/common/empty_state.html' with icon='person-lines-fill' title='No assignments yet' message='Device assignments will appear here once devices are assigned to employees' action_text='Go to Devices' action_url='/devices/' action_icon='laptop' %}
+    {% else %}
+        {% include 'components/common/empty_state.html' with icon='search' title='No assignments match your filters' message='Try adjusting your search criteria' has_filters=True %}
     {% endif %}
-</div>
 {% endif %}

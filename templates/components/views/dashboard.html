@@ -1,50 +1,164 @@
 {% load static %}
 
-<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
-
-<!-- Page Header -->
-<div class="page-header">
-    <div class="page-header-content">
-        <div class="page-header-icon">
-            <i class="bi bi-speedometer2"></i>
-        </div>
-        <div class="page-header-text">
-            <h1 class="page-title">Dashboard</h1>
-            <p class="page-description">
-                Welcome back, {{ user.get_full_name|default:user.username }} •
-                Last login: {{ user.last_login|date:"M d, H:i"|default:"First time" }}
-            </p>
-        </div>
-    </div>
-</div>
-
-<!-- Statistics Section -->
-<div id="dashboard-stats" 
-     hx-get="/api/dashboard/stats/" 
-     hx-trigger="load">
-    <div class="text-center">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Activity -->
-<div class="row mt-4">
-    <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Recent Activity</h5>
+<!-- Dashboard Container - Dark Theme -->
+<div class="dashboard-dark">
+    <!-- Quick Actions Grid -->
+    <div class="dashboard-section">
+        <h2 class="section-title">
+            <i class="bi bi-lightning-fill"></i>
+            Quick Actions
+        </h2>
+        <div class="quick-actions-grid"
+             id="dashboard-quick-actions"
+             hx-get="/api/dashboard/quick-actions/"
+             hx-trigger="load once">
+            <!-- Loading state -->
+            <div class="loading-placeholder-dark">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>
-            <div class="card-body" id="dashboard-activity" 
-                 hx-get="/api/dashboard/activity/" 
-                 hx-trigger="load">
-                <div class="text-center">
+        </div>
+    </div>
+
+    <!-- Global Search -->
+    <div class="dashboard-section">
+        <div class="search-card-dark">
+            <div class="search-input-wrapper">
+                <form class="d-flex" id="global-search-form" onsubmit="performGlobalSearch(event)">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text search-icon-dark">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control search-input-dark"
+                               id="global-search-input"
+                               placeholder="Search devices, employees, users, assignments..."
+                               autocomplete="off">
+                        <button class="btn btn-primary-dark" type="submit">
+                            <i class="bi bi-search me-1"></i>
+                            Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted-dark">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>Quick search:</strong> Try searching by device name, asset tag, employee name
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results (hidden by default) -->
+    <div class="dashboard-section" id="search-results-container" style="display: none;">
+        <div class="card-dark">
+            <div class="card-header-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title-dark mb-0">
+                    <i class="bi bi-search me-2"></i>
+                    Search Results
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary-dark" onclick="clearSearch()">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Clear
+                </button>
+            </div>
+            <div class="card-body-dark" id="search-results-content">
+                <!-- Results loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="dashboard-section">
+        <h2 class="section-title">
+            <i class="bi bi-bar-chart-fill"></i>
+            Overview
+        </h2>
+        <div id="dashboard-stats"
+             hx-get="/api/dashboard/stats/"
+             hx-trigger="load once">
+            <div class="loading-placeholder-dark">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading statistics...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="dashboard-section">
+        <h2 class="section-title">
+            <i class="bi bi-clock-history"></i>
+            Recent Activity
+        </h2>
+        <div class="card-dark">
+            <div class="card-body-dark" id="dashboard-activity"
+                 hx-get="/api/dashboard/activity/"
+                 hx-trigger="load once">
+                <div class="loading-placeholder-dark">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                        <span class="visually-hidden">Loading activity...</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function performGlobalSearch(event) {
+    event.preventDefault();
+    const query = document.getElementById('global-search-input').value.trim();
+
+    if (!query) {
+        return;
+    }
+
+    const resultsContainer = document.getElementById('search-results-container');
+    const resultsContent = document.getElementById('search-results-content');
+
+    // Show container and loading state
+    resultsContainer.style.display = 'block';
+    resultsContent.innerHTML = `
+        <div class="loading-placeholder-dark">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Searching...</span>
+            </div>
+        </div>
+    `;
+
+    // Scroll to results
+    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Perform search via HTMX
+    htmx.ajax('GET', `/api/global-search/?q=${encodeURIComponent(query)}`, {
+        target: '#search-results-content',
+        swap: 'innerHTML'
+    });
+}
+
+function clearSearch() {
+    document.getElementById('global-search-input').value = '';
+    document.getElementById('search-results-container').style.display = 'none';
+    document.getElementById('search-results-content').innerHTML = '';
+}
+
+// Mobile scroll detection for navbar background
+(function() {
+    if (window.innerWidth < 768) {
+        const dashboard = document.querySelector('.dashboard-dark');
+        const navbar = document.querySelector('.navbar');
+        if (dashboard && navbar) {
+            dashboard.addEventListener('scroll', function() {
+                if (this.scrollTop > 10) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
+        }
+    }
+})();
+</script>

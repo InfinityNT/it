@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Users - {{ SYSTEM_NAME }}{% endblock %}
+
+{% block content %}
+{% include 'components/views/users.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/user_list.js' %}"></script>
+{% endblock %}

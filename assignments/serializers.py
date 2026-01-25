@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Assignment, DeviceReservation
+from .models import Assignment
 from devices.serializers import DeviceSerializer
 from core.serializers import UserSerializer
 
@@ -43,52 +43,9 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
         model = Assignment
         fields = [
             'device', 'employee', 'expected_return_date',
-            'purpose', 'location', 'notes', 'requires_approval'
+            'purpose', 'notes', 'requires_approval'
         ]
 
     def create(self, validated_data):
         validated_data['assigned_by'] = self.context['request'].user
         return super().create(validated_data)
-
-
-
-
-class DeviceReservationSerializer(serializers.ModelSerializer):
-    device_display = serializers.CharField(source='device.__str__', read_only=True)
-    user_display = serializers.CharField(source='user.get_full_name', read_only=True)
-    approved_by_display = serializers.CharField(source='approved_by.get_full_name', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    is_expired = serializers.ReadOnlyField()
-    
-    class Meta:
-        model = DeviceReservation
-        fields = '__all__'
-        read_only_fields = [
-            'id', 'created_at', 'updated_at', 'device_display', 'user_display',
-            'approved_by_display', 'status_display', 'is_expired'
-        ]
-
-
-class DeviceReservationCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DeviceReservation
-        fields = ['device', 'start_date', 'end_date', 'purpose']
-    
-    def validate(self, attrs):
-        if attrs['start_date'] >= attrs['end_date']:
-            raise serializers.ValidationError("End date must be after start date")
-        return attrs
-    
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
-
-
-class ReservationApprovalSerializer(serializers.Serializer):
-    action = serializers.ChoiceField(choices=['approve', 'reject'])
-    rejection_reason = serializers.CharField(required=False, allow_blank=True)
-    
-    def validate(self, attrs):
-        if attrs['action'] == 'reject' and not attrs.get('rejection_reason'):
-            raise serializers.ValidationError("Rejection reason is required when rejecting")
-        return attrs

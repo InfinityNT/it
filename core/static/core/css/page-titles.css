@@ -157,16 +157,57 @@
    RESPONSIVE BREAKPOINTS
    ========================================== */
 
-/* Tablets and below */
-@media (max-width: 991.98px) {
+/* Medium screens (900-1200px) - optimized for split windows */
+@media (max-width: 1199.98px) {
     .page-header {
-        padding: 1.5rem 1.5rem;
+        padding: 1.5rem 1.75rem;
+        gap: 1rem;
     }
 
     .page-title {
         font-size: 1.75rem;
     }
 
+    .page-header-actions {
+        flex-wrap: wrap;
+    }
+
+    .page-header-actions .btn {
+        padding: 0.45rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Tablets and narrow windows (768-899px) */
+@media (max-width: 899.98px) {
+    .page-header {
+        padding: 1.25rem 1.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+    }
+
+    .page-header-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+    }
+
+    .page-header-icon i {
+        font-size: 1.35rem;
+    }
+
+    .page-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* Tablets and below - original breakpoint */
+@media (max-width: 991.98px) {
     .page-header-icon {
         width: 48px;
         height: 48px;

@@ -1,0 +1,239 @@
+<!-- Error State Component -->
+<!-- Usage: {% include 'components/common/error_state.html' with title='Failed to load' message='Something went wrong' %} -->
+
+<div class="error-state-container">
+    <div class="error-state-card">
+        <!-- Icon -->
+        <div class="error-state-icon">
+            <div class="error-icon-bg">
+                <i class="bi bi-{{ icon|default:'exclamation-triangle' }}"></i>
+            </div>
+            <div class="error-icon-pulse"></div>
+        </div>
+
+        <!-- Content -->
+        <div class="error-state-content">
+            <h3 class="error-state-title">
+                {{ title|default:'Failed to load content' }}
+            </h3>
+            <p class="error-state-message">
+                {{ message|default:'We couldn\'t load this content. Please check your connection and try again.' }}
+            </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="error-state-actions">
+            {% if retry_url %}
+            <button class="error-btn error-btn-primary"
+                    hx-get="{{ retry_url }}"
+                    hx-target="{{ retry_target|default:'#content-area' }}"
+                    hx-swap="innerHTML">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Try Again</span>
+            </button>
+            {% elif retry_action %}
+            <button class="error-btn error-btn-primary" onclick="{{ retry_action }}">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Try Again</span>
+            </button>
+            {% else %}
+            <button class="error-btn error-btn-primary" onclick="window.location.reload()">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Refresh Page</span>
+            </button>
+            {% endif %}
+
+            <a href="/" class="error-btn error-btn-secondary">
+                <i class="bi bi-house-door"></i>
+                <span>Go to Dashboard</span>
+            </a>
+        </div>
+
+        <!-- Help Text -->
+        <p class="error-state-help">
+            If this problem persists, please contact your system administrator.
+        </p>
+    </div>
+</div>
+
+<style>
+.error-state-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 2rem;
+}
+
+.error-state-card {
+    text-align: center;
+    max-width: 440px;
+    width: 100%;
+}
+
+/* Icon */
+.error-state-icon {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1.75rem;
+}
+
+.error-icon-bg {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+.error-icon-bg i {
+    font-size: 2.25rem;
+    color: #ef4444;
+}
+
+.error-icon-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    background: rgba(239, 68, 68, 0.15);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.4);
+        opacity: 0;
+    }
+}
+
+/* Content */
+.error-state-content {
+    margin-bottom: 2rem;
+}
+
+.error-state-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+}
+
+.error-state-message {
+    font-size: 0.95rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Actions */
+.error-state-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.error-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.error-btn i {
+    font-size: 1rem;
+}
+
+.error-btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.error-btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.error-btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.error-btn-secondary:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+/* Help */
+.error-state-help {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .error-icon-bg {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
+    }
+
+    .error-state-title {
+        color: #f1f5f9;
+    }
+
+    .error-state-message {
+        color: #94a3b8;
+    }
+
+    .error-btn-secondary {
+        background: #334155;
+        color: #e2e8f0;
+    }
+
+    .error-btn-secondary:hover {
+        background: #475569;
+        color: #f1f5f9;
+    }
+
+    .error-state-help {
+        color: #64748b;
+    }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .error-state-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .error-state-actions {
+        flex-direction: column;
+    }
+
+    .error-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>

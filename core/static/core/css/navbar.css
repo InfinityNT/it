@@ -1,8 +1,8 @@
-/* Custom navbar breakpoint: 1250px instead of Bootstrap's lg (992px) */
-/* Override Bootstrap's lg breakpoint to use 1250px breakpoint instead */
+/* Custom navbar breakpoint: 992px (Bootstrap's lg) */
+/* Optimized for split-window desktop usage */
 
-/* Below 1250px: Show hamburger menu and full-width mobile layout */
-@media (max-width: 1249.98px) {
+/* Below 992px: Show hamburger menu and full-width mobile layout */
+@media (max-width: 991.98px) {
     /* Force mobile navbar behavior */
     .navbar-expand-lg {
         flex-wrap: wrap;
@@ -62,8 +62,8 @@
     }
 }
 
-/* Above 1250px: Show full horizontal navbar */
-@media (min-width: 1250px) {
+/* Above 992px: Show full horizontal navbar */
+@media (min-width: 992px) {
     .navbar-expand-lg .navbar-toggler {
         display: none !important;
     }
@@ -83,44 +83,148 @@
     }
 }
 
-/* Navbar Navigation Styles */
+/* ===========================================
+   Navbar Navigation Styles - Pill Button Design
+   Used across ALL pages for consistent styling
+   =========================================== */
+.navbar-nav {
+    gap: 0.5rem;
+}
+
 .navbar-nav .nav-link {
-    color: rgba(255, 255, 255, 0.75);
-    padding: 0.5rem 1rem;
-    border-bottom: 4px solid transparent;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
     transition: all 0.3s ease;
     position: relative;
 }
 
 .navbar-nav .nav-link:hover {
-    color: rgba(255, 255, 255, 0.95);
-    border-bottom-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
     background-color: rgba(255, 255, 255, 0.1);
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
 }
 
 .navbar-nav .nav-link.active {
     color: #ffffff;
-    border-bottom-color: #007bff;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
     font-weight: 600;
-    background-color: rgba(0, 123, 255, 0.15);
-    letter-spacing: 0.02em;
 }
 
 /* Responsive navbar adjustments */
-/* Mobile/Tablet - Below custom 1250px breakpoint */
-@media (max-width: 1249.98px) {
+/* Mobile/Tablet - Below 992px breakpoint */
+@media (max-width: 991.98px) {
     .navbar-nav {
         padding: 1rem 0;
+        gap: 0.25rem;
     }
 
     .navbar-nav .nav-link {
         padding: 0.75rem 1rem;
-        border-bottom: none; /* Remove bottom border on mobile */
-        border-left: 4px solid transparent; /* Add left border instead */
+        border-radius: 8px;
+        width: 100%;
+        text-align: left;
     }
 
-    .navbar-nav .nav-link.active {
-        border-left-color: #007bff;
-        border-bottom-color: transparent;
+    /* Mobile collapsed menu styling */
+    .navbar-collapse.show,
+    .navbar-collapse.collapsing {
+        background: rgba(33, 37, 41, 0.98);
+        border-radius: 12px;
+        margin-top: 0.5rem;
+        padding: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
+}
+
+/* ==========================================
+   Dashboard-Specific Navbar Overrides
+   Only handles: transparency, hidden elements, centering
+   (Pill styling is now in base styles above)
+   ========================================== */
+
+/* Base navbar transition */
+.navbar {
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Dashboard: Make navbar overlay content so gradient shows through */
+body.dashboard-active .navbar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: transparent !important;
+    box-shadow: none;
+    padding: 0.75rem 1rem !important;
+    margin: 0 !important;
+    z-index: 1000;
+    transition: background 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* Mobile: Navbar gets background when scrolled */
+@media (max-width: 767.98px) {
+    body.dashboard-active .navbar.scrolled {
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+}
+
+/* Dashboard: Center the nav container */
+body.dashboard-active .navbar > .container-fluid {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    justify-content: center;
+}
+
+/* Dashboard: Hide brand/title and sidebar toggle */
+body.dashboard-active .navbar-brand,
+body.dashboard-active .sidebar-toggle-btn {
+    display: none !important;
+}
+
+body.dashboard-active .navbar-collapse {
+    flex-grow: 0;
+    background: transparent;
+}
+
+/* Dashboard: Hide the Dashboard nav link since we're already on it */
+body.dashboard-active .navbar-nav .nav-link[href="/"],
+body.dashboard-active .navbar-nav .nav-link[href="/dashboard/"] {
+    display: none !important;
+}
+
+/* Dashboard: Slightly lighter text color for transparent background */
+body.dashboard-active .navbar-nav .nav-link {
+    color: rgba(226, 232, 240, 0.9) !important;
+}
+
+body.dashboard-active .navbar-nav .nav-link:hover {
+    color: #ffffff !important;
+}
+
+/* Dashboard: Mobile collapsed menu with matching dark theme */
+@media (max-width: 991.98px) {
+    body.dashboard-active .navbar-collapse.show,
+    body.dashboard-active .navbar-collapse.collapsing {
+        background: rgba(30, 41, 59, 0.95);
+        border: 1px solid rgba(51, 65, 85, 0.5);
+    }
+}
+
+/* Dashboard: Navbar toggler (hamburger) styling */
+body.dashboard-active .navbar-toggler {
+    border-color: rgba(241, 245, 249, 0.3) !important;
+}
+
+body.dashboard-active .navbar-toggler-icon {
+    filter: brightness(1.2);
 }

@@ -118,20 +118,26 @@
                class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-pencil"></i><span class="btn-text ps-2">Edit</span>
             </a>
+            {% endif %}
 
+            {% if user.can_manage_system_settings and user_item.id != user.id %}
             {% if user_item.is_active %}
             <button class="btn btn-sm btn-outline-warning"
-                    hx-post="{% url 'api-toggle-user-status' user_id=user_item.id %}"
-                    hx-target="#users-table"
-                    hx-swap="innerHTML">
-                <i class="bi bi-pause-circle"></i> Deactivate
+                    hx-get="{% url 'deactivate-user-modal' user_id=user_item.id %}"
+                    hx-target="#dynamicModalContent"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#dynamicModal">
+                <i class="bi bi-pause-circle"></i><span class="btn-text ps-2">Deactivate</span>
             </button>
             {% else %}
             <button class="btn btn-sm btn-outline-success"
-                    hx-post="{% url 'api-toggle-user-status' user_id=user_item.id %}"
-                    hx-target="#users-table"
-                    hx-swap="innerHTML">
-                <i class="bi bi-play-circle"></i> Activate
+                    hx-get="{% url 'reactivate-user-modal' user_id=user_item.id %}"
+                    hx-target="#dynamicModalContent"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#dynamicModal">
+                <i class="bi bi-play-circle"></i><span class="btn-text ps-2">Activate</span>
             </button>
             {% endif %}
             {% endif %}
@@ -141,8 +147,9 @@
 </div>
 
 {% else %}
-<div class="alert alert-info d-flex align-items-center" role="alert">
-    <i class="bi bi-info-circle me-2"></i>
-    <div>No users found matching your criteria.</div>
-</div>
+    {% if is_empty_database %}
+        {% include 'components/common/empty_state.html' with icon='person-circle' title='No users registered yet' message='Create user accounts to grant system access' action_text='Add User' action_hx_get='/api/users/create/' action_icon='person-plus' %}
+    {% else %}
+        {% include 'components/common/empty_state.html' with icon='search' title='No users match your filters' message='Try adjusting your search criteria' has_filters=True %}
+    {% endif %}
 {% endif %}

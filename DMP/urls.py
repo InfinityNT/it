@@ -30,9 +30,9 @@ urlpatterns = [
     path("reports/", include("reports.urls")),
 ]
 
-# Serve static files in development
+# Static files handling:
+# - Production (DEBUG=False): WhiteNoise middleware serves from STATIC_ROOT (run collectstatic)
+# - Development (DEBUG=True): Django's staticfiles app serves from app directories
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-else:
-    # For production with DEBUG=False, we need to explicitly serve static files
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()

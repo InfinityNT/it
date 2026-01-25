@@ -4,8 +4,8 @@ from .models import Department, JobTitle, Employee
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'manager_employee_id', 'location', 'is_active', 'created_at')
-    list_filter = ('is_active', 'location', 'created_at')
+    list_display = ('name', 'code', 'manager_employee_id', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
     search_fields = ('name', 'code', 'description', 'budget_code', 'manager_employee_id')
     readonly_fields = ('created_at',)
 

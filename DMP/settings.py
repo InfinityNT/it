@@ -153,7 +153,9 @@ STATICFILES_DIRS = [
 ]
 
 # Whitenoise for serving static files in production
-MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+# Only add in production - in development, Django's runserver serves static files
+if not DEBUG:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True
@@ -172,8 +174,8 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').lower() == 'true'
     CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True').lower() == 'true'
     SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = True
-    
+    CSRF_COOKIE_HTTPONLY = False  # Allow JS to read CSRF token for HTMX requests
+
     # Additional security headers
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
     
@@ -190,7 +192,7 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = False  # Allow JS to read CSRF token for HTMX requests
 
 # Session configuration
 SESSION_COOKIE_AGE = int(os.environ.get('SESSION_COOKIE_AGE', '43200'))  # 12 hours

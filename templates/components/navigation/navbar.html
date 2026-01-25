@@ -1,19 +1,15 @@
 <!-- Navigation -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" id="mainNavbar">
     <div class="container-fluid">
-        <!-- Sidebar toggle button (for quick actions panel on mobile/tablet) -->
-        <button class="navbar-toggler sidebar-toggle-btn me-2" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle quick actions">
-            <i class="bi bi-lightning-fill toggle-icon"></i>
+        <!-- Sidebar toggle button (for quick actions panel) -->
+        <button class="sidebar-toggle-btn me-2" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle quick actions">
+            <i class="bi bi-list toggle-icon"></i>
         </button>
 
-        <!-- Brand -->
-        <a class="navbar-brand" href="{% url 'dashboard' %}"
-           hx-get="/api/views/dashboard/"
-           hx-target="#content-area"
-           hx-push-url="true"
-           hx-swap="innerHTML show:none">
+        <!-- Brand
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
             {{ SYSTEM_NAME }}
-        </a>
+        </a> -->
 
         <!-- Mobile menu toggle -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,11 +21,7 @@
             <ul class="navbar-nav mx-auto navbar-nav-custom">
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="/api/views/dashboard/"
-                       hx-target="#content-area"
-                       hx-push-url="{% url 'dashboard' %}"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
                        href="{% url 'dashboard' %}">
                         Dashboard
                     </a>
@@ -38,11 +30,7 @@
                 <!-- Devices -->
                 {% if user.can_view_devices %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="/api/views/devices/"
-                       hx-target="#content-area"
-                       hx-push-url="{% url 'devices' %}"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'devices' %}active{% endif %}"
                        href="{% url 'devices' %}">
                         Devices
                     </a>
@@ -51,11 +39,7 @@
 
                 <!-- Advanced Search -->
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="{% url 'advanced-search' %}"
-                       hx-target="#content-area"
-                       hx-push-url="true"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'advanced-search' %}active{% endif %}"
                        href="{% url 'advanced-search' %}">
                         Search
                     </a>
@@ -64,11 +48,7 @@
                 <!-- Assignments -->
                 {% if user.can_view_assignments %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="{% url 'assignments' %}"
-                       hx-target="#content-area"
-                       hx-push-url="true"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'assignments' %}active{% endif %}"
                        href="{% url 'assignments' %}">
                         Assignments
                     </a>
@@ -78,11 +58,7 @@
                 <!-- Users -->
                 {% if user.can_manage_users %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="/api/views/users/"
-                       hx-target="#content-area"
-                       hx-push-url="{% url 'users' %}"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}"
                        href="{% url 'users' %}">
                         Users
                     </a>
@@ -92,11 +68,7 @@
                 <!-- Employees -->
                 {% if user.can_view_employees %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="{% url 'employees' %}"
-                       hx-target="#content-area"
-                       hx-push-url="true"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'employees' %}active{% endif %}"
                        href="{% url 'employees' %}">
                         Employees
                     </a>
@@ -106,11 +78,7 @@
                 <!-- Reports -->
                 {% if user.can_view_reports %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="{% url 'reports:reports' %}"
-                       hx-target="#content-area"
-                       hx-push-url="true"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}"
                        href="{% url 'reports:reports' %}">
                         Reports
                     </a>
@@ -120,11 +88,7 @@
                 <!-- Approvals -->
                 {% if user.can_modify_assignments %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="{% url 'approvals' %}"
-                       hx-target="#content-area"
-                       hx-push-url="true"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'approvals' %}active{% endif %}"
                        href="{% url 'approvals' %}">
                         Approvals
                     </a>
@@ -134,11 +98,7 @@
                 <!-- Settings -->
                 {% if user.can_manage_system_settings %}
                 <li class="nav-item">
-                    <a class="nav-link"
-                       hx-get="{% url 'settings' %}"
-                       hx-target="#content-area"
-                       hx-push-url="true"
-                       hx-swap="innerHTML show:none"
+                    <a class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
                        href="{% url 'settings' %}">
                         Settings
                     </a>

@@ -259,7 +259,7 @@ class UserQuickAction(models.Model):
                 'permission': 'employees.can_modify_employees',
             },
             'generate_report': {
-                'url': 'reports:custom-report-form',
+                'url': 'reports:custom-report-modal',
                 'icon': 'bi-file-earmark-text',
                 'permission': 'core.can_view_reports',
             },

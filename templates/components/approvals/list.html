@@ -113,9 +113,9 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="text-center py-5 text-muted">
-    <i class="bi bi-check-circle display-1 mb-3"></i>
-    <h5>No approval requests found</h5>
-    <p>All caught up! No pending approvals match your current filters.</p>
-</div>
+    {% if is_empty_database %}
+        {% include 'components/common/empty_state.html' with icon='check-circle' title='No approval requests' message='All caught up! Approval requests will appear here when devices are requested' %}
+    {% else %}
+        {% include 'components/common/empty_state.html' with icon='funnel' title='No approvals match your filters' message='Try adjusting your filter criteria or view all statuses' has_filters=True %}
+    {% endif %}
 {% endif %}

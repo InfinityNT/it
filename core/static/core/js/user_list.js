@@ -2,7 +2,8 @@
  * User Management - Enhanced with Bulk Operations Framework
  */
 
-let bulkManager;
+// Use var to allow redeclaration across page scripts loaded in base.html
+var bulkManager;
 
 // Initialize bulk operations when page loads
 document.addEventListener('DOMContentLoaded', function() {

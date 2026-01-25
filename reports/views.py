@@ -20,20 +20,28 @@ from .models import ReportGeneration
 @login_required
 @permission_required('core.can_view_reports', raise_exception=True)
 def reports_view(request):
-    """Reports dashboard page"""
-    # If HTMX request, return content fragment
-    if request.headers.get('HX-Request'):
-        return render(request, 'reports/reports_content.html')
-    # If direct access, return full page
-    else:
-        return render(request, 'reports/reports.html')
+    """Reports dashboard page - full page view"""
+    return render(request, 'reports/reports.html')
 
 
-@login_required 
+@login_required
+@permission_required('core.can_view_reports', raise_exception=True)
+def reports_component_view(request):
+    """Reports component view for SPA loading via HTMX"""
+    return render(request, 'reports/reports_content.html')
+
+
+@login_required
 @permission_required('core.can_view_reports', raise_exception=True)
 def custom_report_form_view(request):
     """Custom report generation form"""
     return render(request, 'reports/custom_report_form.html')
+
+
+@login_required
+def custom_report_modal_view(request):
+    """Custom report modal content for HTMX"""
+    return render(request, 'reports/custom_report_modal_content.html')
 
 
 @api_view(['GET'])
@@ -714,3 +722,183 @@ def device_categories_api_view(request):
     categories = DeviceCategory.objects.all()
     data = [{'id': cat.id, 'name': cat.name} for cat in categories]
     return Response(data)
+
+
+# =============================================================================
+# DYNAMIC CUSTOM REPORT BUILDER
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def report_schema_api_view(request):
+    """Get report schema for dynamic report builder"""
+    from .report_schema import get_schema_for_frontend
+    schema = get_schema_for_frontend()
+    return Response(schema)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def suggest_primary_source_view(request):
+    """Suggest primary source for multi-source report"""
+    from .report_schema import (
+        suggest_primary_source,
+        get_join_path,
+        validate_source_combination,
+        REPORT_SCHEMA
+    )
+
+    try:
+        sources = request.data.get('sources', [])
+
+        if not sources:
+            return Response({
+                'error': 'No sources provided'
+            }, status=400)
+
+        # Validate source combination
+        is_valid, error_msg = validate_source_combination(sources)
+        if not is_valid:
+            return Response({
+                'error': error_msg
+            }, status=400)
+
+        # Get suggested primary source
+        suggested = suggest_primary_source(sources)
+
+        # Build join path descriptions
+        join_paths = {}
+        for source in sources:
+            if source != suggested:
+                join_info = get_join_path(suggested, source)
+                if join_info:
+                    join_paths[source] = join_info['description']
+
+        return Response({
+            'suggested': suggested,
+            'suggested_label': REPORT_SCHEMA[suggested]['label'],
+            'join_paths': join_paths
+        })
+
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_dynamic_report_view(request):
+    """Generate dynamic custom report based on user selections"""
+    from .query_builder import DynamicReportBuilder
+    from .formatters import ReportFormatter
+
+    try:
+        # Parse request data
+        # Support both old single source and new multi-source format
+        data_sources_json = request.POST.get('data_sources')
+        if data_sources_json:
+            # New multi-source format
+            data_sources = json.loads(data_sources_json)
+            primary_source = request.POST.get('primary_source')
+        else:
+            # Old single source format (backwards compatible)
+            data_source = request.POST.get('data_source')
+            data_sources = [data_source] if data_source else []
+            primary_source = data_source
+
+        fields_json = request.POST.get('fields', '[]')
+        fields = json.loads(fields_json)
+        is_preview = request.POST.get('preview') == 'true'
+        output_format = request.POST.get('format', 'csv')
+
+        # Build filters
+        filters = {}
+        if request.POST.get('start_date'):
+            filters['start_date'] = request.POST.get('start_date')
+        if request.POST.get('end_date'):
+            filters['end_date'] = request.POST.get('end_date')
+        if request.POST.getlist('status'):
+            filters['status'] = request.POST.getlist('status')
+
+        # Create report builder with multi-source support
+        builder = DynamicReportBuilder(
+            data_sources=data_sources,
+            selected_fields=fields,
+            filters=filters,
+            primary_source=primary_source
+        )
+
+        # Build queryset
+        queryset = builder.build_queryset()
+        record_count = queryset.count()
+
+        # Preview mode
+        if is_preview:
+            preview_data = []
+            field_labels = builder.get_field_labels()
+
+            for obj in queryset[:10]:
+                values = builder.extract_values(obj)
+                # Use labels as keys
+                labeled_values = {
+                    field_labels[key]: value
+                    for key, value in values.items()
+                }
+                preview_data.append(labeled_values)
+
+            return JsonResponse({
+                'success': True,
+                'record_count': record_count,
+                'preview_data': preview_data
+            })
+
+        # Generate full report
+        # Prepare data for formatter
+        data_rows = []
+        field_labels = builder.get_field_labels()
+
+        for obj in queryset:
+            values = builder.extract_values(obj)
+            data_rows.append(values)
+
+        # Generate filename with source info
+        source_name = '_'.join(data_sources) if len(data_sources) > 1 else data_sources[0]
+        timestamp = timezone.now().strftime("%Y%m%d")
+
+        # Use the existing formatter
+        if output_format == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="custom_report_{source_name}_{timestamp}.csv"'
+
+            writer = csv.writer(response)
+            # Write headers using labels
+            writer.writerow([field_labels[f] for f in fields])
+            # Write data
+            for row in data_rows:
+                writer.writerow([row[f] for f in fields])
+
+            return response
+
+        elif output_format == 'json':
+            response = HttpResponse(content_type='application/json')
+            response['Content-Disposition'] = f'attachment; filename="custom_report_{source_name}_{timestamp}.json"'
+
+            # Convert to labeled format
+            labeled_data = []
+            for row in data_rows:
+                labeled_row = {field_labels[key]: value for key, value in row.items()}
+                labeled_data.append(labeled_row)
+
+            response.write(json.dumps(labeled_data, indent=2))
+            return response
+
+        else:
+            return JsonResponse({'success': False, 'error': 'Unsupported format'}, status=400)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        if is_preview:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)

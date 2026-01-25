@@ -1,427 +1,626 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - {{ SYSTEM_NAME }}</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>Login - DMP</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS (needed for modal) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    
-    <!-- Login-specific CSS -->
+
     <style>
-        /* Login Overlay Styles - Moved from login_overlay.js and separate CSS files */
-        .login-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background: #0f172a;
+            overflow: hidden;
+        }
+
+        /* Left Panel - Branding */
+        .brand-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+
+        .brand-panel::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            right: -30%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-20px, -20px); }
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: white;
+            max-width: 400px;
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 0 auto 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        
-        .login-overlay.show {
-            opacity: 1;
-            visibility: visible;
+
+        .brand-logo i {
+            font-size: 2.5rem;
         }
-        
-        .login-modal {
+
+        .brand-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+            margin-bottom: 3rem;
+        }
+
+        .brand-features {
+            text-align: left;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            opacity: 0.95;
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-icon i {
+            font-size: 1.1rem;
+        }
+
+        .feature-text {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* Right Panel - Login Form */
+        .login-panel {
+            width: 480px;
+            min-width: 480px;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        .login-container {
+            max-width: 360px;
             width: 100%;
-            max-width: 420px;
-            margin: 2rem;
-            transform: translateY(50px);
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 0 auto;
         }
-        
-        .login-overlay.show .login-modal {
-            transform: translateY(0);
-        }
-        
-        .login-modal-content {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 3rem 2.5rem;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
+
         .login-header {
-            text-align: center;
             margin-bottom: 2.5rem;
         }
-        
-        .login-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            display: block;
-        }
-        
-        .login-title {
-            color: #2d3748;
+
+        .login-header h1 {
+            color: #f1f5f9;
             font-size: 1.75rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
         }
-        
-        .login-subtitle {
-            color: #718096;
+
+        .login-header p {
+            color: #64748b;
             font-size: 0.95rem;
-            margin-bottom: 0;
         }
-        
-        .input-group {
+
+        .form-group {
             margin-bottom: 1.5rem;
         }
-        
-        .input-label {
+
+        .form-label {
             display: block;
-            color: #4a5568;
-            font-weight: 600;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            font-weight: 500;
             margin-bottom: 0.5rem;
-            font-size: 0.9rem;
         }
-        
-        .input-field {
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #475569;
+            font-size: 1.1rem;
+            transition: color 0.2s;
+        }
+
+        .form-input {
             width: 100%;
-            padding: 0.85rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: #f1f5f9;
             font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.8);
+            font-family: inherit;
+            transition: all 0.2s;
         }
-        
-        .input-field:focus {
+
+        .form-input::placeholder {
+            color: #475569;
+        }
+
+        .form-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: rgba(255, 255, 255, 0.95);
+            border-color: #3b82f6;
+            background: #1e293b;
         }
-        
-        .input-field::placeholder {
-            color: #a0aec0;
+
+        .form-input:focus + i,
+        .input-wrapper:focus-within i {
+            color: #3b82f6;
         }
-        
-        .login-button {
+
+        .login-btn {
             width: 100%;
-            padding: 0.85rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 0.875rem 1.5rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             border: none;
-            border-radius: 10px;
-            font-weight: 600;
+            border-radius: 12px;
+            color: white;
             font-size: 0.95rem;
+            font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
             position: relative;
             overflow: hidden;
-            margin-bottom: 1.5rem;
         }
-        
-        .login-button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+
+        .login-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
-        
-        .login-button:disabled {
+
+        .login-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
             opacity: 0.7;
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
         }
-        
-        .button-text {
-            transition: opacity 0.3s ease;
+
+        .login-btn .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
-        
-        .loading-spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.2rem;
+
+        .login-btn.loading .btn-text {
+            display: none;
         }
-        
-        .login-help {
-            text-align: center;
+
+        .login-btn.loading .spinner {
+            display: block;
         }
-        
-        .help-text {
-            color: #718096;
-            font-size: 0.85rem;
-            text-decoration: none;
-            transition: color 0.3s ease;
+
+        .login-btn.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
-        
-        .help-text:hover {
-            color: #667eea;
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
-        
-        .help-text strong {
-            color: #2d3748;
+
+        /* Error Message */
+        .error-alert {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            animation: slideDown 0.3s ease;
         }
-        
-        /* Error message styling */
-        .error-message {
-            color: #dc2626;
-            background: #fee2e2;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 14px;
-            border: 1px solid #fecaca;
-            animation: slideDown 0.3s ease-out;
+
+        .error-alert i {
+            color: #ef4444;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            margin-top: 2px;
         }
-        
-        .login-form-container.error .input-field {
-            border-color: #dc2626;
-            animation: shake 0.5s ease-in-out;
+
+        .error-alert-content {
+            flex: 1;
         }
-        
+
+        .error-alert-title {
+            color: #fca5a5;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .error-alert-message {
+            color: #fca5a5;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
         }
-        
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        .shake {
+            animation: shake 0.4s ease-in-out;
         }
-        
-        @keyframes slideUp {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(-10px); }
+
+        /* Footer */
+        .login-footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: #475569;
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .brand-panel {
+                display: none;
+            }
+
+            .login-panel {
+                width: 100%;
+                min-width: 100%;
+                min-height: 100vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-panel {
+                padding: 2rem 1.5rem;
+            }
+
+            .login-header h1 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Main Login Interface -->
-    <div id="login-overlay" class="login-overlay show">
-        <div class="login-modal">
-            <div class="login-modal-content">
-                <!-- Header -->
-                <div class="login-header">
-                    <div class="login-icon">💻</div>
-                    <h1 class="login-title">{{ SYSTEM_NAME }}</h1>
-                    <p class="login-subtitle">Sign in to your account</p>
+    <!-- Brand Panel -->
+    <div class="brand-panel">
+        <div class="brand-content">
+            <div class="brand-logo">
+                <i class="bi bi-laptop"></i>
+            </div>
+            <h1 class="brand-title">Device Management Platform</h1>
+            <p class="brand-subtitle">
+                Streamline your IT asset management with powerful tracking, assignments, and reporting tools.
+            </p>
+            <div class="brand-features">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-pc-display"></i>
+                    </div>
+                    <span class="feature-text">Track all devices in one place</span>
                 </div>
-
-                <!-- Login Form -->
-                <div class="login-form-container">
-                    <form id="login-form" 
-                          hx-post="/api/auth/login/" 
-                          hx-swap="none">
-                        
-                        {% csrf_token %}
-                        
-                        <!-- Username Field -->
-                        <div class="input-group">
-                            <label for="username" class="input-label">Username</label>
-                            <input type="text" 
-                                   id="username" 
-                                   name="username" 
-                                   class="input-field"
-                                   placeholder="Enter your username"
-                                   required
-                                   autocomplete="username"
-                                   autofocus>
-                        </div>
-                        
-                        <!-- Password Field -->
-                        <div class="input-group">
-                            <label for="password" class="input-label">Password</label>
-                            <input type="password" 
-                                   id="password" 
-                                   name="password" 
-                                   class="input-field"
-                                   placeholder="Enter your password"
-                                   required
-                                   autocomplete="current-password">
-                        </div>
-                        
-                        <!-- Submit Button -->
-                        <button type="submit" class="login-button">
-                            <span class="button-text">Sign In</span>
-                            <div class="loading-spinner" style="display: none;">⏳</div>
-                        </button>
-                    </form>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <span class="feature-text">Manage employee assignments</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <span class="feature-text">Generate detailed reports</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <span class="feature-text">Approval workflows built-in</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Password Change Modal (shown when required) -->
+    <!-- Login Panel -->
+    <div class="login-panel">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>Welcome back</h1>
+                <p>Enter your credentials to access your account</p>
+            </div>
+
+            <!-- Error Alert (hidden by default) -->
+            <div id="error-alert" class="error-alert" style="display: none;">
+                <i class="bi bi-exclamation-circle"></i>
+                <div class="error-alert-content">
+                    <div class="error-alert-title">Authentication failed</div>
+                    <div class="error-alert-message" id="error-message">Invalid username or password</div>
+                </div>
+            </div>
+
+            <form id="login-form" hx-post="/api/auth/login/" hx-swap="none">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            class="form-input"
+                            placeholder="Enter your username"
+                            required
+                            autocomplete="username"
+                            autofocus
+                        >
+                        <i class="bi bi-person"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="form-input"
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                        <i class="bi bi-lock"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-btn" id="login-btn">
+                    <span class="btn-text">Sign in</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                DMP - Device Management Platform
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Change Modal -->
     {% include 'components/forms/password_change_modal.html' %}
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS (for modal) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Login Controller Script -->
+
     <script>
         class LoginController {
             constructor() {
                 this.form = document.getElementById('login-form');
-                this.overlay = document.getElementById('login-overlay');
+                this.btn = document.getElementById('login-btn');
+                this.errorAlert = document.getElementById('error-alert');
+                this.errorMessage = document.getElementById('error-message');
                 this.passwordModal = document.getElementById('passwordChangeModal');
+
                 this.init();
             }
 
             init() {
-                this.setupEventListeners();
+                this.form.addEventListener('submit', () => this.onSubmit());
+                document.addEventListener('htmx:afterRequest', (e) => this.onResponse(e));
             }
 
-            setupEventListeners() {
-                // Handle form submission
-                if (this.form) {
-                    this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
-                }
-
-                // Handle HTMX responses
-                document.addEventListener('htmx:responseError', (e) => this.handleLoginError(e));
-                document.addEventListener('htmx:afterRequest', (e) => this.handleLoginResponse(e));
-                
-                // Handle password change modal
-                document.addEventListener('htmx:afterRequest', (e) => this.handlePasswordChangeResponse(e));
+            onSubmit() {
+                this.hideError();
+                this.btn.classList.add('loading');
+                this.btn.disabled = true;
             }
 
-            handleFormSubmit(event) {
-                const button = this.form.querySelector('.login-button');
-                const buttonText = button.querySelector('.button-text');
-                const spinner = button.querySelector('.loading-spinner');
-                
-                // Show loading state
-                button.disabled = true;
-                buttonText.style.opacity = '0';
-                spinner.style.display = 'block';
-            }
+            onResponse(e) {
+                if (!e.target.closest('#login-form')) return;
 
-            handleLoginError(event) {
-                if (event.target.closest('#login-form')) {
-                    this.resetButtonState();
-                    this.showErrorMessage('Invalid credentials. Please try again.');
-                }
-            }
+                const xhr = e.detail.xhr;
+                const status = xhr.status;
 
-            handleLoginResponse(event) {
-                if (event.target.closest('#login-form')) {
-                    const response = event.detail.xhr;
-                    if (response.status === 200) {
-                        const responseData = JSON.parse(response.responseText);
-                        
-                        if (responseData.password_change_required) {
-                            // Show password change modal
-                            this.showPasswordChangeModal();
+                if (status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.password_change_required) {
+                            this.resetBtn();
+                            this.showPasswordModal();
                         } else {
-                            // Login successful - redirect to dashboard
-                            this.showSuccessAndRedirect();
+                            this.showSuccess();
                         }
+                    } catch {
+                        this.showSuccess();
                     }
+                } else {
+                    this.resetBtn();
+                    let message = 'Invalid username or password';
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        message = data.error || data.detail || message;
+                    } catch {}
+                    this.showError(message);
                 }
             }
 
-            handlePasswordChangeResponse(event) {
-                if (event.target.closest('#password-change-form')) {
-                    const response = event.detail.xhr;
-                    if (response.status === 200) {
-                        const responseData = JSON.parse(response.responseText);
-                        if (responseData.success) {
-                            // Password changed successfully - redirect to dashboard
-                            this.hidePasswordChangeModal();
-                            this.showSuccessAndRedirect();
-                        }
-                    }
-                }
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorAlert.style.display = 'flex';
+                this.form.classList.add('shake');
+                setTimeout(() => this.form.classList.remove('shake'), 400);
             }
 
-            showPasswordChangeModal() {
-                this.resetButtonState();
+            hideError() {
+                this.errorAlert.style.display = 'none';
+            }
+
+            resetBtn() {
+                this.btn.classList.remove('loading');
+                this.btn.disabled = false;
+            }
+
+            showSuccess() {
+                this.btn.classList.remove('loading');
+                this.btn.classList.add('success');
+                this.btn.innerHTML = '<i class="bi bi-check-lg"></i> <span class="btn-text">Success!</span>';
+
+                // Preload page scripts while showing success animation
+                const scriptsToPreload = [
+                    '/static/core/js/base.js?v=5',
+                    '/static/core/js/bulk-operations.js',
+                    '/static/devices/js/devices-new.js',
+                    '/static/devices/js/filter_state.js',
+                    '/static/approvals/js/approvals-new.js',
+                    '/static/assignments/js/assignments-new.js',
+                    '/static/employees/js/employees.js',
+                    '/static/reports/js/reports.js'
+                ];
+
+                scriptsToPreload.forEach(src => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = src;
+                    link.as = 'script';
+                    document.head.appendChild(link);
+                });
+
+                setTimeout(() => window.location.href = '/', 1000);
+            }
+
+            showPasswordModal() {
                 const modal = new bootstrap.Modal(this.passwordModal);
                 modal.show();
             }
-
-            hidePasswordChangeModal() {
-                const modal = bootstrap.Modal.getInstance(this.passwordModal);
-                if (modal) {
-                    modal.hide();
-                }
-            }
-
-            resetButtonState() {
-                const button = this.form.querySelector('.login-button');
-                const buttonText = button.querySelector('.button-text');
-                const spinner = button.querySelector('.loading-spinner');
-                
-                button.disabled = false;
-                buttonText.style.opacity = '1';
-                spinner.style.display = 'none';
-            }
-
-            showSuccessAndRedirect() {
-                const button = this.form.querySelector('.login-button');
-                const buttonText = button.querySelector('.button-text');
-                const spinner = button.querySelector('.loading-spinner');
-                
-                buttonText.textContent = '✓ Success!';
-                buttonText.style.opacity = '1';
-                spinner.style.display = 'none';
-                button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1500);
-            }
-
-            showErrorMessage(message) {
-                // Remove existing error message
-                const existingError = this.overlay.querySelector('.error-message');
-                if (existingError) {
-                    existingError.remove();
-                }
-                
-                // Create error message
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message';
-                errorDiv.textContent = message;
-                
-                // Insert after form
-                const formContainer = this.overlay.querySelector('.login-form-container');
-                formContainer.appendChild(errorDiv);
-                
-                // Add error animation to form
-                formContainer.classList.add('error');
-                setTimeout(() => {
-                    formContainer.classList.remove('error');
-                }, 500);
-                
-                // Auto-remove after 5 seconds
-                setTimeout(() => {
-                    if (errorDiv.parentNode) {
-                        errorDiv.style.animation = 'slideUp 0.3s ease-out';
-                        setTimeout(() => errorDiv.remove(), 300);
-                    }
-                }, 5000);
-            }
         }
 
-        // Initialize login controller when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            new LoginController();
+        // Password change handling
+        document.addEventListener('htmx:afterRequest', function(e) {
+            if (e.target.closest('#password-change-form')) {
+                const xhr = e.detail.xhr;
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.success) {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('passwordChangeModal'));
+                            if (modal) modal.hide();
+                            setTimeout(() => window.location.href = '/', 500);
+                        }
+                    } catch {}
+                }
+            }
         });
+
+        document.addEventListener('DOMContentLoaded', () => new LoginController());
     </script>
 </body>
 </html>

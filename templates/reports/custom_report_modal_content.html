@@ -1,0 +1,162 @@
+{% load static %}
+<!-- Custom Report Builder Modal Content for HTMX Dynamic Modal -->
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">
+        <i class="bi bi-graph-up-arrow me-2"></i>
+        Create Custom Report
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <!-- Step 1: Select Data Sources (Multiple) -->
+    <div class="mb-4">
+        <h6 class="text-primary mb-3">
+            <span class="badge bg-primary rounded-circle me-2">1</span>
+            Select Data Sources
+            <span id="selectedSourceCount" class="badge bg-info ms-2 step-hidden">0</span>
+        </h6>
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Select one or more data sources. You can combine multiple sources in a single report.
+        </p>
+        <div id="dataSourceSelection" class="d-flex gap-2 flex-wrap">
+            <!-- Data source checkboxes populated by JavaScript -->
+        </div>
+        <input type="hidden" id="selectedDataSources" value="">
+    </div>
+
+    <!-- Step 1.5: Choose Primary Source -->
+    <div id="primarySourceSection" class="step-hidden">
+        <hr class="my-3">
+        <div class="mb-3">
+            <label class="form-label fw-bold">
+                <i class="bi bi-star me-1"></i>
+                Primary Source
+            </label>
+            <p class="text-muted small mb-2">
+                The primary source determines the main record (one row per primary record). Related data from other sources will be added as columns.
+            </p>
+            <select class="form-select" id="primarySourceSelect">
+                <!-- Populated dynamically -->
+            </select>
+            <small class="text-muted mt-1">
+                <i class="bi bi-lightbulb me-1"></i>
+                Suggested: <strong id="suggestedPrimary">Auto-detected</strong>
+            </small>
+        </div>
+        <!-- Join path information -->
+        <div id="joinPathInfo" class="alert alert-info step-hidden">
+            <strong><i class="bi bi-diagram-3 me-1"></i>Join Strategy:</strong>
+            <ul id="joinPathList" class="mb-0 mt-2"></ul>
+        </div>
+    </div>
+
+    <!-- Step 2: Select Fields -->
+    <div id="step2" class="step-hidden">
+        <hr class="my-4">
+        <div class="mb-4">
+            <h6 class="text-primary mb-3">
+                <span class="badge bg-primary rounded-circle me-2">2</span>
+                Select Fields
+                <span id="selectedFieldCount" class="badge bg-info ms-2 step-hidden">0</span>
+            </h6>
+            <div id="fieldSelection">
+                <!-- Field checkboxes populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Filters & Options -->
+    <div id="step3" class="step-hidden">
+        <hr class="my-4">
+        <div class="mb-4">
+            <h6 class="text-primary mb-3">
+                <span class="badge bg-primary rounded-circle me-2">3</span>
+                Filters & Options
+            </h6>
+            <div class="row">
+                <!-- Date Range -->
+                <div class="col-md-6 mb-3">
+                    <label for="filterStartDate" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="filterStartDate">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="filterEndDate" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="filterEndDate">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-md-12 mb-3">
+                    <label class="form-label fw-bold">Status Filter (Optional)</label>
+                    <div id="statusFilterCheckboxes" class="checkbox-grid">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox"
+                                   id="status_active" value="active" data-filter="status">
+                            <label class="form-check-label" for="status_active">Active</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox"
+                                   id="status_assigned" value="assigned" data-filter="status">
+                            <label class="form-check-label" for="status_assigned">Assigned</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox"
+                                   id="status_available" value="available" data-filter="status">
+                            <label class="form-check-label" for="status_available">Available</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox"
+                                   id="status_pending" value="pending" data-filter="status">
+                            <label class="form-check-label" for="status_pending">Pending</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox"
+                                   id="status_approved" value="approved" data-filter="status">
+                            <label class="form-check-label" for="status_approved">Approved</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-checkbox" type="checkbox"
+                                   id="status_rejected" value="rejected" data-filter="status">
+                            <label class="form-check-label" for="status_rejected">Rejected</label>
+                        </div>
+                    </div>
+                    <small class="text-muted">Select one or more statuses to filter by</small>
+                </div>
+
+                <!-- Output Format -->
+                <div class="col-md-6 mb-3">
+                    <label for="outputFormat" class="form-label">Output Format</label>
+                    <select class="form-select" id="outputFormat">
+                        <option value="csv">CSV (Excel Compatible)</option>
+                        <option value="xlsx">Excel (.xlsx)</option>
+                        <option value="json">JSON</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="previewContainer" class="step-hidden mt-4">
+            <!-- Preview content populated by JavaScript -->
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x-circle me-1"></i>
+        Cancel
+    </button>
+    <button type="button" class="btn btn-outline-primary" id="previewReportBtn">
+        <i class="bi bi-eye me-1"></i>
+        Preview
+    </button>
+    <button type="button" class="btn btn-primary" id="generateReportBtn" disabled>
+        <i class="bi bi-download me-1"></i>
+        Generate Report
+    </button>
+</div>
+
+<!-- Load Styles and JavaScript -->
+<link rel="stylesheet" href="{% static 'reports/css/custom_report_builder.css' %}">
+<script src="{% static 'reports/js/custom_report_builder.js' %}"></script>

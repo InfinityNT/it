@@ -266,9 +266,16 @@
     text-align: center;
 }
 
-.text-center.py-5 i {
+.text-center.py-5 > i,
+.text-center.py-5 > div > i {
     font-size: 3rem;
     color: #d0d7de;
+}
+
+/* Reset button icons to normal size */
+.text-center.py-5 .btn i {
+    font-size: inherit;
+    color: inherit;
 }
 
 .text-center.py-5 h3 {

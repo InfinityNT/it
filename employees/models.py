@@ -9,7 +9,6 @@ class Department(models.Model):
     description = models.TextField(blank=True)
     manager_employee_id = models.CharField(max_length=50, blank=True, help_text="Manager's employee ID")
     budget_code = models.CharField(max_length=50, blank=True)
-    location = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

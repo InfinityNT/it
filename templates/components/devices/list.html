@@ -30,18 +30,6 @@
                     {% else %}
                         <span class="badge bg-danger">{{ device.get_status_display }}</span>
                     {% endif %}
-
-                    {% if device.condition == 'new' %}
-                        <span class="badge bg-primary">{{ device.get_condition_display }}</span>
-                    {% elif device.condition == 'excellent' %}
-                        <span class="badge bg-success">{{ device.get_condition_display }}</span>
-                    {% elif device.condition == 'good' %}
-                        <span class="badge bg-info">{{ device.get_condition_display }}</span>
-                    {% elif device.condition == 'fair' %}
-                        <span class="badge bg-warning">{{ device.get_condition_display }}</span>
-                    {% else %}
-                        <span class="badge bg-danger">{{ device.get_condition_display }}</span>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -74,17 +62,6 @@
                         {% endif %}
                     {% else %}
                         <span class="text-muted">Unassigned</span>
-                    {% endif %}
-                </span>
-            </div>
-
-            <div class="item-card-field">
-                <span class="item-card-label"><i class="bi bi-geo-alt me-1"></i>Location:</span>
-                <span class="item-card-value">
-                    {% if device.location %}
-                        {{ device.location }}
-                    {% else %}
-                        <span class="text-muted">Not specified</span>
                     {% endif %}
                 </span>
             </div>
@@ -171,15 +148,9 @@
 {% endif %}
 
 {% else %}
-<div class="text-center py-5">
-    <i class="bi bi-laptop display-1 text-muted"></i>
-    <h3 class="mt-3">No Devices Found</h3>
-    <p class="text-muted">No devices match your current filters.</p>
-    {% if user.can_modify_devices %}
-    <a href="{% url 'add-device' %}" class="btn btn-primary">
-        <i class="bi bi-plus"></i>
-        Add Your First Device
-    </a>
+    {% if is_empty_database %}
+        {% include 'components/common/empty_state.html' with icon='laptop' title='No devices registered yet' message='Get started by adding your first device to the inventory' action_text='Add Device' action_hx_get=add_device_url action_icon='plus' %}
+    {% else %}
+        {% include 'components/common/empty_state.html' with icon='search' title='No devices match your filters' message='Try adjusting your search criteria' has_filters=True %}
     {% endif %}
-</div>
 {% endif %}

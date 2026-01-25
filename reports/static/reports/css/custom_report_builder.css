@@ -1,0 +1,99 @@
+/**
+ * Custom Report Builder Styles
+ * Extracted from inline styles for better maintainability
+ */
+
+/* Visibility Management */
+.step-hidden {
+    display: none;
+}
+
+/* Data Source Selection */
+.data-source-btn {
+    min-width: 150px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.data-source-btn:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+.data-source-btn.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+.data-source-btn.active::after {
+    content: '\2713';  /* Checkmark */
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    font-weight: bold;
+}
+
+/* Field Selection */
+#fieldSelection .form-check {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+#fieldSelection .form-check:hover {
+    background-color: var(--bs-gray-100);
+}
+
+/* Source Grouping */
+.source-group {
+    border-left: 3px solid var(--bs-primary);
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.source-group-header {
+    color: var(--bs-primary);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+/* Filter Checkboxes */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+}
+
+/* Modal Sizing */
+.modal-xl {
+    max-width: 1200px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .data-source-btn {
+        min-width: 130px;
+        font-size: 0.9rem;
+    }
+
+    .checkbox-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .modal-xl {
+        max-width: 100%;
+        margin: 0.5rem;
+    }
+
+    .data-source-btn {
+        min-width: 110px;
+        font-size: 0.85rem;
+    }
+
+    .checkbox-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

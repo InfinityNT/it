@@ -25,6 +25,7 @@ api_urlpatterns = [
     path('dashboard/stats/', views.dashboard_stats_view, name='api-dashboard-stats'),
     path('dashboard/activity/', views.dashboard_activity_view, name='api-dashboard-activity'),
     path('dashboard/search/', views.dashboard_search_view, name='api-dashboard-search'),
+    path('dashboard/quick-actions/', views.dashboard_quick_actions_view, name='api-dashboard-quick-actions'),
     
     # Quick actions API (JSON only)
     path('quick-actions/', views.quick_actions_api_view, name='api-quick-actions'),
@@ -37,6 +38,9 @@ api_urlpatterns = [
 
     # User list HTML endpoint for HTMX
     path('users/list/', views.user_list_api_view, name='api-user-list-html'),
+
+    # Global search
+    path('global-search/', views.dashboard_search_view, name='api-global-search'),
 ]
 
 # HTMX Fragment URLs - For dynamic content updates
@@ -72,6 +76,8 @@ urlpatterns = [
     path('users/add/', views.add_user_modal_view, name='add-user-modal'),
     path('users/<int:user_id>/detail/', views.user_detail_view, name='user-detail-modal'),
     path('users/<int:user_id>/edit/', views.user_edit_view, name='edit-user-modal'),
+    path('users/<int:user_id>/deactivate-modal/', views.deactivate_user_modal_view, name='deactivate-user-modal'),
+    path('users/<int:user_id>/reactivate-modal/', views.reactivate_user_modal_view, name='reactivate-user-modal'),
 
     # Include API and HTMX routes
     path('api/', include(api_urlpatterns)),

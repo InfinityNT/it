@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib import admin
 from .models import DeviceModel, Device, DeviceManufacturer, DeviceVendor, DeviceCategory
-from core.models import Location
 
 
 class DeviceModelForm(forms.ModelForm):
@@ -151,38 +150,8 @@ class DeviceModelAdminForm(forms.ModelForm):
 
 
 class DeviceAdminForm(forms.ModelForm):
-    """Custom admin form for Device with location dropdown"""
-
-    location_choice = forms.ModelChoiceField(
-        queryset=Location.objects.filter(is_active=True),
-        empty_label="Select Location (Optional)",
-        required=False,
-        help_text="Select a predefined location",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+    """Custom admin form for Device"""
 
     class Meta:
         model = Device
-        exclude = ['location']  # Exclude the original location field since we use location_choice
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # If editing existing device, set the location dropdown to current value
-        if self.instance.pk and self.instance.location:
-            try:
-                location_obj = Location.objects.get(name=self.instance.location)
-                self.fields['location_choice'].initial = location_obj
-            except Location.DoesNotExist:
-                pass
-
-    def save(self, commit=True):
-        # Save the location name to the CharField field
-        instance = super().save(commit=False)
-        if self.cleaned_data.get('location_choice'):
-            instance.location = self.cleaned_data['location_choice'].name
-        else:
-            instance.location = ''
-
-        if commit:
-            instance.save()
-        return instance
+        fields = '__all__'

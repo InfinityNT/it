@@ -21,10 +21,8 @@ def system_settings(request):
 
     # Set defaults for important settings
     system_name = settings_dict.get('system_name', 'IT Device Management')
-    admin_email = settings_dict.get('admin_email', 'admin@company.com')
 
     return {
         'SYSTEM_NAME': system_name,
-        'ADMIN_EMAIL': admin_email,
         'system_settings': settings_dict,
     }

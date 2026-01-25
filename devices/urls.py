@@ -16,7 +16,6 @@ api_urlpatterns = [
     path('vendors/', views.DeviceVendorListView.as_view(), name='device-vendor-list'),
     path('models/', views.DeviceModelListView.as_view(), name='device-model-list'),
     path('models/<int:model_id>/', views.device_model_detail_api, name='device-model-detail'),
-    path('locations/', views.location_list_api, name='device-location-list'),
 ]
 
 # Frontend URLs
@@ -24,6 +23,8 @@ urlpatterns = [
     path('', views.devices_view, name='devices'),
     path('search/', views.advanced_search_view, name='advanced-search'),
     path('add/', views.add_device_view, name='add-device'),
+    path('models/add/', views.add_device_model_modal_view, name='add-device-model'),
+    path('models/spec-template/', views.get_spec_template_view, name='get-spec-template'),
     path('<int:device_id>/', views.device_detail_view, name='device-detail-page'),
     path('<int:device_id>/history/', views.device_history_view, name='device-history'),
     path('<int:device_id>/edit/', views.edit_device_view, name='edit-device'),

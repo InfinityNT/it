@@ -1,0 +1,72 @@
+{% load static %}
+
+<!-- Reactivate User Confirmation Modal Content -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-info-circle-fill text-success me-2"></i>
+        Reactivate User Account
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    {% if error_message %}
+    <div class="alert alert-danger mb-0">
+        <i class="bi bi-exclamation-circle me-2"></i>{{ error_message }}
+    </div>
+    {% else %}
+    <div class="alert alert-info mb-4">
+        <strong>Are you sure you want to reactivate this user?</strong>
+    </div>
+
+    <!-- User Details -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-sm-4 text-muted">Username:</div>
+                <div class="col-sm-8"><strong>{{ target_user.username }}</strong></div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4 text-muted">Full Name:</div>
+                <div class="col-sm-8">{{ target_user.get_full_name|default:"Not specified" }}</div>
+            </div>
+            {% if target_user.email %}
+            <div class="row mt-2">
+                <div class="col-sm-4 text-muted">Email:</div>
+                <div class="col-sm-8">{{ target_user.email }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Consequences Explanation -->
+    <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>What happens when you reactivate a user:</h6>
+    <ul class="list-group mb-3">
+        <li class="list-group-item">
+            <i class="bi bi-box-arrow-in-right text-success me-2"></i>
+            User will be able to <strong>log in again</strong>
+        </li>
+        <li class="list-group-item">
+            <i class="bi bi-shield-check text-primary me-2"></i>
+            All <strong>permissions and group memberships</strong> will be restored
+        </li>
+        <li class="list-group-item">
+            <i class="bi bi-hdd text-success me-2"></i>
+            All <strong>previous data and history</strong> remain preserved
+        </li>
+    </ul>
+    {% endif %}
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x-lg me-1"></i>{% if error_message %}Close{% else %}Cancel{% endif %}
+    </button>
+    {% if not error_message %}
+    <button type="button"
+            class="btn btn-success"
+            hx-post="{% url 'api-toggle-user-status' user_id=target_user.id %}"
+            hx-swap="none"
+            hx-on::after-request="if(event.detail.successful) { htmx.trigger('#users-table', 'refresh'); bootstrap.Modal.getInstance(document.getElementById('dynamicModal')).hide(); showToast('success', 'User reactivated successfully'); }">
+        <i class="bi bi-play-circle me-1"></i>Confirm Reactivation
+    </button>
+    {% endif %}
+</div>

@@ -122,9 +122,6 @@ class Device(models.Model):
     shared_usage = models.CharField(max_length=20, choices=SHARED_USAGE_CHOICES, blank=True, null=True,
                                    help_text="Required if usage_type is 'shared'")
     
-    # Location and Assignment
-    location = models.CharField(max_length=100, blank=True)
-
     # Assignment - Changed to use Employee model instead of User
     assigned_to = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_devices')
     assigned_date = models.DateTimeField(null=True, blank=True)
@@ -142,11 +139,6 @@ class Device(models.Model):
 
     def __str__(self):
         return f"{self.asset_tag} - {self.device_model}"
-
-    @property
-    def full_location(self):
-        """Get complete location string"""
-        return str(self.location) if self.location else ""
 
     def clean(self):
         """Validate model data"""
@@ -191,7 +183,6 @@ class Device(models.Model):
             # Search optimization indexes
             models.Index(fields=['asset_tag']),  # Already unique, but explicit index
             models.Index(fields=['serial_number']),
-            models.Index(fields=['location']),
             models.Index(fields=['hostname']),
             
             # Network-related indexes

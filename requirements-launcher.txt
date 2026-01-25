@@ -1,0 +1,9 @@
+# Optional dependencies for DMP Launcher
+# These are only needed if building the standalone launcher or using advanced features
+
+# System tray support (optional, Windows only)
+pystray>=0.19.5
+Pillow>=10.0.0
+
+# For building standalone executable
+pyinstaller>=6.0.0

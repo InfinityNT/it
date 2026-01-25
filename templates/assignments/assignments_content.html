@@ -139,36 +139,4 @@
         can_view_assignments: {% if user.can_view_assignments %}true{% else %}false{% endif %}
     };
 </script>
-<!-- Load bulk operations framework BEFORE assignments-new.js since it depends on BulkOperationsManager -->
-<script src="{% static 'core/js/bulk-operations.js' %}"></script>
-<script src="{% static 'assignments/js/assignments-new.js' %}"></script>
 
-<!-- HTMX SPA Re-initialization -->
-<script>
-    (function() {
-        // Reset initialization flag to allow re-init
-        window.assignmentsInitialized = false;
-
-        // Initialize with a small delay to ensure script is loaded
-        function tryInitialize() {
-            if (typeof initializeAssignmentsPage === 'function') {
-                initializeAssignmentsPage();
-                console.log('Assignments page initialized');
-            } else {
-                console.warn('initializeAssignmentsPage not yet available, retrying...');
-                setTimeout(tryInitialize, 50);
-            }
-        }
-
-        // Start initialization
-        tryInitialize();
-
-        // Re-initialize on HTMX content swap (when navigating back to this page)
-        document.body.addEventListener('htmx:afterSwap', function(evt) {
-            if (evt.detail.target.id === 'content-area' && document.querySelector('#assignmentsContainer')) {
-                window.assignmentsInitialized = false;
-                tryInitialize();
-            }
-        });
-    })();
-</script>

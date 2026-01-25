@@ -37,11 +37,6 @@
                         <div class="form-text">Displayed in page titles and headers</div>
                     </div>
                     <div class="mb-3">
-                        <label for="adminEmail" class="form-label">Administrator Email</label>
-                        <input type="email" class="form-control" id="adminEmail" value="{{ current_settings.admin_email|default:'admin@company.com' }}" placeholder="admin@example.com">
-                        <div class="form-text">Receives system notifications and alerts</div>
-                    </div>
-                    <div class="mb-3">
                         <label for="timezone" class="form-label">Timezone</label>
                         <select class="form-select" id="timezone">
                             <option value="UTC" {% if current_settings.timezone == 'UTC' or not current_settings.timezone %}selected{% endif %}>UTC</option>
@@ -192,8 +187,9 @@
 {% else %}
 <!-- Profile Settings (Regular Users) -->
 <div class="row">
-    <!-- Profile Information -->
-    <div class="col-lg-8">
+    <!-- Left Column -->
+    <div class="col-lg-6">
+        <!-- Profile Information -->
         <div class="card mb-4">
             <div class="card-header">
                 <h6 class="m-0 fw-bold text-primary">
@@ -201,21 +197,15 @@
                 </h6>
             </div>
             <div class="card-body">
-                <form method="post" action="{% url 'profile' %}" hx-post="{% url 'profile' %}" hx-swap="none">
+                <form method="post" action="{% url 'profile' %}" hx-post="{% url 'profile' %}" hx-target="#content-area" hx-swap="innerHTML">
                     {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="first_name" class="form-label">First Name</label>
-                                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" placeholder="Enter first name">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="last_name" class="form-label">Last Name</label>
-                                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" placeholder="Enter last name">
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" placeholder="Enter first name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" placeholder="Enter last name">
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email Address</label>
@@ -249,36 +239,11 @@
                 </button>
             </div>
         </div>
-
-        <!-- Quick Actions Configuration -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="m-0 fw-bold text-primary">
-                    <i class="bi bi-lightning me-2"></i>Quick Actions Configuration
-                </h6>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3">
-                    Customize which quick actions appear in your sidebar. Only actions you have permission to use are available.
-                </p>
-
-                <div id="actions-list"
-                     hx-get="/fragments/quick-actions/config/"
-                     hx-trigger="load"
-                     hx-swap="innerHTML">
-                    <!-- Loading placeholder -->
-                    <div class="text-center p-3">
-                        <div class="spinner-border spinner-border-sm text-muted" role="status">
-                            <span class="visually-hidden">Loading quick actions...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Account Info Sidebar -->
-    <div class="col-lg-4">
+    <!-- Right Column -->
+    <div class="col-lg-6">
+        <!-- Account Information -->
         <div class="card mb-4">
             <div class="card-header">
                 <h6 class="m-0 fw-bold text-primary">
@@ -341,31 +306,26 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Account Status -->
+<!-- Full Width Row for Quick Actions -->
+<div class="row">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h6 class="m-0 fw-bold text-success">
-                    <i class="bi bi-check-circle me-2"></i>Account Status
+                <h6 class="m-0 fw-bold text-primary">
+                    <i class="bi bi-lightning me-2"></i>Quick Actions Configuration
                 </h6>
             </div>
             <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-2">
-                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                        <strong>Account Active</strong>
-                    </li>
-                    <li class="mb-2">
-                        <i class="bi bi-envelope-check-fill text-success me-2"></i>
-                        <strong>Email Verified</strong>
-                    </li>
-                    {% if user.password_change_required %}
-                    <li class="mb-2">
-                        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
-                        <strong>Password Change Required</strong>
-                    </li>
-                    {% endif %}
-                </ul>
+                <p class="text-muted mb-3">
+                    Customize which quick actions appear in your sidebar. Only actions you have permission to use are available.
+                </p>
+
+                <div id="actions-list">
+                    {% include 'components/quick_actions/config_partial.html' %}
+                </div>
             </div>
         </div>
     </div>

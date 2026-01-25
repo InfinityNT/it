@@ -1,0 +1,24 @@
+<!-- Breadcrumb Navigation Component -->
+<!-- Usage: {% include 'components/navigation/breadcrumbs.html' with breadcrumbs=breadcrumbs_list %} -->
+<!-- breadcrumbs should be a list of dicts: [{'name': 'Devices'}] for current page -->
+
+{% if breadcrumbs and breadcrumbs|length > 0 %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb bg-light px-3 py-2 rounded">
+        <li class="breadcrumb-item">
+            <a href="/">
+                <i class="bi bi-house-door"></i> Home
+            </a>
+        </li>
+        {% for crumb in breadcrumbs %}
+            {% if crumb.url %}
+                <li class="breadcrumb-item">
+                    <a href="{{ crumb.url }}">{{ crumb.name }}</a>
+                </li>
+            {% else %}
+                <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+            {% endif %}
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}

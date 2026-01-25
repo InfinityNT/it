@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -14,8 +15,7 @@ from .serializers import (
     DeviceManufacturerSerializer, DeviceVendorSerializer, DeviceModelSerializer, 
     DeviceHistorySerializer, DeviceAssignSerializer, DeviceUnassignSerializer
 )
-from core.models import User, Location
-from core.serializers import LocationSerializer
+from core.models import User
 from employees.models import Employee
 from core.decorators import permission_required_redirect
 
@@ -107,12 +107,15 @@ def device_list_api_view(request):
         'device_model',
         'assigned_to'
     )
-    
+
     # Apply filters
     status_filter = request.GET.get('status')
     category = request.GET.get('category')
     search = request.GET.get('search')
-    
+
+    # Track if any filters are active
+    has_filters = bool(status_filter or category or search)
+
     if status_filter:
         queryset = queryset.filter(status=status_filter)
     if category:
@@ -125,9 +128,18 @@ def device_list_api_view(request):
             models.Q(device_model__manufacturer__icontains=search) |
             models.Q(device_model__model_name__icontains=search)
         )
-    
+
     devices = queryset.order_by('asset_tag')
-    context = {'devices': devices}
+
+    # Check if database is empty (for empty state messaging)
+    total_devices = Device.objects.count() if not devices.exists() else None
+
+    context = {
+        'devices': devices,
+        'has_filters': has_filters,
+        'is_empty_database': total_devices == 0 if total_devices is not None else False,
+        'add_device_url': reverse('add-device'),
+    }
     return render(request, 'components/devices/list.html', context)
 
 
@@ -349,12 +361,7 @@ def unassign_device_view(request, device_id):
 @permission_required_redirect('devices.can_view_devices', message='You do not have permission to view devices.')
 def devices_view(request):
     """Devices management view"""
-    # If HTMX request, return content fragment
-    if request.headers.get('HX-Request'):
-        return render(request, 'devices/devices_content.html')
-    # If direct access, return full page
-    else:
-        return render(request, 'devices/devices.html')
+    return render(request, 'devices/devices.html')
 
 
 @login_required
@@ -462,7 +469,6 @@ def add_device_view(request):
                     shared_usage=request.POST.get('shared_usage') or None,
                     ip_address=request.POST.get('ip_address') or None,
                     mac_address=request.POST.get('mac_address') or None,
-                    location=request.POST.get('location', ''),
                     notes=request.POST.get('notes', ''),
                     created_by=request.user
                 )
@@ -492,13 +498,11 @@ def add_device_view(request):
     categories = DeviceCategory.objects.filter(is_active=True)
     manufacturers = DeviceManufacturer.objects.filter(is_active=True)
     vendors = DeviceVendor.objects.filter(is_active=True)
-    locations = Location.objects.filter(is_active=True).order_by('name')
     device_models = DeviceModel.objects.filter(is_active=True).select_related('category').order_by('manufacturer', 'model_name')
     context = {
         'categories': categories,
         'manufacturers': manufacturers,
         'vendors': vendors,
-        'locations': locations,
         'device_models': device_models
     }
 
@@ -613,16 +617,14 @@ def edit_device_view(request, device_id):
     categories = DeviceCategory.objects.filter(is_active=True)
     manufacturers = DeviceManufacturer.objects.filter(is_active=True)
     vendors = DeviceVendor.objects.filter(is_active=True)
-    locations = Location.objects.filter(is_active=True).order_by('name')
     device_models = DeviceModel.objects.filter(is_active=True).select_related('category').order_by('manufacturer', 'model_name')
     formatted_specs = format_specifications(device.device_model.specifications)
-    
+
     context = {
         'device': device,
         'categories': categories,
         'manufacturers': manufacturers,
         'vendors': vendors,
-        'locations': locations,
         'device_models': device_models,
         'formatted_specs': formatted_specs
     }
@@ -672,10 +674,6 @@ def advanced_search_api(request):
             models.Q(assigned_to__first_name__icontains=search_query) |
             models.Q(assigned_to__last_name__icontains=search_query) |
             models.Q(assigned_to__email__icontains=search_query) |
-            models.Q(location__icontains=search_query) |
-            models.Q(building__icontains=search_query) |
-            models.Q(room__icontains=search_query) |
-            models.Q(hostname__icontains=search_query) |
             models.Q(ip_address__icontains=search_query) |
             models.Q(mac_address__icontains=search_query) |
             models.Q(notes__icontains=search_query)
@@ -696,11 +694,6 @@ def advanced_search_api(request):
     if manufacturer:
         queryset = queryset.filter(device_model__manufacturer=manufacturer)
 
-    # Location filter
-    location = request.GET.get('location')
-    if location:
-        queryset = queryset.filter(location__icontains=location)
-
     # Date range filters
     assigned_date_from = request.GET.get('assigned_date_from')
     assigned_date_to = request.GET.get('assigned_date_to')
@@ -717,7 +710,7 @@ def advanced_search_api(request):
         writer = csv.writer(response)
         writer.writerow([
             'Asset Tag', 'Hostname', 'Serial Number', 'Category', 'Manufacturer', 'Model',
-            'Status', 'Assigned To', 'Location'
+            'Status', 'Assigned To'
         ])
 
         for device in queryset:
@@ -729,8 +722,7 @@ def advanced_search_api(request):
                 device.device_model.manufacturer,
                 device.device_model.model_name,
                 device.get_status_display(),
-                device.assigned_to.get_full_name() if device.assigned_to else '',
-                device.location
+                device.assigned_to.get_full_name() if device.assigned_to else ''
             ])
         
         return response
@@ -757,7 +749,6 @@ def advanced_search_api(request):
             'status_display': device.get_status_display(),
             'assigned_to': device.assigned_to.get_full_name() if device.assigned_to else None,
             'assigned_date': device.assigned_date.isoformat() if device.assigned_date else None,
-            'location': device.location,
         }
         results.append(result)
     
@@ -830,23 +821,6 @@ def bulk_operations_view(request):
                     new_status=new_status,
                     previous_status=old_status,
                     notes=f'Bulk status update by {request.user.get_full_name()}',
-                    created_by=request.user
-                )
-                updated_count += 1
-        
-        elif operation == 'update_location':
-            new_location = request.data.get('new_location', '')
-            
-            for device in devices:
-                old_location = device.location
-                device.location = new_location
-                device.save()
-                
-                # Create history record
-                DeviceHistory.objects.create(
-                    device=device,
-                    action='bulk_updated',
-                    notes=f'Bulk location update from "{old_location}" to "{new_location}" by {request.user.get_full_name()}',
                     created_by=request.user
                 )
                 updated_count += 1
@@ -996,13 +970,74 @@ def bulk_operations_view(request):
                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def location_list_api(request):
-    """API endpoint for getting locations for bulk operations"""
+@login_required
+def add_device_model_modal_view(request):
+    """Render the add device model modal and handle form submission"""
+    from .spec_templates import get_spec_template, get_spec_display_name
+
+    if request.method == 'POST':
+        category_id = request.POST.get('category')
+        manufacturer = request.POST.get('manufacturer')
+        model_name = request.POST.get('model_name')
+
+        # Build specifications from form data
+        specifications = {}
+        for key in request.POST:
+            if key.startswith('spec_'):
+                spec_key = key[5:]  # Remove 'spec_' prefix
+                value = request.POST.get(key, '').strip()
+                if value:  # Only include non-empty specs
+                    specifications[spec_key] = value
+
+        try:
+            category = DeviceCategory.objects.get(id=category_id)
+            device_model = DeviceModel.objects.create(
+                category=category,
+                manufacturer=manufacturer,
+                model_name=model_name,
+                specifications=specifications
+            )
+            messages.success(request, f'Device model "{device_model}" created successfully.')
+            # Return success HTML for modal
+            return render(request, 'components/common/modal_success.html', {
+                'message': f'Device model "{device_model}" created successfully.',
+                'icon': 'bi-check-circle-fill',
+                'icon_color': 'text-success'
+            })
+        except DeviceCategory.DoesNotExist:
+            messages.error(request, 'Invalid category selected.')
+        except Exception as e:
+            messages.error(request, f'Error creating device model: {str(e)}')
+
+    # GET request - render modal
+    context = {
+        'categories': DeviceCategory.objects.filter(is_active=True),
+        'manufacturers': DeviceManufacturer.objects.filter(is_active=True),
+    }
+    return render(request, 'devices/add_device_model_modal.html', context)
+
+
+@login_required
+def get_spec_template_view(request):
+    """Return specification fields for a category via HTMX"""
+    from .spec_templates import get_spec_template, get_spec_display_name
+
+    category_id = request.GET.get('category')
+
+    if not category_id:
+        return render(request, 'devices/partials/spec_fields.html', {'spec_fields': []})
+
     try:
-        locations = Location.objects.all()
-        serializer = LocationSerializer(locations, many=True)
-        return Response(serializer.data)
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        category = DeviceCategory.objects.get(id=category_id)
+        specs = get_spec_template(category.name)
+        # Build list of tuples (key, value, display_name) for the template
+        spec_fields = [
+            (key, value, get_spec_display_name(key))
+            for key, value in specs.items()
+        ]
+    except DeviceCategory.DoesNotExist:
+        spec_fields = []
+
+    return render(request, 'devices/partials/spec_fields.html', {
+        'spec_fields': spec_fields
+    })

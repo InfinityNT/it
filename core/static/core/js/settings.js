@@ -3,8 +3,20 @@
  * Handles form submissions, quick actions toggles, and system settings management
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle quick actions toggle switches
+// Flag to prevent duplicate event listener attachment
+let settingsInitialized = false;
+
+function initializeSettings() {
+    if (settingsInitialized) {
+        // Only re-attach listeners for dynamically loaded forms
+        attachFormListeners();
+        return;
+    }
+
+    settingsInitialized = true;
+
+    // Handle quick actions toggle switches - using event delegation on body
+    // This only needs to be attached once since it delegates to body
     document.body.addEventListener('change', function(e) {
         if (e.target.classList.contains('action-toggle')) {
             const actionCode = e.target.dataset.actionCode;
@@ -30,7 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Update the quick actions sidebar without full refresh
                     const quickActionsSection = document.getElementById('quick-actions-section');
                     if (quickActionsSection) {
-                        htmx.trigger(quickActionsSection, 'load');
+                        // Use htmx.ajax to reload the quick actions
+                        htmx.ajax('GET', '/api/quick-actions/', {
+                            target: '#quick-actions-section',
+                            swap: 'innerHTML'
+                        });
                     }
                     showAlert('success', data.message);
                 } else {
@@ -50,6 +66,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Attach form listeners
+    attachFormListeners();
+}
+
+function attachFormListeners() {
     // Handle system settings form submissions
     const generalSettingsForm = document.getElementById('generalSettingsForm');
     if (generalSettingsForm) {
@@ -74,7 +95,10 @@ document.addEventListener('DOMContentLoaded', function() {
             saveSettings('security', form);
         });
     }
-});
+}
+
+// Initialize on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', initializeSettings);
 
 /**
  * Save settings to the backend
@@ -87,7 +111,6 @@ function saveSettings(settingsType, formElement) {
     // Gather form data based on settings type
     if (settingsType === 'general') {
         formData.append('system_name', document.getElementById('systemName')?.value || '');
-        formData.append('admin_email', document.getElementById('adminEmail')?.value || '');
         formData.append('timezone', document.getElementById('timezone')?.value || '');
     } else if (settingsType === 'features') {
         formData.append('enable_ldap', document.getElementById('enableLDAP')?.checked || false);
@@ -141,7 +164,7 @@ function saveSettings(settingsType, formElement) {
 /**
  * Run backup operation
  */
-function runBackup() {
+function runBackup(event) {
     if (!confirm('Create a backup of the database now?')) {
         return;
     }
@@ -178,7 +201,7 @@ function runBackup() {
 /**
  * Check data integrity
  */
-function checkDataIntegrity() {
+function checkDataIntegrity(event) {
     if (!confirm('Check database integrity? This will scan for inconsistencies.')) {
         return;
     }

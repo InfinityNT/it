@@ -12,9 +12,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" 
-                      hx-post="{% url 'add-user' %}" 
-                      hx-target="#modal-container" 
+                <form method="post"
+                      id="addUserForm"
+                      hx-post="{% url 'add-user-modal' %}"
+                      hx-target="#modal-container"
                       hx-swap="innerHTML"
                       hx-indicator="#user-save-spinner">
                     {% csrf_token %}

@@ -1,4 +1,5 @@
 {% load static %}
+
 <!-- Alert Container -->
 <div id="alert-container"></div>
 
@@ -15,6 +16,16 @@
     </div>
     {% if user.can_modify_devices %}
     <div class="page-header-actions">
+        <a href="#"
+           hx-get="{% url 'add-device-model' %}"
+           hx-target="#dynamicModalContent"
+           hx-swap="innerHTML"
+           data-bs-toggle="modal"
+           data-bs-target="#dynamicModal"
+           class="btn btn-outline-primary">
+            <i class="bi bi-cpu me-1"></i>
+            Add Model
+        </a>
         <a href="#"
            hx-get="{% url 'add-device' %}"
            hx-target="#dynamicModalContent"
@@ -120,35 +131,4 @@
         can_assign_devices: {% if user.can_assign_devices %}true{% else %}false{% endif %}
     };
 </script>
-<script src="{% static 'devices/js/devices-new.js' %}"></script>
-<script src="{% static 'devices/js/filter_state.js' %}"></script>
 
-<!-- HTMX SPA Re-initialization -->
-<script>
-    (function() {
-        // Reset initialization flag to allow re-init
-        window.devicesInitialized = false;
-
-        // Initialize with a small delay to ensure script is loaded
-        function tryInitialize() {
-            if (typeof initializeDevicesPage === 'function') {
-                initializeDevicesPage();
-                console.log('Devices page initialized');
-            } else {
-                console.warn('initializeDevicesPage not yet available, retrying...');
-                setTimeout(tryInitialize, 50);
-            }
-        }
-
-        // Start initialization
-        tryInitialize();
-
-        // Re-initialize on HTMX content swap (when navigating back to this page)
-        document.body.addEventListener('htmx:afterSwap', function(evt) {
-            if (evt.detail.target.id === 'content-area' && document.querySelector('#devices-table')) {
-                window.devicesInitialized = false;
-                tryInitialize();
-            }
-        });
-    })();
-</script>

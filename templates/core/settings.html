@@ -5,28 +5,28 @@
 <link rel="stylesheet" href="{% static 'core/css/page-titles.css' %}">
 {% endblock %}
 
+{% block extra_js %}
+<script>
+// Reload settings script after HTMX swap
+// settings.js is now loaded in base.html, so this just re-initializes
+function loadSettingsScript() {
+    if (typeof initializeSettings === 'function') {
+        initializeSettings();
+    }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <div id="settings-container"
-     hx-get="{% url 'settings' %}"
+     hx-get="{{ request.path }}"
      hx-trigger="load"
      hx-swap="innerHTML"
      hx-on::after-swap="loadSettingsScript()">
     <div class="text-center p-4">
         <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading settings...</span>
+            <span class="visually-hidden">Loading...</span>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'core/js/settings.js' %}"></script>
-<script>
-// Reload settings script after HTMX swap
-function loadSettingsScript() {
-    // Re-run the DOMContentLoaded logic after HTMX loads content
-    const event = new Event('DOMContentLoaded');
-    document.dispatchEvent(event);
-}
-</script>
-{% endblock %}
+|{% endblock %}

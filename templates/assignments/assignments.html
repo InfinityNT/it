@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Assignments - {{ SYSTEM_NAME }}{% endblock %}
 
 {% block content %}
-<div hx-get="{% url 'assignments' %}"
-     hx-trigger="load"
-     hx-swap="innerHTML">
-    <div class="text-center p-4">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading assignments...</span>
-        </div>
-    </div>
-</div>
+{% include 'assignments/assignments_content.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'assignments/js/assignments-new.js' %}"></script>
 {% endblock %}

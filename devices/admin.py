@@ -56,10 +56,10 @@ class DeviceModelAdmin(admin.ModelAdmin):
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
     form = DeviceAdminForm
-    list_display = ('asset_tag', 'hostname', 'serial_number', 'device_model', 'status', 'assigned_to', 'usage_type', 'full_location')
-    list_filter = ('status', 'usage_type', 'shared_usage', 'device_model__category', 'device_model__manufacturer', 'location', 'created_at')
+    list_display = ('asset_tag', 'hostname', 'serial_number', 'device_model', 'status', 'assigned_to', 'usage_type')
+    list_filter = ('status', 'usage_type', 'shared_usage', 'device_model__category', 'device_model__manufacturer', 'created_at')
     search_fields = ('asset_tag', 'hostname', 'serial_number', 'device_model__manufacturer', 'device_model__model_name', 'assigned_to__first_name', 'assigned_to__last_name', 'ip_address', 'mac_address')
-    readonly_fields = ('created_at', 'updated_at', 'full_location')
+    readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'created_at'
 
     fieldsets = (
@@ -74,9 +74,6 @@ class DeviceAdmin(admin.ModelAdmin):
         }),
         ('Network Information', {
             'fields': ('ip_address', 'mac_address')
-        }),
-        ('Location', {
-            'fields': ('location_choice', 'room', 'full_location')
         }),
         ('Assignment', {
             'fields': ('assigned_to', 'assigned_date')

@@ -11,9 +11,13 @@
         </div>
     </div>
     <div class="page-header-actions">
-        <button class="btn btn-info" onclick="exportAllReports()">
+        <button class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#customReportModal">
+            <i class="bi bi-graph-up-arrow me-1"></i>
+            Create Custom Report
+        </button>
+        <button class="btn btn-outline-info" onclick="exportAllReports()">
             <i class="bi bi-download me-1"></i>
-            Export All Reports
+            Export All
         </button>
     </div>
 </div>
@@ -124,8 +128,16 @@
                     <i class="bi bi-download me-1"></i>Export
                 </button>
             </div>
-            <div class="card-body">
-                <canvas id="deviceDistributionChart"></canvas>
+            <div class="card-body" style="min-height: 300px;">
+                <div class="chart-loading text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+                <canvas id="deviceDistributionChart" style="display: none;"></canvas>
+                <div class="chart-empty-state text-center py-5" style="display: none;">
+                    <i class="bi bi-pie-chart display-4 text-muted" style="opacity: 0.3;"></i>
+                    <p class="text-muted mt-3 mb-0">No devices registered yet</p>
+                    <small class="text-muted">Add devices to see distribution by category</small>
+                </div>
             </div>
         </div>
     </div>
@@ -139,8 +151,16 @@
                     <i class="bi bi-download me-1"></i>Export
                 </button>
             </div>
-            <div class="card-body">
-                <canvas id="statusOverviewChart"></canvas>
+            <div class="card-body" style="min-height: 300px;">
+                <div class="chart-loading text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+                <canvas id="statusOverviewChart" style="display: none;"></canvas>
+                <div class="chart-empty-state text-center py-5" style="display: none;">
+                    <i class="bi bi-pie-chart display-4 text-muted" style="opacity: 0.3;"></i>
+                    <p class="text-muted mt-3 mb-0">No status data available</p>
+                    <small class="text-muted">Add devices to see status breakdown</small>
+                </div>
             </div>
         </div>
     </div>
@@ -156,8 +176,16 @@
                     <i class="bi bi-download me-1"></i>Export
                 </button>
             </div>
-            <div class="card-body">
-                <canvas id="assignmentTrendsChart"></canvas>
+            <div class="card-body" style="min-height: 300px;">
+                <div class="chart-loading text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+                <canvas id="assignmentTrendsChart" style="display: none;"></canvas>
+                <div class="chart-empty-state text-center py-5" style="display: none;">
+                    <i class="bi bi-graph-up display-4 text-muted" style="opacity: 0.3;"></i>
+                    <p class="text-muted mt-3 mb-0">No assignment history yet</p>
+                    <small class="text-muted">Assignment trends will appear after devices are assigned</small>
+                </div>
             </div>
         </div>
     </div>
@@ -171,11 +199,15 @@
                     <i class="bi bi-download me-1"></i>Export
                 </button>
             </div>
-            <div class="card-body">
-                <div id="topUsersTable">
-                    <div class="d-flex justify-content-center p-3">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    </div>
+            <div class="card-body" style="min-height: 300px;">
+                <div class="chart-loading text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+                <div id="topUsersTable" style="display: none;"></div>
+                <div class="chart-empty-state text-center py-5" style="display: none;">
+                    <i class="bi bi-people display-4 text-muted" style="opacity: 0.3;"></i>
+                    <p class="text-muted mt-3 mb-0">No device assignments yet</p>
+                    <small class="text-muted">Top users will appear after devices are assigned</small>
                 </div>
             </div>
         </div>
@@ -370,6 +402,9 @@
     </div>
 </div>
 
+<!-- Include Custom Report Builder Modal -->
+{% include 'components/forms/create_custom_report_modal.html' %}
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link rel="stylesheet" href="{% static 'reports/css/reports.css'  %}">
-<script src="{% static 'reports/js/reports.js'  %}"></script>
+<link rel="stylesheet" href="{% static 'reports/css/reports.css' %}">
+

@@ -1,0 +1,28 @@
+# Generated manually to break circular dependency
+
+import django.db.models.deletion
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('employees', '0001_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='employee',
+            name='system_user',
+            field=models.OneToOneField(
+                blank=True,
+                help_text='Link to system user account if employee has portal access',
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='employee_profile',
+                to=settings.AUTH_USER_MODEL
+            ),
+        ),
+    ]

@@ -1,19 +1,18 @@
-<div class="list-group">
+<!-- Dashboard Activity List - Dark Theme -->
+<div class="activity-list-dark">
     {% for activity in activities %}
-    <div class="list-group-item list-group-item-action">
-        <div class="d-flex w-100 justify-content-between">
-            <h6 class="mb-1">{{ activity.action }}</h6>
-            <small>{{ activity.timestamp|date:"M d, H:i" }}</small>
+    <div class="activity-item-dark">
+        <div class="activity-header-dark">
+            <h6 class="activity-title-dark">{{ activity.action }}</h6>
+            <small class="activity-time-dark">{{ activity.timestamp|date:"M d, H:i" }}</small>
         </div>
-        <p class="mb-1">{{ activity.description }}</p>
-        <small>by {{ activity.user }}</small>
+        <p class="activity-description-dark">{{ activity.description }}</p>
+        <small class="activity-user-dark">by {{ activity.user }}</small>
     </div>
     {% empty %}
-    <div class="list-group-item">
-        <div class="text-center text-muted py-3">
-            <i class="bi bi-clock-history display-6"></i>
-            <p class="mt-2">No recent activity</p>
-        </div>
+    <div class="activity-empty-dark">
+        <i class="bi bi-clock-history"></i>
+        <p>No recent activity</p>
     </div>
     {% endfor %}
 </div>

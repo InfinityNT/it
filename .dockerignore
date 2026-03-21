@@ -47,6 +47,11 @@ htmlcov/
 # Media files (if any)
 media/
 
+# E2E test suite
+tests/
+pyproject.toml
+requirements-dev.txt
+
 # Backup files
 *.bak
 *.backup

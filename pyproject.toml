@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "DMP.settings"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+addopts = [
+    "--tb=short",
+    "-v",
+]
+markers = [
+    "e2e: End-to-end browser tests (require Playwright)",
+    "slow: Tests that take longer than usual",
+]

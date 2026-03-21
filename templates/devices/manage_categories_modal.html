@@ -1,0 +1,40 @@
+{% load static %}
+
+<!-- Manage Categories Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-tags me-2"></i>Manage Categories
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <!-- Content Container - switches between list and add form -->
+    <div id="categories-content">
+        <!-- Header Row: Search + Add Button -->
+        <div class="manage-header-row">
+            <input type="text" class="form-control" placeholder="Search categories..."
+                   hx-get="{% url 'manage-categories-list' %}"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#categories-list"
+                   name="search">
+            {% if can_modify %}
+            <button type="button" class="btn btn-primary"
+                    hx-get="{% url 'manage-categories-add-form' %}"
+                    hx-target="#categories-content"
+                    hx-swap="innerHTML">
+                <i class="bi bi-plus me-1"></i>Add Category
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- List Container -->
+        <div id="categories-list" class="manage-list-container"
+             hx-get="{% url 'manage-categories-list' %}" hx-trigger="load">
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

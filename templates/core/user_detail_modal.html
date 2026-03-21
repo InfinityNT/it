@@ -174,6 +174,13 @@
 </div>
 
 <div class="modal-footer">
+    {% if user.can_manage_system_settings and user_detail.id != user.id %}
+    <button type="button" class="btn btn-outline-warning"
+            data-bs-dismiss="modal"
+            onclick="setTimeout(function(){ resetUserPassword({{ user_detail.id }}, '{{ user_detail.get_full_name|default:user_detail.username }}'); }, 300)">
+        <i class="bi bi-key me-1"></i>Reset Password
+    </button>
+    {% endif %}
     {% if user.can_manage_users %}
     <a href="#"
        hx-get="{% url 'edit-user-modal' user_id=user_detail.id %}"

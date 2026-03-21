@@ -19,7 +19,7 @@
     <!-- User's configured quick actions -->
     {% for action in actions %}
     <div class="quick-action-card" data-action="{{ action.code }}">
-        {% if action.code == 'add_device' or action.code == 'assign_device' or action.code == 'return_device' or action.code == 'add_employee' or action.code == 'add_user' %}
+        {% if action.code == 'add_device' or action.code == 'assign_device' or action.code == 'return_device' or action.code == 'add_employee' or action.code == 'add_user' or action.code == 'generate_report' %}
         <!-- Modal-based actions -->
         <a href="#"
            class="quick-action-link"
@@ -57,7 +57,7 @@
             <p class="widget-title">No shortcuts configured</p>
             <p class="widget-desc">Add quick actions for faster access to frequent tasks</p>
         </div>
-        <a href="/settings/" class="btn btn-primary-dark btn-sm">
+        <a href="/settings/" class="btn btn-primary-dash btn-sm">
             Configure
         </a>
     </div>

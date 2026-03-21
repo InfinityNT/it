@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib import messages
 from django.db import models, transaction
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -18,8 +19,35 @@ from pathlib import Path
 from datetime import datetime
 from django.utils import timezone
 import threading
-from .models import User, AuditLog, SystemSettings, UserQuickAction
+from .models import User, AuditLog, SystemSettings, UserQuickAction, Location
 from .decorators import permission_required_redirect
+
+
+
+
+def _resolve_doc_path(doc_path):
+    """Resolve a doc path safely, preventing directory traversal."""
+    from django.conf import settings as django_settings
+    docs_root = Path(django_settings.BASE_DIR) / 'docs'
+    # Append .md if not present
+    if not doc_path.endswith('.md'):
+        doc_path = doc_path + '.md'
+    resolved = (docs_root / doc_path).resolve()
+    # Ensure path stays within docs root
+    if not str(resolved).startswith(str(docs_root.resolve())):
+        return None
+    if not resolved.is_file():
+        return None
+    return resolved
+
+
+def _extract_title(md_content):
+    """Extract the first # heading from markdown content."""
+    for line in md_content.split('\n'):
+        line = line.strip()
+        if line.startswith('# ') and not line.startswith('##'):
+            return line[2:].strip()
+    return None
 from .serializers import (
     UserSerializer, UserCreateSerializer, LoginSerializer,
     AuditLogSerializer, SystemSettingsSerializer
@@ -490,7 +518,16 @@ def toggle_user_status(request, user_id):
     # Don't allow users to deactivate themselves
     if user == request.user:
         return Response({'error': 'You cannot deactivate your own account'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    # Prevent deactivating the last active superuser
+    if user.is_superuser and user.is_active:
+        active_superusers = User.objects.filter(is_active=True, is_superuser=True).exclude(id=user.id)
+        if active_superusers.count() == 0:
+            return Response(
+                {'error': 'Cannot deactivate the last active superuser. At least one superuser must remain active.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     user.is_active = not user.is_active
     user.save()
     
@@ -687,17 +724,24 @@ def settings_view(request):
 
     # Load current settings for display
     current_settings = {}
+    last_backup_time = None
     if user.can_manage_system_settings:
         from core.models import SystemSettings
         settings_queryset = SystemSettings.objects.filter(is_active=True)
         for setting in settings_queryset:
             current_settings[setting.key] = setting.value
 
+        # Get last backup time from audit log
+        last_backup = AuditLog.objects.filter(model_name='Backup').order_by('-timestamp').first()
+        if last_backup:
+            last_backup_time = timezone.localtime(last_backup.timestamp).strftime('%b %d, %Y at %I:%M %p')
+
     context = {
         'user': user,
         'can_manage_system': user.can_manage_system_settings,
         'page_title': 'System Settings' if user.can_manage_system_settings else 'Profile Settings',
-        'current_settings': current_settings
+        'current_settings': current_settings,
+        'last_backup_time': last_backup_time,
     }
 
     # If HTMX request, return content fragment
@@ -735,19 +779,18 @@ def dashboard_activity_view(request):
     activities = []
     for log in recent_logs:
         user_name = log.user.get_full_name() if log.user else 'System'
-        username = f"({log.user.username})" if log.user else ""
-        
+
         # Create readable description
         action_display = log.get_action_display()
-        description = f"{action_display} {log.model_name}"
+        description = log.model_name
         if log.object_repr:
             description += f": {log.object_repr}"
-        
+
         activities.append({
             'action': action_display,
             'description': description,
             'timestamp': log.timestamp.isoformat(),
-            'user': f"{user_name} {username}".strip()
+            'user': user_name if user_name else log.user.username
         })
     
     # If no audit logs exist, show a placeholder
@@ -970,6 +1013,9 @@ def password_change_view(request):
         messages.success(request, 'Password changed successfully! You can now continue using the system.')
         return redirect('dashboard')
     
+    # For HTMX requests (e.g. from profile settings), return content without modal wrapper
+    if request.headers.get('HX-Request'):
+        return render(request, 'components/forms/password_change_content.html')
     return render(request, 'components/forms/password_change_modal.html')
 
 
@@ -1128,346 +1174,15 @@ def reset_user_password(request, user_id):
     })
 
 
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def user_bulk_operations_view(request):
-    """Bulk operations for user management"""
-    user_ids = request.data.get('item_ids', [])
-    operation = request.data.get('operation')
-    
-    if not user_ids or not operation:
-        return Response({'error': 'User IDs and operation are required'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
-    
-    users = User.objects.filter(id__in=user_ids)
-    if not users.exists():
-        return Response({'error': 'No valid users found'}, 
-                       status=status.HTTP_404_NOT_FOUND)
-    
-    # Check base permissions
-    if not request.user.can_manage_users:
-        return Response({'error': 'Permission denied'}, 
-                       status=status.HTTP_403_FORBIDDEN)
-    
-    updated_count = 0
-    errors = []
-    
-    try:
-        with transaction.atomic():
-            if operation == 'activate_users':
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot modify your own account status')
-                        continue
-                    
-                    # Check permissions for system accounts
-                    if not request.user.can_manage_system_settings and user.can_manage_system_settings:
-                        errors.append(f'Cannot modify system administrator {user.get_full_name()}')
-                        continue
-                    
-                    if not user.is_active:
-                        user.is_active = True
-                        user.save()
-                        
-                        # Create audit log
-                        AuditLog.objects.create(
-                            user=request.user,
-                            action='update',
-                            model_name='User',
-                            object_id=str(user.id),
-                            object_repr=str(user),
-                            changes={
-                                'bulk_operation': 'activate_users',
-                                'activated_by': request.user.get_full_name(),
-                                'status_change': 'activated'
-                            },
-                            ip_address=request.META.get('REMOTE_ADDR'),
-                            user_agent=request.META.get('HTTP_USER_AGENT', '')
-                        )
-                        updated_count += 1
-            
-            elif operation == 'deactivate_users':
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot deactivate your own account')
-                        continue
-                    
-                    # Check permissions for system accounts
-                    if not request.user.can_manage_system_settings and user.can_manage_system_settings:
-                        errors.append(f'Cannot modify system administrator {user.get_full_name()}')
-                        continue
-                    
-                    if user.is_active:
-                        user.is_active = False
-                        user.save()
-                        
-                        # Create audit log
-                        AuditLog.objects.create(
-                            user=request.user,
-                            action='update',
-                            model_name='User',
-                            object_id=str(user.id),
-                            object_repr=str(user),
-                            changes={
-                                'bulk_operation': 'deactivate_users',
-                                'deactivated_by': request.user.get_full_name(),
-                                'status_change': 'deactivated'
-                            },
-                            ip_address=request.META.get('REMOTE_ADDR'),
-                            user_agent=request.META.get('HTTP_USER_AGENT', '')
-                        )
-                        updated_count += 1
-            
-            elif operation == 'assign_group':
-                # Only system managers can assign groups
-                if not request.user.can_manage_system_settings:
-                    return Response({'error': 'Only system managers can assign user groups'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                new_group_id = request.data.get('new_group_id')
-                replace_existing = request.data.get('replace_existing', True)
-                
-                if not new_group_id:
-                    return Response({'error': 'Group is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    from django.contrib.auth.models import Group
-                    new_group = Group.objects.get(id=new_group_id)
-                except Group.DoesNotExist:
-                    return Response({'error': 'Group not found'}, 
-                                   status=status.HTTP_404_NOT_FOUND)
-                
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot modify your own group assignment')
-                        continue
-                    
-                    old_groups = list(user.groups.all())
-                    
-                    if replace_existing:
-                        user.groups.clear()
-                        user.groups.add(new_group)
-                    else:
-                        user.groups.add(new_group)
-                    
-                    # Create audit log
-                    AuditLog.objects.create(
-                        user=request.user,
-                        action='update',
-                        model_name='User',
-                        object_id=str(user.id),
-                        object_repr=str(user),
-                        changes={
-                            'bulk_operation': 'assign_group',
-                            'assigned_by': request.user.get_full_name(),
-                            'new_group': new_group.name,
-                            'old_groups': [g.name for g in old_groups],
-                            'replace_existing': replace_existing
-                        },
-                        ip_address=request.META.get('REMOTE_ADDR'),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')
-                    )
-                    updated_count += 1
-            
-            elif operation == 'remove_from_group':
-                # Only system managers can remove from groups
-                if not request.user.can_manage_system_settings:
-                    return Response({'error': 'Only system managers can remove users from groups'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                group_id = request.data.get('group_id')
-                
-                if not group_id:
-                    return Response({'error': 'Group is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    from django.contrib.auth.models import Group
-                    group = Group.objects.get(id=group_id)
-                except Group.DoesNotExist:
-                    return Response({'error': 'Group not found'}, 
-                                   status=status.HTTP_404_NOT_FOUND)
-                
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot modify your own group assignment')
-                        continue
-                    
-                    if user.groups.filter(id=group_id).exists():
-                        user.groups.remove(group)
-                        
-                        # Create audit log
-                        AuditLog.objects.create(
-                            user=request.user,
-                            action='update',
-                            model_name='User',
-                            object_id=str(user.id),
-                            object_repr=str(user),
-                            changes={
-                                'bulk_operation': 'remove_from_group',
-                                'removed_by': request.user.get_full_name(),
-                                'removed_from_group': group.name
-                            },
-                            ip_address=request.META.get('REMOTE_ADDR'),
-                            user_agent=request.META.get('HTTP_USER_AGENT', '')
-                        )
-                        updated_count += 1
-            
-            elif operation == 'force_password_change':
-                # Only system managers can force password changes
-                if not request.user.can_manage_system_settings:
-                    return Response({'error': 'Only system managers can force password changes'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot force password change on your own account')
-                        continue
-                    
-                    user.password_change_required = True
-                    user.save()
-                    
-                    # Create audit log
-                    AuditLog.objects.create(
-                        user=request.user,
-                        action='update',
-                        model_name='User',
-                        object_id=str(user.id),
-                        object_repr=str(user),
-                        changes={
-                            'bulk_operation': 'force_password_change',
-                            'forced_by': request.user.get_full_name(),
-                            'password_change_required': True
-                        },
-                        ip_address=request.META.get('REMOTE_ADDR'),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')
-                    )
-                    updated_count += 1
-            
-            elif operation == 'reset_passwords':
-                # Only system managers can reset passwords
-                if not request.user.can_manage_system_settings:
-                    return Response({'error': 'Only system managers can reset passwords'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                import secrets
-                import string
-                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-                reset_results = []
-                
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot reset your own password')
-                        continue
-                    
-                    # Generate secure temporary password
-                    temp_password = ''.join(secrets.choice(alphabet) for i in range(12))
-                    
-                    user.set_password(temp_password)
-                    user.password_change_required = True
-                    user.save()
-                    
-                    reset_results.append({
-                        'user': user.get_full_name(),
-                        'username': user.username,
-                        'temp_password': temp_password
-                    })
-                    
-                    # Create audit log
-                    AuditLog.objects.create(
-                        user=request.user,
-                        action='update',
-                        model_name='User',
-                        object_id=str(user.id),
-                        object_repr=str(user),
-                        changes={
-                            'bulk_operation': 'reset_passwords',
-                            'reset_by': request.user.get_full_name(),
-                            'password_change_required': True
-                        },
-                        ip_address=request.META.get('REMOTE_ADDR'),
-                        user_agent=request.META.get('HTTP_USER_AGENT', '')
-                    )
-                    updated_count += 1
-                
-                return Response({
-                    'message': f'Successfully reset passwords for {updated_count} users',
-                    'updated_count': updated_count,
-                    'total_users': len(user_ids),
-                    'reset_results': reset_results,
-                    'errors': errors if errors else None
-                })
-            
-            elif operation == 'update_staff_status':
-                # Only system managers can update staff status
-                if not request.user.can_manage_system_settings:
-                    return Response({'error': 'Only system managers can update staff status'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                is_staff = request.data.get('is_staff', False)
-                
-                for user in users:
-                    if user == request.user:
-                        errors.append(f'Cannot modify your own staff status')
-                        continue
-                    
-                    if user.is_staff != is_staff:
-                        user.is_staff = is_staff
-                        user.save()
-                        
-                        # Create audit log
-                        AuditLog.objects.create(
-                            user=request.user,
-                            action='update',
-                            model_name='User',
-                            object_id=str(user.id),
-                            object_repr=str(user),
-                            changes={
-                                'bulk_operation': 'update_staff_status',
-                                'updated_by': request.user.get_full_name(),
-                                'staff_status': 'granted' if is_staff else 'removed'
-                            },
-                            ip_address=request.META.get('REMOTE_ADDR'),
-                            user_agent=request.META.get('HTTP_USER_AGENT', '')
-                        )
-                        updated_count += 1
-            
-            elif operation == 'export_users':
-                export_format = request.data.get('export_format', 'csv')
-                include_permissions = request.data.get('include_permissions', True)
-                include_groups = request.data.get('include_groups', True)
-                
-                # This would implement the export functionality
-                # For now, just return success
-                return Response({
-                    'message': f'Export request created for {len(user_ids)} users',
-                    'export_format': export_format,
-                    'updated_count': len(user_ids)
-                })
-            
-            else:
-                return Response({'error': 'Invalid operation'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-        
-        response_data = {
-            'message': f'Successfully updated {updated_count} users',
-            'updated_count': updated_count,
-            'total_users': len(user_ids)
-        }
-        
-        if errors:
-            response_data['errors'] = errors
-            response_data['error_count'] = len(errors)
-        
-        return Response(response_data)
-    
-    except Exception as e:
-        return Response({'error': f'Bulk operation failed: {str(e)}'},
-                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 @login_required
+@login_required
+@require_http_methods(["POST"])
+def extend_session_view(request):
+    """Extend the user's session by updating last_activity timestamp"""
+    request.session['last_activity'] = timezone.now().timestamp()
+    return JsonResponse({'success': True})
+
+
 @require_http_methods(["POST"])
 def save_settings_view(request):
     """Save system settings"""
@@ -1493,13 +1208,13 @@ def save_settings_view(request):
             )
             message = 'General settings saved successfully'
 
-        elif settings_type == 'features':
-            # Save feature toggles
+        elif settings_type == 'backup':
+            # Save backup settings
             SystemSettings.objects.update_or_create(
-                key='enable_approvals',
-                defaults={'value': str(request.POST.get('enable_approvals') == 'true')}
+                key='backup_frequency',
+                defaults={'value': request.POST.get('backup_frequency', 'daily')}
             )
-            message = 'Feature settings saved successfully'
+            message = 'Backup settings saved successfully'
 
         elif settings_type == 'security':
             # Save security settings
@@ -1558,8 +1273,10 @@ def run_backup_view(request):
         backup_dir = os.path.join(os.path.dirname(db_path), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
 
-        # Generate backup filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Generate backup filename with timestamp (use local time from configured timezone)
+        from django.utils import timezone as tz
+        now = tz.localtime(tz.now())
+        timestamp = now.strftime('%Y%m%d_%H%M%S')
         backup_file = os.path.join(backup_dir, f'db_backup_{timestamp}.sqlite3')
 
         # Copy database file
@@ -1577,9 +1294,13 @@ def run_backup_view(request):
             user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
 
+        # Format timestamp for display
+        backup_time_display = now.strftime('%b %d, %Y at %I:%M %p')
+
         return JsonResponse({
             'success': True,
-            'message': f'Backup created successfully: {os.path.basename(backup_file)}'
+            'message': f'Backup created successfully: {os.path.basename(backup_file)}',
+            'last_backup_time': backup_time_display
         })
 
     except Exception as e:
@@ -1638,3 +1359,311 @@ def check_data_integrity_view(request):
             'success': False,
             'message': f'Integrity check failed: {str(e)}'
         }, status=500)
+
+
+@login_required
+def add_location_modal_view(request):
+    """Render the add location modal and handle form submission"""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip().upper()
+
+        errors = []
+        if not name:
+            errors.append('Location name is required.')
+        if not code:
+            errors.append('Location code is required.')
+
+        if errors:
+            return render(request, 'core/partials/location_add_form.html', {
+                'error': ' '.join(errors)
+            })
+
+        # Check if location name or code already exists
+        if Location.objects.filter(name__iexact=name).exists():
+            return render(request, 'core/partials/location_add_form.html', {
+                'error': f'A location named "{name}" already exists.'
+            })
+        if Location.objects.filter(code__iexact=code).exists():
+            return render(request, 'core/partials/location_add_form.html', {
+                'error': f'A location with code "{code}" already exists.'
+            })
+
+        try:
+            location = Location.objects.create(
+                name=name,
+                code=code
+            )
+            messages.success(request, f'Location "{location.name}" created successfully.')
+            # Return the modal view with list
+            return render(request, 'core/manage_locations_modal.html', {
+                'can_modify': request.user.can_manage_system_settings,
+            })
+        except Exception as e:
+            return render(request, 'core/partials/location_add_form.html', {
+                'error': f'Error creating location: {str(e)}'
+            })
+
+    # GET request - render add form
+    return render(request, 'core/partials/location_add_form.html')
+
+
+@login_required
+def manage_locations_add_form_view(request):
+    """Render the add location form (replaces list view)"""
+    return render(request, 'core/partials/location_add_form.html')
+
+
+# ==========================================
+#   MANAGE LOCATIONS VIEWS
+# ==========================================
+
+@login_required
+def manage_locations_view(request):
+    """Render the manage locations modal"""
+    return render(request, 'core/manage_locations_modal.html', {
+        'can_modify': request.user.can_manage_system_settings,
+    })
+
+
+@login_required
+def manage_locations_list_view(request):
+    """Return location list for HTMX partial updates"""
+    from django.db import models as db_models
+    search = request.GET.get('search', '').strip()
+    locations = Location.objects.all()
+
+    if search:
+        locations = locations.filter(
+            db_models.Q(name__icontains=search) |
+            db_models.Q(code__icontains=search) |
+            db_models.Q(building__icontains=search) |
+            db_models.Q(address__icontains=search)
+        )
+
+    locations = locations.order_by('name')
+
+    return render(request, 'core/partials/location_list.html', {
+        'locations': locations,
+        'can_modify': request.user.can_manage_system_settings,
+    })
+
+
+@login_required
+@permission_required('core.can_manage_system', raise_exception=True)
+def manage_locations_edit_view(request, location_id):
+    """Edit a location inline"""
+    location = get_object_or_404(Location, id=location_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip().upper()
+        is_active = request.POST.get('is_active') == 'on'
+
+        errors = []
+        if not name:
+            errors.append('Location name is required.')
+        if not code:
+            errors.append('Location code is required.')
+
+        if errors:
+            return render(request, 'core/partials/location_edit_form.html', {
+                'location': location,
+                'error': ' '.join(errors),
+            })
+
+        # Check for duplicates (excluding current)
+        if Location.objects.filter(name__iexact=name).exclude(id=location_id).exists():
+            return render(request, 'core/partials/location_edit_form.html', {
+                'location': location,
+                'error': f'A location named "{name}" already exists.',
+            })
+        if Location.objects.filter(code__iexact=code).exclude(id=location_id).exists():
+            return render(request, 'core/partials/location_edit_form.html', {
+                'location': location,
+                'error': f'A location with code "{code}" already exists.',
+            })
+
+        try:
+            location.name = name
+            location.code = code
+            location.is_active = is_active
+            location.save()
+            messages.success(request, f'Location "{location.name}" updated successfully.')
+            return manage_locations_list_view(request)
+        except Exception as e:
+            return render(request, 'core/partials/location_edit_form.html', {
+                'location': location,
+                'error': f'Error updating location: {str(e)}',
+            })
+
+    # GET - return edit form
+    return render(request, 'core/partials/location_edit_form.html', {
+        'location': location,
+    })
+
+
+@login_required
+@permission_required('core.can_manage_system', raise_exception=True)
+def manage_locations_delete_view(request, location_id):
+    """Delete a location with confirmation"""
+    location = get_object_or_404(Location, id=location_id)
+
+    if request.method == 'POST':
+        location_name = location.name
+        location.delete()
+        messages.success(request, f'Location "{location_name}" deleted successfully.')
+        return manage_locations_list_view(request)
+
+    # GET - return confirmation dialog
+    return render(request, 'components/common/delete_confirmation.html', {
+        'item': location,
+        'item_id': f'location-item-{location.id}',
+        'item_name': location.name,
+        'list_target_id': 'locations-list',
+        'delete_url': reverse('manage-locations-delete', args=[location_id]),
+        'cancel_url': reverse('manage-locations-list'),
+    })
+
+
+# ==========================================
+#   DOCS / HELP VIEWS
+# ==========================================
+
+@login_required
+def docs_view(request):
+    """Full-page Help Center landing."""
+    return render(request, 'docs/docs.html')
+
+
+@login_required
+def docs_content_view(request):
+    """HTMX content-only Help Center landing."""
+    return render(request, 'docs/docs_content.html')
+
+
+_DOCS_NAVIGATION_CACHE = None
+
+
+def _get_docs_navigation():
+    """Return docs navigation structure, cached after first call."""
+    global _DOCS_NAVIGATION_CACHE
+    if _DOCS_NAVIGATION_CACHE is not None:
+        return _DOCS_NAVIGATION_CACHE
+    _DOCS_NAVIGATION_CACHE = [
+        {
+            'title': 'User Guide',
+            'icon': 'bi-book',
+            'section': 'user-guide',
+            'items': [
+                {'title': 'Overview', 'path': 'user-guide/index'},
+                {'title': 'Dashboard', 'path': 'user-guide/dashboard'},
+                {'title': 'Devices', 'path': 'user-guide/devices'},
+                {'title': 'Assignments', 'path': 'user-guide/assignments'},
+                {'title': 'Employees', 'path': 'user-guide/employees'},
+                {'title': 'Reports', 'path': 'user-guide/reports'},
+                {'title': 'Approvals', 'path': 'user-guide/approvals'},
+                {'title': 'Search', 'path': 'user-guide/search'},
+            ],
+        },
+        {
+            'title': 'Admin Guide',
+            'icon': 'bi-gear',
+            'section': 'admin-guide',
+            'items': [
+                {'title': 'Overview', 'path': 'admin-guide/index'},
+                {'title': 'User Management', 'path': 'admin-guide/user-management'},
+                {'title': 'System Settings', 'path': 'admin-guide/system-settings'},
+                {'title': 'Locations', 'path': 'admin-guide/locations'},
+                {'title': 'Categories & Models', 'path': 'admin-guide/categories-models'},
+                {'title': 'Departments', 'path': 'admin-guide/departments'},
+            ],
+        },
+        {
+            'title': 'Developer',
+            'icon': 'bi-code-slash',
+            'section': 'developer',
+            'items': [
+                {'title': 'Overview', 'path': 'developer/index'},
+                {'title': 'Quick Start', 'path': 'developer/quick-start'},
+                {'title': 'Development Setup', 'path': 'developer/development-setup'},
+                {'title': 'Project Structure', 'path': 'developer/project-structure'},
+                {'title': 'Template System', 'path': 'developer/template-system'},
+                {'title': 'Custom Reports', 'path': 'developer/custom-reports'},
+                {'title': 'Production Deployment', 'path': 'developer/production-deployment'},
+                {'title': 'Testing Guide', 'path': 'developer/testing-guide'},
+            ],
+        },
+    ]
+    return _DOCS_NAVIGATION_CACHE
+
+
+@login_required
+def docs_page_view(request, doc_path):
+    """Render an individual markdown doc page."""
+    import re as re_module
+    import markdown as md_lib
+    from django.http import Http404
+
+    # Restrict admin-guide, developer, and CHANGELOG to system managers
+    restricted_prefixes = ('admin-guide', 'developer', 'CHANGELOG')
+    if doc_path.startswith(restricted_prefixes) and not request.user.can_manage_system_settings:
+        raise Http404("Documentation page not found.")
+
+    file_path = _resolve_doc_path(doc_path)
+    if file_path is None:
+        raise Http404("Documentation page not found.")
+
+    raw = file_path.read_text(encoding='utf-8')
+
+    # Size guard for very large files (e.g. CHANGELOG)
+    truncated = False
+    if len(raw) > 100_000:
+        lines = raw.split('\n')[:500]
+        raw = '\n'.join(lines)
+        truncated = True
+
+    title = _extract_title(raw) or doc_path.replace('/', ' - ').replace('-', ' ').title()
+
+    # Render markdown
+    md = md_lib.Markdown(extensions=['fenced_code', 'tables', 'toc'])
+    html_content = md.convert(raw)
+    toc_html = getattr(md, 'toc', '')
+
+    # Rewrite relative .md links to /docs/ URLs
+    # Resolve relative links against the current doc's directory
+    import posixpath
+    doc_dir = posixpath.dirname(doc_path.rstrip('/'))
+
+    def _rewrite_md_link(m):
+        target = m.group(1)
+        if target.startswith('/') or '://' in target:
+            return 'href="/docs/%s/"' % target.lstrip('/').removesuffix('.md')
+        resolved = posixpath.normpath(posixpath.join(doc_dir, target)) if doc_dir else target
+        return 'href="/docs/%s/"' % resolved
+
+    html_content = re_module.sub(
+        r'href="([^"]*?)\.md"',
+        _rewrite_md_link,
+        html_content,
+    )
+
+    # Determine current path key for sidebar active state
+    current_path = doc_path.rstrip('/')
+    if current_path.endswith('.md'):
+        current_path = current_path[:-3]
+
+    # Filter navigation sections based on permissions
+    docs_nav = _get_docs_navigation()
+    if not request.user.can_manage_system_settings:
+        docs_nav = [s for s in docs_nav if s['section'] not in ('admin-guide', 'developer')]
+
+    context = {
+        'title': title,
+        'html_content': html_content,
+        'toc_html': toc_html,
+        'truncated': truncated,
+        'docs_nav': docs_nav,
+        'current_path': current_path,
+    }
+    return render(request, 'docs/docs_page.html', context)

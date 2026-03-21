@@ -1,0 +1,37 @@
+{% if locations %}
+{% for location in locations %}
+<div class="manage-list-item {% if not location.is_active %}inactive{% endif %}"
+     id="location-item-{{ location.id }}">
+    <div class="manage-item-info">
+        <div class="manage-item-name">
+            {{ location.name }}
+            <span class="badge bg-light text-dark ms-1">{{ location.code }}</span>
+            {% if not location.is_active %}
+                <span class="badge bg-secondary ms-1">Inactive</span>
+            {% endif %}
+        </div>
+    </div>
+    {% if can_modify %}
+    <div class="manage-item-actions">
+        <button class="btn btn-sm btn-outline-primary" title="Edit"
+                hx-get="{% url 'manage-locations-edit' location_id=location.id %}"
+                hx-target="#location-item-{{ location.id }}"
+                hx-swap="outerHTML">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" title="Delete"
+                hx-get="{% url 'manage-locations-delete' location_id=location.id %}"
+                hx-target="#location-item-{{ location.id }}"
+                hx-swap="outerHTML">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="manage-empty-state">
+    <i class="bi bi-inbox d-block"></i>
+    <p class="mb-0">No locations found</p>
+</div>
+{% endif %}

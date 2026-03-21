@@ -1,0 +1,37 @@
+{% load static %}
+
+<!-- Manage Departments Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-diagram-3 me-2"></i>Manage Departments
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <div id="departments-content">
+        <!-- Header Row: Search + Add Button -->
+        <div class="manage-header-row">
+            <input type="text" class="form-control" placeholder="Search departments..."
+                   hx-get="{% url 'manage-departments-list' %}"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#departments-list"
+                   name="search">
+            <button type="button" class="btn btn-primary"
+                    hx-get="{% url 'manage-departments-add-form' %}"
+                    hx-target="#departments-content"
+                    hx-swap="innerHTML">
+                <i class="bi bi-plus me-1"></i>Add Department
+            </button>
+        </div>
+
+        <!-- List Container -->
+        <div id="departments-list" class="manage-list-container"
+             hx-get="{% url 'manage-departments-list' %}" hx-trigger="load">
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

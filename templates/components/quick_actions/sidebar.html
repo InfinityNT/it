@@ -26,7 +26,7 @@
     {# Modal-based quick actions #}
     <a class="nav-link quick-action"
        href="#"
-       hx-get="{% url action.url %}{{ action.url_params }}"
+       hx-get="{{ action.url }}"
        hx-target="#dynamicModalContent"
        hx-swap="innerHTML"
        data-bs-toggle="modal"
@@ -36,15 +36,15 @@
     </a>
     {% elif action.code == 'approvals' %}
     {# Full page navigation (not HTMX) #}
-    <a class="nav-link quick-action" href="{% url action.url %}{{ action.url_params }}">
+    <a class="nav-link quick-action" href="{{ action.url }}">
         <i class="{{ action.icon }}"></i>
         <span class="quick-action-text">{{ action.display_name }}</span>
     </a>
     {% else %}
     {# Content-area quick action (SPA-style navigation) #}
     <a class="nav-link quick-action"
-       href="{% url action.url %}{{ action.url_params }}"
-       hx-get="{% url action.url %}{{ action.url_params }}"
+       href="{{ action.url }}"
+       hx-get="{{ action.url }}"
        hx-target="#content-area"
        hx-push-url="true"
        hx-swap="innerHTML show:none">

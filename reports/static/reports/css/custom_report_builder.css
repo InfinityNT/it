@@ -13,6 +13,8 @@
     min-width: 150px;
     position: relative;
     transition: all 0.2s ease;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.25rem;
 }
 
 .data-source-btn:focus {
@@ -26,14 +28,6 @@
     border-color: var(--bs-primary);
 }
 
-.data-source-btn.active::after {
-    content: '\2713';  /* Checkmark */
-    position: absolute;
-    top: 5px;
-    right: 8px;
-    font-weight: bold;
-}
-
 /* Field Selection */
 #fieldSelection .form-check {
     padding: 0.5rem;
@@ -42,7 +36,7 @@
 }
 
 #fieldSelection .form-check:hover {
-    background-color: var(--bs-gray-100);
+    background-color: var(--clr-bg-hover);
 }
 
 /* Source Grouping */

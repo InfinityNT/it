@@ -277,263 +277,6 @@ def job_title_list_api(request):
     return Response(data)
 
 
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def employee_bulk_operations_view(request):
-    """Bulk operations for employees"""
-    employee_ids = request.data.get('item_ids', [])
-    operation = request.data.get('operation')
-    
-    if not employee_ids or not operation:
-        return Response({'error': 'Employee IDs and operation are required'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
-    
-    employees = Employee.objects.filter(id__in=employee_ids)
-    if not employees.exists():
-        return Response({'error': 'No valid employees found'}, 
-                       status=status.HTTP_404_NOT_FOUND)
-    
-    # Check permissions
-    if not request.user.has_perm('employees.can_modify_employees'):
-        return Response({'error': 'Permission denied'}, 
-                       status=status.HTTP_403_FORBIDDEN)
-    
-    updated_count = 0
-    errors = []
-    
-    try:
-        with transaction.atomic():
-            if operation == 'update_status':
-                new_status = request.data.get('new_employment_status')
-                status_reason = request.data.get('status_reason', '')
-                
-                if not new_status:
-                    return Response({'error': 'New employment status is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                # Check for sensitive operations
-                if new_status == 'terminated' and not request.user.has_perm('core.can_manage_system'):
-                    return Response({'error': 'Permission denied for termination operations'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                for employee in employees:
-                    old_status = employee.employment_status
-                    employee.employment_status = new_status
-                    
-                    # Add status change note
-                    note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Status changed from {old_status} to {new_status} by {request.user.get_full_name()}'
-                    if status_reason:
-                        note += f': {status_reason}'
-                    
-                    employee.notes = (employee.notes or '') + '\\n' + note
-                    employee.save()
-                    updated_count += 1
-            
-            elif operation == 'bulk_department_transfer':
-                new_department_id = request.data.get('new_department_id')
-                new_job_title_id = request.data.get('new_job_title_id')
-                transfer_date = request.data.get('transfer_date')
-                transfer_reason = request.data.get('transfer_reason', '')
-                
-                if not new_department_id:
-                    return Response({'error': 'New department is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    new_department = Department.objects.get(id=new_department_id)
-                except Department.DoesNotExist:
-                    return Response({'error': 'Department not found'}, 
-                                   status=status.HTTP_404_NOT_FOUND)
-                
-                new_job_title = None
-                if new_job_title_id:
-                    try:
-                        new_job_title = JobTitle.objects.get(id=new_job_title_id)
-                    except JobTitle.DoesNotExist:
-                        errors.append('Job title not found, keeping existing titles')
-                
-                for employee in employees:
-                    old_department = employee.department
-                    old_job_title = employee.job_title
-                    
-                    employee.department = new_department
-                    if new_job_title:
-                        employee.job_title = new_job_title
-                    
-                    # Add transfer note
-                    note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Department transfer from {old_department} to {new_department} by {request.user.get_full_name()}'
-                    if new_job_title and old_job_title != new_job_title:
-                        note += f', Job title changed from {old_job_title} to {new_job_title}'
-                    if transfer_reason:
-                        note += f': {transfer_reason}'
-                    
-                    employee.notes = (employee.notes or '') + '\\n' + note
-                    employee.save()
-                    updated_count += 1
-            
-            elif operation == 'update_location':
-                new_office_location = request.data.get('new_office_location')
-                new_building = request.data.get('new_building', '')
-                new_floor = request.data.get('new_floor', '')
-                new_desk_number = request.data.get('new_desk_number', '')
-                
-                if not new_office_location:
-                    return Response({'error': 'New office location is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                for employee in employees:
-                    old_location = employee.office_location
-                    employee.office_location = new_office_location
-                    
-                    if new_building:
-                        employee.building = new_building
-                    if new_floor:
-                        employee.floor = new_floor
-                    if new_desk_number:
-                        employee.desk_number = new_desk_number
-                    
-                    # Add location update note
-                    note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Location updated from {old_location} to {new_office_location} by {request.user.get_full_name()}'
-                    employee.notes = (employee.notes or '') + '\\n' + note
-                    employee.save()
-                    updated_count += 1
-            
-            elif operation == 'update_contact_info':
-                new_work_phone = request.data.get('new_work_phone')
-                new_mobile_phone = request.data.get('new_mobile_phone')
-                new_work_email = request.data.get('new_work_email')
-                contact_update_reason = request.data.get('contact_update_reason', '')
-                
-                if not any([new_work_phone, new_mobile_phone, new_work_email]):
-                    return Response({'error': 'At least one contact field is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                for employee in employees:
-                    updates = []
-                    
-                    if new_work_phone:
-                        old_work_phone = employee.work_phone
-                        employee.work_phone = new_work_phone
-                        updates.append(f'work phone from {old_work_phone} to {new_work_phone}')
-                    
-                    if new_mobile_phone:
-                        old_mobile_phone = employee.mobile_phone
-                        employee.mobile_phone = new_mobile_phone
-                        updates.append(f'mobile phone from {old_mobile_phone} to {new_mobile_phone}')
-                    
-                    if new_work_email:
-                        old_work_email = employee.work_email
-                        employee.work_email = new_work_email
-                        updates.append(f'work email from {old_work_email} to {new_work_email}')
-                    
-                    if updates:
-                        note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Contact info updated ({", ".join(updates)}) by {request.user.get_full_name()}'
-                        if contact_update_reason:
-                            note += f': {contact_update_reason}'
-                        
-                        employee.notes = (employee.notes or '') + '\\n' + note
-                        employee.save()
-                        updated_count += 1
-            
-            elif operation == 'assign_manager':
-                new_manager_id = request.data.get('new_manager_id')
-                manager_assignment_date = request.data.get('manager_assignment_date')
-                manager_assignment_notes = request.data.get('manager_assignment_notes', '')
-                
-                if not new_manager_id:
-                    return Response({'error': 'Manager is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    new_manager = Employee.objects.get(id=new_manager_id)
-                except Employee.DoesNotExist:
-                    return Response({'error': 'Manager not found'}, 
-                                   status=status.HTTP_404_NOT_FOUND)
-                
-                for employee in employees:
-                    if employee.id == new_manager.id:
-                        errors.append(f'Cannot assign {employee.get_full_name()} as their own manager')
-                        continue
-                    
-                    old_manager = employee.manager_employee_id
-                    employee.manager_employee_id = new_manager.employee_id
-                    
-                    note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Manager assigned: {new_manager.get_full_name()} by {request.user.get_full_name()}'
-                    if manager_assignment_notes:
-                        note += f': {manager_assignment_notes}'
-                    
-                    employee.notes = (employee.notes or '') + '\\n' + note
-                    employee.save()
-                    updated_count += 1
-            
-            elif operation == 'update_access_level':
-                system_access_action = request.data.get('system_access_action')
-                user_groups = request.data.get('user_groups')
-                access_reason = request.data.get('access_reason')
-                
-                if not system_access_action or not access_reason:
-                    return Response({'error': 'Access action and reason are required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                # This operation requires system management permissions
-                if not request.user.has_perm('core.can_manage_system'):
-                    return Response({'error': 'Permission denied for access level changes'}, 
-                                   status=status.HTTP_403_FORBIDDEN)
-                
-                for employee in employees:
-                    if system_access_action == 'grant':
-                        # Create system user if doesn't exist
-                        if not employee.system_user:
-                            # This would need to be implemented based on your user creation logic
-                            errors.append(f'System user creation for {employee.get_full_name()} needs manual setup')
-                            continue
-                    
-                    elif system_access_action == 'revoke':
-                        if employee.system_user:
-                            employee.system_user.is_active = False
-                            employee.system_user.save()
-                    
-                    # Add access change note
-                    note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] System access {system_access_action} by {request.user.get_full_name()}: {access_reason}'
-                    employee.notes = (employee.notes or '') + '\\n' + note
-                    employee.save()
-                    updated_count += 1
-            
-            elif operation == 'add_notes':
-                note_category = request.data.get('note_category')
-                note_content = request.data.get('note_content')
-                
-                if not note_category or not note_content:
-                    return Response({'error': 'Note category and content are required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                for employee in employees:
-                    note = f'[{timezone.now().strftime("%Y-%m-%d %H:%M")}] {note_category.upper()} NOTE by {request.user.get_full_name()}: {note_content}'
-                    employee.notes = (employee.notes or '') + '\\n' + note
-                    employee.save()
-                    updated_count += 1
-            
-            else:
-                return Response({'error': 'Invalid operation'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-        
-        response_data = {
-            'message': f'Successfully updated {updated_count} employees',
-            'updated_count': updated_count,
-            'total_employees': len(employee_ids)
-        }
-        
-        if errors:
-            response_data['errors'] = errors
-            response_data['error_count'] = len(errors)
-        
-        return Response(response_data)
-    
-    except Exception as e:
-        return Response({'error': f'Bulk operation failed: {str(e)}'},
-                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 # Excel Import Views
 @permission_required_redirect('employees.can_modify_employees', message='You do not have permission to import employees.')
 def import_employees_modal_view(request):
@@ -863,4 +606,308 @@ def import_employees_view(request):
         'success_count': len(results['success']),
         'error_count': len(results['errors']),
         'results': results
+    })
+
+
+# ==============================
+# Department Management Views
+# ==============================
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_departments_view(request):
+    """Manage departments modal"""
+    departments = Department.objects.all().order_by('name')
+    return render(request, 'employees/manage_departments_modal.html', {
+        'departments': departments,
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_departments_list_view(request):
+    """Return departments list partial"""
+    departments = Department.objects.all().order_by('name')
+    return render(request, 'employees/partials/department_list.html', {
+        'departments': departments,
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_departments_add_form_view(request):
+    """Add department form / handle creation"""
+    import json
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip().upper()
+        manager_employee_id = request.POST.get('manager_employee_id', '').strip()
+
+        if not name or not code:
+            return render(request, 'employees/partials/department_add_form.html', {
+                'error': 'Name and code are required.',
+                'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+            })
+
+        if Department.objects.filter(name__iexact=name).exists():
+            return render(request, 'employees/partials/department_add_form.html', {
+                'error': f'Department "{name}" already exists.',
+                'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+            })
+
+        if Department.objects.filter(code__iexact=code).exists():
+            return render(request, 'employees/partials/department_add_form.html', {
+                'error': f'Department code "{code}" already exists.',
+                'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+            })
+
+        Department.objects.create(
+            name=name,
+            code=code,
+            manager_employee_id=manager_employee_id,
+        )
+
+        response = render(request, 'employees/manage_departments_modal.html', {
+            'departments': Department.objects.all().order_by('name'),
+        })
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Department "{name}" created successfully.', 'type': 'success'}
+        })
+        return response
+
+    return render(request, 'employees/partials/department_add_form.html', {
+        'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_departments_edit_view(request, department_id):
+    """Edit department form / handle update"""
+    import json
+    department = get_object_or_404(Department, id=department_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        code = request.POST.get('code', '').strip().upper()
+        manager_employee_id = request.POST.get('manager_employee_id', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+
+        if not name or not code:
+            return render(request, 'employees/partials/department_edit_form.html', {
+                'department': department,
+                'error': 'Name and code are required.',
+                'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+            })
+
+        if Department.objects.filter(name__iexact=name).exclude(id=department_id).exists():
+            return render(request, 'employees/partials/department_edit_form.html', {
+                'department': department,
+                'error': f'Department "{name}" already exists.',
+                'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+            })
+
+        department.name = name
+        department.code = code
+        department.manager_employee_id = manager_employee_id
+        department.is_active = is_active
+        department.save()
+
+        response = render(request, 'employees/manage_departments_modal.html', {
+            'departments': Department.objects.all().order_by('name'),
+        })
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Department "{name}" updated successfully.', 'type': 'success'}
+        })
+        return response
+
+    return render(request, 'employees/partials/department_edit_form.html', {
+        'department': department,
+        'employees': Employee.objects.filter(employment_status='active').order_by('first_name'),
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_departments_delete_view(request, department_id):
+    """Delete a department"""
+    import json
+    department = get_object_or_404(Department, id=department_id)
+
+    if request.method == 'POST':
+        employee_count = Employee.objects.filter(department=department).count()
+        if employee_count > 0:
+            return render(request, 'components/common/delete_confirmation.html', {
+                'item': department,
+                'item_id': f'department-item-{department.id}',
+                'item_name': str(department),
+                'error': f'Cannot delete: {employee_count} employee(s) are assigned to this department.',
+                'cancel_url': "{% url 'manage-departments' %}",
+            })
+
+        name = department.name
+        department.delete()
+
+        response = render(request, 'employees/manage_departments_modal.html', {
+            'departments': Department.objects.all().order_by('name'),
+        })
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Department "{name}" deleted.', 'type': 'success'}
+        })
+        return response
+
+    return render(request, 'components/common/delete_confirmation.html', {
+        'item': department,
+        'item_id': f'department-item-{department.id}',
+        'item_name': str(department),
+        'delete_url': f'/employees/departments/manage/{department.id}/delete/',
+        'cancel_url': '/employees/departments/manage/',
+    })
+
+
+# ==============================
+# Job Title Management Views
+# ==============================
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_job_titles_view(request):
+    """Manage job titles modal"""
+    job_titles = JobTitle.objects.select_related('department').all().order_by('title')
+    return render(request, 'employees/manage_job_titles_modal.html', {
+        'job_titles': job_titles,
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_job_titles_list_view(request):
+    """Return job titles list partial"""
+    job_titles = JobTitle.objects.select_related('department').all().order_by('title')
+    return render(request, 'employees/partials/job_title_list.html', {
+        'job_titles': job_titles,
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_job_titles_add_form_view(request):
+    """Add job title form / handle creation"""
+    import json
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        department_id = request.POST.get('department')
+
+        if not title or not department_id:
+            return render(request, 'employees/partials/job_title_add_form.html', {
+                'error': 'Title and department are required.',
+                'departments': Department.objects.filter(is_active=True).order_by('name'),
+            })
+
+        if JobTitle.objects.filter(title__iexact=title).exists():
+            return render(request, 'employees/partials/job_title_add_form.html', {
+                'error': f'Job title "{title}" already exists.',
+                'departments': Department.objects.filter(is_active=True).order_by('name'),
+            })
+
+        JobTitle.objects.create(
+            title=title,
+            department_id=department_id,
+        )
+
+        response = render(request, 'employees/manage_job_titles_modal.html', {
+            'job_titles': JobTitle.objects.select_related('department').all().order_by('title'),
+        })
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Job title "{title}" created successfully.', 'type': 'success'}
+        })
+        return response
+
+    return render(request, 'employees/partials/job_title_add_form.html', {
+        'departments': Department.objects.filter(is_active=True).order_by('name'),
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_job_titles_edit_view(request, job_title_id):
+    """Edit job title form / handle update"""
+    import json
+    job_title = get_object_or_404(JobTitle, id=job_title_id)
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        department_id = request.POST.get('department')
+        is_active = request.POST.get('is_active') == 'on'
+
+        if not title or not department_id:
+            return render(request, 'employees/partials/job_title_edit_form.html', {
+                'job_title': job_title,
+                'error': 'Title and department are required.',
+                'departments': Department.objects.filter(is_active=True).order_by('name'),
+            })
+
+        if JobTitle.objects.filter(title__iexact=title).exclude(id=job_title_id).exists():
+            return render(request, 'employees/partials/job_title_edit_form.html', {
+                'job_title': job_title,
+                'error': f'Job title "{title}" already exists.',
+                'departments': Department.objects.filter(is_active=True).order_by('name'),
+            })
+
+        job_title.title = title
+        job_title.department_id = department_id
+        job_title.is_active = is_active
+        job_title.save()
+
+        response = render(request, 'employees/manage_job_titles_modal.html', {
+            'job_titles': JobTitle.objects.select_related('department').all().order_by('title'),
+        })
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Job title "{title}" updated successfully.', 'type': 'success'}
+        })
+        return response
+
+    return render(request, 'employees/partials/job_title_edit_form.html', {
+        'job_title': job_title,
+        'departments': Department.objects.filter(is_active=True).order_by('name'),
+    })
+
+
+@login_required
+@permission_required('employees.can_modify_employees', raise_exception=True)
+def manage_job_titles_delete_view(request, job_title_id):
+    """Delete a job title"""
+    import json
+    job_title = get_object_or_404(JobTitle, id=job_title_id)
+
+    if request.method == 'POST':
+        employee_count = Employee.objects.filter(job_title=job_title).count()
+        if employee_count > 0:
+            return render(request, 'components/common/delete_confirmation.html', {
+                'item': job_title,
+                'item_id': f'job-title-item-{job_title.id}',
+                'item_name': str(job_title),
+                'error': f'Cannot delete: {employee_count} employee(s) have this job title.',
+                'cancel_url': "{% url 'manage-job-titles' %}",
+            })
+
+        title = job_title.title
+        job_title.delete()
+
+        response = render(request, 'employees/manage_job_titles_modal.html', {
+            'job_titles': JobTitle.objects.select_related('department').all().order_by('title'),
+        })
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Job title "{title}" deleted.', 'type': 'success'}
+        })
+        return response
+
+    return render(request, 'components/common/delete_confirmation.html', {
+        'item': job_title,
+        'item_id': f'job-title-item-{job_title.id}',
+        'item_name': str(job_title),
+        'delete_url': f'/employees/job-titles/manage/{job_title.id}/delete/',
+        'cancel_url': '/employees/job-titles/manage/',
     })

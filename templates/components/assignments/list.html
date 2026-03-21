@@ -1,16 +1,6 @@
 {% load static %}
 
 {% if assignments %}
-<!-- Bulk Select Header - Hidden by default -->
-<div id="bulk-select-header" class="mb-3" style="display: none;">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" id="selectAllAssignments" onchange="bulkManager.toggleSelectAll()">
-        <label class="form-check-label fw-bold" for="selectAllAssignments">
-            Select All Assignments
-        </label>
-    </div>
-</div>
-
 <!-- Assignment Cards Grid -->
 <div class="card-grid">
     {% for assignment in assignments %}
@@ -19,7 +9,6 @@
         <div class="item-card-header">
             <div class="item-card-header-content">
                 <div class="item-card-header-left">
-                    <input type="checkbox" class="item-card-checkbox assignment-checkbox bulk-select-cell" value="{{ assignment.id }}" onchange="bulkManager.updateSelection()" style="display: none;">
                     <div class="device-icon me-2">
                         {% if assignment.device.device_model.category.name == 'Laptop' %}
                             <i class="bi bi-laptop text-primary"></i>

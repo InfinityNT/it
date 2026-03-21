@@ -15,7 +15,7 @@ from .serializers import (
     DeviceManufacturerSerializer, DeviceVendorSerializer, DeviceModelSerializer, 
     DeviceHistorySerializer, DeviceAssignSerializer, DeviceUnassignSerializer
 )
-from core.models import User
+from core.models import User, Location
 from employees.models import Employee
 from core.decorators import permission_required_redirect
 
@@ -369,12 +369,25 @@ def device_detail_view(request, device_id):
     """Device detail view"""
     device = get_object_or_404(Device, id=device_id)
 
-    # Format specifications for display
-    formatted_specs = format_specifications(device.device_model.specifications)
+    # Build spec label mapping from category specifications
+    category = device.device_model.category
+    category_specs = category.get_specification_fields() if category else []
+    spec_labels = {spec.get('name'): spec.get('label', spec.get('name')) for spec in category_specs}
+
+    # Format specifications with labels
+    formatted_specs = []
+    for key, value in device.device_model.specifications.items():
+        if value:  # Only include non-empty specs
+            formatted_specs.append({
+                'key': key,
+                'label': spec_labels.get(key, key),
+                'value': value
+            })
 
     context = {
         'device': device,
-        'formatted_specs': formatted_specs
+        'specifications': device.device_model.specifications,
+        'formatted_specs': formatted_specs,
     }
 
     # If HTMX request, return modal template
@@ -412,10 +425,33 @@ def add_device_view(request):
             # Handle HTMX form submission
             try:
                 from django.db import models
-                
+
+                # Validate category is selected
+                category_name = request.POST.get('category')
+                if not category_name:
+                    return render(request, 'devices/add_device_modal.html', {
+                        'error': 'Please select a category.',
+                        'categories': DeviceCategory.objects.filter(is_active=True),
+                        'device_models': DeviceModel.objects.filter(is_active=True).select_related('category'),
+                    })
+
                 # Get selected device model
                 device_model_id = request.POST.get('device_model')
-                device_model = DeviceModel.objects.get(id=device_model_id)
+                if not device_model_id:
+                    return render(request, 'devices/add_device_modal.html', {
+                        'error': 'Please select a device model.',
+                        'categories': DeviceCategory.objects.filter(is_active=True),
+                        'device_models': DeviceModel.objects.filter(is_active=True).select_related('category'),
+                    })
+                device_model = DeviceModel.objects.select_related('category').get(id=device_model_id)
+
+                # Validate device model category matches selected category
+                if device_model.category.name != category_name:
+                    return render(request, 'devices/add_device_modal.html', {
+                        'error': f'Selected device model does not belong to category "{category_name}". Please select a model from the correct category.',
+                        'categories': DeviceCategory.objects.filter(is_active=True),
+                        'device_models': DeviceModel.objects.filter(is_active=True).select_related('category'),
+                    })
                 
                 # Handle additional specifications (optional)
                 spec_keys = request.POST.getlist('spec_key[]')
@@ -499,11 +535,13 @@ def add_device_view(request):
     manufacturers = DeviceManufacturer.objects.filter(is_active=True)
     vendors = DeviceVendor.objects.filter(is_active=True)
     device_models = DeviceModel.objects.filter(is_active=True).select_related('category').order_by('manufacturer', 'model_name')
+    locations = Location.objects.filter(is_active=True)
     context = {
         'categories': categories,
         'manufacturers': manufacturers,
         'vendors': vendors,
-        'device_models': device_models
+        'device_models': device_models,
+        'locations': locations
     }
 
     # If HTMX request, return modal template
@@ -543,23 +581,21 @@ def edit_device_view(request, device_id):
                     except (ValueError, DeviceModel.DoesNotExist):
                         pass  # Keep existing device model if invalid ID provided
 
-                # Handle additional specifications (these could be device-specific)
-                spec_keys = request.POST.getlist('spec_key[]')
-                spec_values = request.POST.getlist('spec_value[]')
-                custom_spec_keys = request.POST.getlist('custom_spec_key[]')
-                additional_specifications = {}
-
-                for i, (key, value) in enumerate(zip(spec_keys, spec_values)):
-                    if key.strip() and value.strip():
-                        if key == 'Custom':
-                            # Use custom specification name if provided
-                            if i < len(custom_spec_keys) and custom_spec_keys[i].strip():
-                                additional_specifications[custom_spec_keys[i].strip()] = value.strip()
-                        else:
-                            additional_specifications[key.strip()] = value.strip()
-
-                # For now, we'll just use the model's specifications
-                # In the future, we could add device-specific specifications
+                # Handle dynamic specifications from category
+                category = device.device_model.category
+                if category:
+                    category_specs = category.get_specification_fields()
+                    specifications = {}
+                    for spec in category_specs:
+                        spec_name = spec.get('name', '')
+                        if spec_name:
+                            value = request.POST.get(f'spec_{spec_name}', '').strip()
+                            if value:
+                                specifications[spec_name] = value
+                    # Update device model specifications
+                    if specifications:
+                        device.device_model.specifications.update(specifications)
+                        device.device_model.save()
 
                 # Validate the device
                 # Exclude device_model since it's not in the edit form
@@ -618,7 +654,24 @@ def edit_device_view(request, device_id):
     manufacturers = DeviceManufacturer.objects.filter(is_active=True)
     vendors = DeviceVendor.objects.filter(is_active=True)
     device_models = DeviceModel.objects.filter(is_active=True).select_related('category').order_by('manufacturer', 'model_name')
-    formatted_specs = format_specifications(device.device_model.specifications)
+
+    locations = Location.objects.filter(is_active=True)
+
+    # Get category specifications for dynamic field rendering
+    category = device.device_model.category
+    category_specs = category.get_specification_fields() if category else []
+
+    # Build spec fields with labels and current values
+    spec_fields = []
+    for spec in category_specs:
+        name = spec.get('name', '')
+        spec_fields.append({
+            'name': name,
+            'label': spec.get('label', name),
+            'type': spec.get('type', 'text'),
+            'options': spec.get('options', []),
+            'value': device.device_model.specifications.get(name, ''),
+        })
 
     context = {
         'device': device,
@@ -626,7 +679,9 @@ def edit_device_view(request, device_id):
         'manufacturers': manufacturers,
         'vendors': vendors,
         'device_models': device_models,
-        'formatted_specs': formatted_specs
+        'specifications': device.device_model.specifications,
+        'spec_fields': spec_fields,
+        'locations': locations,
     }
 
     if request.headers.get('HX-Request'):
@@ -777,204 +832,9 @@ def device_model_detail_api(request, model_id):
         return Response({'error': 'Device model not found'}, status=404)
 
 
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def bulk_operations_view(request):
-    """Bulk operations for devices"""
-    device_ids = request.data.get('device_ids', [])
-    operation = request.data.get('operation')
-    
-    if not device_ids or not operation:
-        return Response({'error': 'Device IDs and operation are required'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
-    
-    devices = Device.objects.filter(id__in=device_ids)
-    if not devices.exists():
-        return Response({'error': 'No valid devices found'}, 
-                       status=status.HTTP_404_NOT_FOUND)
-    
-    updated_count = 0
-    errors = []
-    
-    try:
-        if operation == 'update_status':
-            new_status = request.data.get('new_status')
-            if not new_status or new_status not in dict(Device.STATUS_CHOICES):
-                return Response({'error': 'Valid status is required'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-            
-            for device in devices:
-                # Check if status change is valid
-                if device.status == 'assigned' and new_status != 'assigned':
-                    # Can only change assigned devices through proper unassignment
-                    errors.append(f'Device {device.asset_tag} is assigned and cannot be changed directly')
-                    continue
-                
-                old_status = device.status
-                device.status = new_status
-                device.save()
-                
-                # Create history record
-                DeviceHistory.objects.create(
-                    device=device,
-                    action='bulk_updated',
-                    new_status=new_status,
-                    previous_status=old_status,
-                    notes=f'Bulk status update by {request.user.get_full_name()}',
-                    created_by=request.user
-                )
-                updated_count += 1
-
-        elif operation == 'assign_devices':
-            employee_id = request.data.get('employee_id') or request.data.get('user_id')
-            if not employee_id:
-                return Response({'error': 'Employee ID is required for assignment'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                assign_to_employee = Employee.objects.get(id=employee_id)
-            except Employee.DoesNotExist:
-                return Response({'error': 'Employee not found'}, 
-                               status=status.HTTP_404_NOT_FOUND)
-            
-            expected_return_date = request.data.get('expected_return_date')
-            notes = request.data.get('notes', '')
-            
-            for device in devices:
-                if device.status != 'available':
-                    errors.append(f'Device {device.asset_tag} is not available for assignment')
-                    continue
-                
-                # Update device
-                device.assigned_to = assign_to_employee
-                device.status = 'assigned'
-                device.save()
-                
-                # Create assignment record
-                from assignments.models import Assignment
-                Assignment.objects.create(
-                    device=device,
-                    employee=assign_to_employee,
-                    assigned_by=request.user,
-                    expected_return_date=expected_return_date,
-                    notes=notes
-                )
-                
-                # Create history record
-                DeviceHistory.objects.create(
-                    device=device,
-                    action='assigned',
-                    new_employee=assign_to_employee,
-                    new_status='assigned',
-                    previous_status='available',
-                    notes=f'Bulk assignment by {request.user.get_full_name()}: {notes}',
-                    created_by=request.user
-                )
-                updated_count += 1
-        
-        elif operation == 'unassign_devices':
-            notes = request.data.get('notes', '')
-
-            for device in devices:
-                if device.status != 'assigned':
-                    errors.append(f'Device {device.asset_tag} is not currently assigned')
-                    continue
-
-                previous_employee = device.assigned_to
-
-                # Update device
-                device.assigned_to = None
-                device.status = 'available'
-                device.save()
-
-                # Update assignment record
-                from assignments.models import Assignment
-                assignment = Assignment.objects.filter(
-                    device=device,
-                    employee=previous_employee,
-                    status='active'
-                ).first()
-
-                if assignment:
-                    assignment.return_device(
-                        returned_by=request.user,
-                        notes=notes
-                    )
-                
-                # Create history record
-                DeviceHistory.objects.create(
-                    device=device,
-                    action='unassigned',
-                    previous_employee=previous_employee,
-                    new_status='available',
-                    previous_status='assigned',
-                    notes=f'Bulk unassignment by {request.user.get_full_name()}: {notes}',
-                    created_by=request.user
-                )
-                updated_count += 1
-        
-        elif operation == 'update_specifications':
-            spec_updates = request.data.get('spec_updates')
-            if not spec_updates:
-                return Response({'error': 'Specification updates are required'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                import json
-                spec_data = json.loads(spec_updates)
-                if not isinstance(spec_data, dict):
-                    raise ValueError("Specifications must be a JSON object")
-            except (json.JSONDecodeError, ValueError) as e:
-                return Response({'error': f'Invalid JSON format: {str(e)}'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-            
-            for device in devices:
-                # Get current specs or empty dict
-                current_specs = device.device_model.specifications or {}
-                
-                # Merge with new specs
-                updated_specs = current_specs.copy()
-                updated_specs.update(spec_data)
-                
-                # Update device model specifications
-                device.device_model.specifications = updated_specs
-                device.device_model.save()
-                
-                # Create history record
-                DeviceHistory.objects.create(
-                    device=device,
-                    action='bulk_updated',
-                    notes=f'Bulk specification update by {request.user.get_full_name()}: {spec_updates}',
-                    created_by=request.user
-                )
-                updated_count += 1
-        
-        else:
-            return Response({'error': 'Invalid operation'}, 
-                           status=status.HTTP_400_BAD_REQUEST)
-        
-        response_data = {
-            'message': f'Successfully updated {updated_count} devices',
-            'updated_count': updated_count,
-            'total_devices': len(device_ids)
-        }
-        
-        if errors:
-            response_data['errors'] = errors
-            response_data['error_count'] = len(errors)
-        
-        return Response(response_data)
-    
-    except Exception as e:
-        return Response({'error': f'Bulk operation failed: {str(e)}'}, 
-                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 @login_required
 def add_device_model_modal_view(request):
     """Render the add device model modal and handle form submission"""
-    from .spec_templates import get_spec_template, get_spec_display_name
-
     if request.method == 'POST':
         category_id = request.POST.get('category')
         manufacturer = request.POST.get('manufacturer')
@@ -998,12 +858,8 @@ def add_device_model_modal_view(request):
                 specifications=specifications
             )
             messages.success(request, f'Device model "{device_model}" created successfully.')
-            # Return success HTML for modal
-            return render(request, 'components/common/modal_success.html', {
-                'message': f'Device model "{device_model}" created successfully.',
-                'icon': 'bi-check-circle-fill',
-                'icon_color': 'text-success'
-            })
+            # Return the updated list for the manage modal
+            return manage_device_models_list_view(request)
         except DeviceCategory.DoesNotExist:
             messages.error(request, 'Invalid category selected.')
         except Exception as e:
@@ -1019,25 +875,448 @@ def add_device_model_modal_view(request):
 
 @login_required
 def get_spec_template_view(request):
-    """Return specification fields for a category via HTMX"""
-    from .spec_templates import get_spec_template, get_spec_display_name
+    """Return specification fields for a category via HTMX.
 
+    Loads specifications from category.specifications (database).
+    """
     category_id = request.GET.get('category')
 
     if not category_id:
-        return render(request, 'devices/partials/spec_fields.html', {'spec_fields': []})
+        return render(request, 'devices/partials/spec_fields.html', {'spec_fields': [], 'category_specs': []})
 
     try:
         category = DeviceCategory.objects.get(id=category_id)
-        specs = get_spec_template(category.name)
-        # Build list of tuples (key, value, display_name) for the template
+
+        # Load specifications from database
+        category_specs = category.get_specification_fields()
+
+        # Build spec_fields for backward compatibility with existing templates
+        # This uses the same format as before for templates that expect tuples
+        # (name, value, label)
         spec_fields = [
-            (key, value, get_spec_display_name(key))
-            for key, value in specs.items()
+            (spec.get('name', ''), '', spec.get('label', spec.get('name', '')))
+            for spec in category_specs
         ]
+
     except DeviceCategory.DoesNotExist:
         spec_fields = []
+        category_specs = []
 
     return render(request, 'devices/partials/spec_fields.html', {
-        'spec_fields': spec_fields
+        'spec_fields': spec_fields,
+        'category_specs': category_specs
+    })
+
+
+@login_required
+def next_asset_tag_api(request, category_id):
+    """API to get the next auto-generated asset tag for a category"""
+    try:
+        category = DeviceCategory.objects.get(id=category_id)
+        asset_tag = category.generate_next_asset_tag()
+        return JsonResponse({'asset_tag': asset_tag, 'prefix': category.get_asset_tag_prefix()})
+    except DeviceCategory.DoesNotExist:
+        return JsonResponse({'error': 'Category not found'}, status=404)
+
+
+@login_required
+@permission_required('devices.can_modify_devices', raise_exception=True)
+def add_category_modal_view(request):
+    """Render the add category modal and handle form submission"""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        is_general = request.POST.get('is_general') == 'on'
+
+        # Build specifications list from form data
+        spec_names = request.POST.getlist('spec_name[]')
+        spec_labels = request.POST.getlist('spec_label[]')
+        spec_types = request.POST.getlist('spec_type[]')
+        spec_options = request.POST.getlist('spec_options[]')
+
+        specifications = []
+        for i, spec_name in enumerate(spec_names):
+            if spec_name.strip():
+                spec = {
+                    'name': spec_name.strip(),
+                    'type': spec_types[i] if i < len(spec_types) else 'text',
+                    'label': spec_labels[i].strip() if i < len(spec_labels) and spec_labels[i].strip() else spec_name.strip()
+                }
+                # Add options for dropdown type
+                if spec['type'] == 'dropdown' and i < len(spec_options) and spec_options[i].strip():
+                    spec['options'] = [opt.strip() for opt in spec_options[i].split(',') if opt.strip()]
+                specifications.append(spec)
+
+        if not name:
+            return render(request, 'devices/partials/category_add_form.html', {
+                'error': 'Category name is required.',
+            })
+
+        # Check if category already exists
+        if DeviceCategory.objects.filter(name__iexact=name).exists():
+            return render(request, 'devices/partials/category_add_form.html', {
+                'error': f'A category named "{name}" already exists.',
+            })
+
+        try:
+            import json
+            category = DeviceCategory.objects.create(
+                name=name,
+                is_general=is_general,
+                specifications=specifications
+            )
+            # Return the full modal with toast notification
+            response = render(request, 'devices/manage_categories_modal.html', {
+                'can_modify': request.user.can_modify_devices,
+            })
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': f'Category "{category.name}" created successfully.', 'type': 'success'}
+            })
+            return response
+        except Exception as e:
+            return render(request, 'devices/partials/category_add_form.html', {
+                'error': f'Error creating category: {str(e)}',
+            })
+
+    # GET request - render add form
+    return render(request, 'devices/partials/category_add_form.html')
+
+
+# ==========================================
+#   MANAGE CATEGORIES VIEWS
+# ==========================================
+
+@login_required
+def manage_categories_view(request):
+    """Render the manage categories modal"""
+    return render(request, 'devices/manage_categories_modal.html', {
+        'can_modify': request.user.can_modify_devices,
+    })
+
+
+@login_required
+def manage_categories_add_form_view(request):
+    """Render the add category form (replaces list view)"""
+    return render(request, 'devices/partials/category_add_form.html')
+
+
+@login_required
+def manage_categories_list_view(request):
+    """Return category list for HTMX partial updates"""
+    search = request.GET.get('search', '').strip()
+    categories = DeviceCategory.objects.all()
+
+    if search:
+        categories = categories.filter(
+            models.Q(name__icontains=search) |
+            models.Q(description__icontains=search)
+        )
+
+    categories = categories.order_by('name')
+
+    return render(request, 'devices/partials/category_list.html', {
+        'categories': categories,
+        'can_modify': request.user.can_modify_devices,
+    })
+
+
+@login_required
+@permission_required('devices.can_modify_devices', raise_exception=True)
+def manage_categories_edit_view(request, category_id):
+    """Edit a category with full modal takeover"""
+    import json
+    category = get_object_or_404(DeviceCategory, id=category_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        is_general = request.POST.get('is_general') == 'on'
+
+        # Build specifications list from form data
+        spec_names = request.POST.getlist('spec_name[]')
+        spec_labels = request.POST.getlist('spec_label[]')
+        spec_types = request.POST.getlist('spec_type[]')
+        spec_options = request.POST.getlist('spec_options[]')
+
+        specifications = []
+        for i, spec_name in enumerate(spec_names):
+            if spec_name.strip():
+                spec = {
+                    'name': spec_name.strip(),
+                    'type': spec_types[i] if i < len(spec_types) else 'text',
+                    'label': spec_labels[i].strip() if i < len(spec_labels) and spec_labels[i].strip() else spec_name.strip()
+                }
+                # Add options for dropdown type
+                if spec['type'] == 'dropdown' and i < len(spec_options) and spec_options[i].strip():
+                    spec['options'] = [opt.strip() for opt in spec_options[i].split(',') if opt.strip()]
+                specifications.append(spec)
+
+        if not name:
+            return render(request, 'devices/partials/category_edit_form.html', {
+                'category': category,
+                'error': 'Category name is required.',
+            })
+
+        # Check for duplicate name (excluding current category)
+        if DeviceCategory.objects.filter(name__iexact=name).exclude(id=category_id).exists():
+            return render(request, 'devices/partials/category_edit_form.html', {
+                'category': category,
+                'error': f'A category named "{name}" already exists.',
+            })
+
+        try:
+            category.name = name
+            category.is_active = is_active
+            category.is_general = is_general
+            category.specifications = specifications
+            category.save()
+            # Return the full modal with toast notification
+            response = render(request, 'devices/manage_categories_modal.html', {
+                'can_modify': request.user.can_modify_devices,
+            })
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': f'Category "{category.name}" updated successfully.', 'type': 'success'}
+            })
+            return response
+        except Exception as e:
+            return render(request, 'devices/partials/category_edit_form.html', {
+                'category': category,
+                'error': f'Error updating category: {str(e)}',
+            })
+
+    # GET - return edit form
+    return render(request, 'devices/partials/category_edit_form.html', {
+        'category': category,
+    })
+
+
+@login_required
+@permission_required('devices.can_modify_devices', raise_exception=True)
+def manage_categories_delete_view(request, category_id):
+    """Delete a category with confirmation"""
+    import json
+    category = get_object_or_404(DeviceCategory, id=category_id)
+
+    if request.method == 'POST':
+        # Check if category has associated device models
+        model_count = category.devicemodel_set.count()
+        if model_count > 0:
+            return render(request, 'components/common/delete_confirmation.html', {
+                'item': category,
+                'item_id': f'category-item-{category.id}',
+                'item_name': category.name,
+                'list_target_id': 'categories-list',
+                'error': f'Cannot delete: {model_count} device model(s) use this category.',
+                'delete_url': reverse('manage-categories-delete', args=[category_id]),
+                'cancel_url': reverse('manage-categories-list'),
+            })
+
+        category_name = category.name
+        category.delete()
+        response = manage_categories_list_view(request)
+        response['HX-Trigger'] = json.dumps({
+            'showToast': {'message': f'Category "{category_name}" deleted successfully.', 'type': 'success'}
+        })
+        return response
+
+    # GET - return confirmation dialog
+    model_count = category.devicemodel_set.count()
+    return render(request, 'components/common/delete_confirmation.html', {
+        'item': category,
+        'item_id': f'category-item-{category.id}',
+        'item_name': category.name,
+        'list_target_id': 'categories-list',
+        'warning': f'This category has {model_count} device model(s) associated.' if model_count else None,
+        'delete_url': reverse('manage-categories-delete', args=[category_id]),
+        'cancel_url': reverse('manage-categories-list'),
+    })
+
+
+# ==========================================
+#   MANAGE DEVICE MODELS VIEWS
+# ==========================================
+
+@login_required
+def manage_device_models_view(request):
+    """Render the manage device models modal"""
+    return render(request, 'devices/manage_device_models_modal.html', {
+        'can_modify': request.user.can_modify_devices,
+        'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+        'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+    })
+
+
+@login_required
+def manage_device_models_add_form_view(request):
+    """Render the add device model form (replaces list view)"""
+    return render(request, 'devices/partials/device_model_add_form.html', {
+        'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+        'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+    })
+
+
+@login_required
+def manage_device_models_list_view(request):
+    """Return device model list for HTMX partial updates"""
+    search = request.GET.get('search', '').strip()
+    device_models = DeviceModel.objects.select_related('category').all()
+
+    if search:
+        device_models = device_models.filter(
+            models.Q(model_name__icontains=search) |
+            models.Q(manufacturer__icontains=search) |
+            models.Q(category__name__icontains=search)
+        )
+
+    device_models = device_models.order_by('manufacturer', 'model_name')
+
+    return render(request, 'devices/partials/device_model_list.html', {
+        'device_models': device_models,
+        'can_modify': request.user.can_modify_devices,
+    })
+
+
+@login_required
+@permission_required('devices.can_modify_devices', raise_exception=True)
+def manage_device_models_edit_view(request, model_id):
+    """Edit a device model with full form takeover"""
+    import json
+    device_model = get_object_or_404(DeviceModel, id=model_id)
+
+    def build_spec_fields(device_model, post_data=None):
+        """Build spec_fields list from category spec definitions with current values."""
+        category_specs = device_model.category.get_specification_fields()
+        spec_fields = []
+        for spec in category_specs:
+            name = spec.get('name', '')
+            if post_data:
+                # Prefer POST data (preserving user input on error)
+                value = post_data.get(f'spec_{name}', '')
+            else:
+                value = device_model.specifications.get(name, '') if device_model.specifications else ''
+            spec_fields.append({
+                'name': name,
+                'label': spec.get('label', name),
+                'type': spec.get('type', 'text'),
+                'options': spec.get('options', []),
+                'value': value,
+            })
+        return spec_fields
+
+    if request.method == 'POST':
+        category_id = request.POST.get('category')
+        manufacturer = request.POST.get('manufacturer', '').strip()
+        model_name = request.POST.get('model_name', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+
+        errors = []
+        if not category_id:
+            errors.append('Category is required.')
+        if not manufacturer:
+            errors.append('Manufacturer is required.')
+        if not model_name:
+            errors.append('Model name is required.')
+
+        if errors:
+            return render(request, 'devices/partials/device_model_edit_form.html', {
+                'device_model': device_model,
+                'error': ' '.join(errors),
+                'spec_fields': build_spec_fields(device_model, request.POST),
+                'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+                'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+            })
+
+        # Check for duplicate
+        if DeviceModel.objects.filter(
+            manufacturer__iexact=manufacturer,
+            model_name__iexact=model_name
+        ).exclude(id=model_id).exists():
+            return render(request, 'devices/partials/device_model_edit_form.html', {
+                'device_model': device_model,
+                'error': f'A model "{manufacturer} {model_name}" already exists.',
+                'spec_fields': build_spec_fields(device_model, request.POST),
+                'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+                'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+            })
+
+        try:
+            device_model.category_id = category_id
+            device_model.manufacturer = manufacturer
+            device_model.model_name = model_name
+            device_model.is_active = is_active
+
+            # Collect specification values from form
+            category = DeviceCategory.objects.get(id=category_id)
+            category_specs = category.get_specification_fields()
+            specifications = {}
+            for spec in category_specs:
+                name = spec.get('name', '')
+                value = request.POST.get(f'spec_{name}', '')
+                if value:
+                    specifications[name] = value
+            device_model.specifications = specifications
+
+            device_model.save()
+            # Return the full modal with HX-Trigger toast (matching category edit pattern)
+            response = render(request, 'devices/manage_device_models_modal.html', {
+                'can_modify': request.user.can_modify_devices,
+                'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+                'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+            })
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': f'Device model "{device_model}" updated successfully.', 'type': 'success'}
+            })
+            return response
+        except Exception as e:
+            return render(request, 'devices/partials/device_model_edit_form.html', {
+                'device_model': device_model,
+                'error': f'Error updating device model: {str(e)}',
+                'spec_fields': build_spec_fields(device_model, request.POST),
+                'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+                'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+            })
+
+    # GET - return edit form with spec fields pre-populated
+    return render(request, 'devices/partials/device_model_edit_form.html', {
+        'device_model': device_model,
+        'spec_fields': build_spec_fields(device_model),
+        'categories': DeviceCategory.objects.filter(is_active=True).order_by('name'),
+        'manufacturers': DeviceManufacturer.objects.filter(is_active=True).order_by('name'),
+    })
+
+
+@login_required
+@permission_required('devices.can_modify_devices', raise_exception=True)
+def manage_device_models_delete_view(request, model_id):
+    """Delete a device model with confirmation"""
+    device_model = get_object_or_404(DeviceModel, id=model_id)
+
+    if request.method == 'POST':
+        # Check if model has associated devices
+        device_count = device_model.device_set.count()
+        if device_count > 0:
+            return render(request, 'components/common/delete_confirmation.html', {
+                'item': device_model,
+                'item_id': f'device-model-item-{device_model.id}',
+                'item_name': str(device_model),
+                'list_target_id': 'device-models-list',
+                'error': f'Cannot delete: {device_count} device(s) use this model.',
+                'delete_url': reverse('manage-device-models-delete', args=[model_id]),
+                'cancel_url': reverse('manage-device-models-list'),
+            })
+
+        model_name = str(device_model)
+        device_model.delete()
+        messages.success(request, f'Device model "{model_name}" deleted successfully.')
+        return manage_device_models_list_view(request)
+
+    # GET - return confirmation dialog
+    device_count = device_model.device_set.count()
+    return render(request, 'components/common/delete_confirmation.html', {
+        'item': device_model,
+        'item_id': f'device-model-item-{device_model.id}',
+        'item_name': str(device_model),
+        'list_target_id': 'device-models-list',
+        'warning': f'This model has {device_count} device(s) associated.' if device_count else None,
+        'delete_url': reverse('manage-device-models-delete', args=[model_id]),
+        'cancel_url': reverse('manage-device-models-list'),
     })

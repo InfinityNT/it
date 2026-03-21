@@ -6,7 +6,7 @@
 .modal-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     line-height: 1.4;
     letter-spacing: -0.01em;
     display: flex;
@@ -17,15 +17,16 @@
 /* Modal Title Icons */
 .modal-title i {
     font-size: 1.25rem;
-    color: #007bff;
+    color: var(--clr-primary);
     flex-shrink: 0;
 }
 
 /* Modal Header Styling */
 .modal-header {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-bottom: 2px solid #e9ecef;
+    background: var(--clr-modal-header-bg);
+    border-bottom: 2px solid var(--clr-border);
     padding: 1.25rem 1.5rem;
+    color: var(--clr-text-primary);
 }
 
 .modal-header .btn-close {
@@ -37,7 +38,7 @@
 .card-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     margin-bottom: 0.5rem;
     line-height: 1.4;
 }
@@ -47,21 +48,21 @@
 }
 
 .card-title i {
-    color: #007bff;
+    color: var(--clr-primary);
     margin-right: 0.5rem;
 }
 
 /* Card Header Styling Enhancement */
 .card-header {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-bottom: 1px solid #e9ecef;
+    background: var(--clr-bg-surface-raised);
+    border-bottom: 1px solid var(--clr-border);
     padding: 1rem 1.25rem;
 }
 
 /* General H5 Styling (for standalone usage) */
 h5 {
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     line-height: 1.4;
     margin-bottom: 0.75rem;
 }
@@ -70,29 +71,47 @@ h5 {
 .info-card-header {
     font-size: 1rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 2px solid var(--clr-border);
+}
+
+/* Modal Content Color Override */
+.modal-content {
+    background: var(--clr-modal-bg);
+    color: var(--clr-text-secondary);
+}
+
+.modal-content .form-label {
+    color: var(--clr-text-primary);
+}
+
+.modal-content .form-text {
+    color: var(--clr-text-muted);
+}
+
+.modal-content .form-check-label {
+    color: var(--clr-text-secondary);
 }
 
 /* Modal Body Enhancements */
 .modal-body {
     padding: 1.5rem;
-    color: #4a5568;
+    color: var(--clr-text-secondary);
 }
 
 .modal-body h6 {
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     margin-top: 1rem;
     margin-bottom: 0.5rem;
 }
 
 /* Modal Footer Styling */
 .modal-footer {
-    background: #f8f9fa;
-    border-top: 1px solid #e9ecef;
+    background: var(--clr-modal-footer-bg);
+    border-top: 1px solid var(--clr-border);
     padding: 1rem 1.5rem;
 }
 
@@ -125,4 +144,271 @@ h5 {
 
 .modal.show .modal-header {
     animation: modalHeaderSlide 0.3s ease-out;
+}
+
+/* Modal content slide-in animation */
+@keyframes modalContentSlideIn {
+    from {
+        transform: translateY(-30px) scale(0.97);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.modal.show .modal-content {
+    animation: modalContentSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================
+   MANAGE MODAL STYLES
+   ========================================== */
+
+/* Manage Modal List Container */
+.manage-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    background: var(--clr-bg-surface);
+}
+
+/* Manage List Item */
+.manage-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--clr-border);
+    transition: background-color var(--transition-fast);
+}
+
+.manage-list-item:last-child {
+    border-bottom: none;
+}
+
+.manage-list-item:hover {
+    background-color: var(--clr-bg-hover);
+}
+
+.manage-list-item.inactive {
+    opacity: 0.6;
+    background-color: var(--clr-bg-surface-sunken);
+}
+
+.manage-list-item.editing {
+    background-color: var(--clr-primary-subtle);
+    padding: 1rem;
+}
+
+/* Manage Item Info */
+.manage-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.manage-item-name {
+    font-weight: 600;
+    color: var(--clr-text-primary);
+    margin-bottom: 0.125rem;
+}
+
+.manage-item-meta {
+    font-size: 0.8rem;
+    color: var(--clr-text-muted);
+}
+
+.manage-item-description {
+    font-size: 0.875rem;
+    color: var(--clr-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Manage Item Actions */
+.manage-item-actions {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+
+.manage-item-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Manage Modal Header Row - Search + Add Button */
+.manage-header-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.manage-header-row .form-control {
+    flex: 1;
+    min-width: 0;
+}
+
+.manage-header-row .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Back Button for Add Form View */
+.manage-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--clr-text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.manage-back-btn:hover {
+    color: var(--clr-text-primary);
+}
+
+.manage-back-btn i {
+    font-size: 1rem;
+}
+
+/* Add Form Section */
+.manage-add-form-section {
+    padding: 0.5rem 0;
+}
+
+.manage-add-form-section h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--clr-text-primary);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--clr-border);
+}
+
+/* Specification Field Builder */
+.spec-field-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: var(--clr-bg-surface-sunken);
+    border-radius: 6px;
+}
+
+.spec-field-row .form-control,
+.spec-field-row .form-select {
+    font-size: 0.875rem;
+}
+
+.spec-field-row .spec-name-input {
+    flex: 2;
+    min-width: 120px;
+}
+
+.spec-field-row .spec-label-input {
+    flex: 2;
+    min-width: 120px;
+}
+
+.spec-field-row .spec-type-select {
+    flex: 1;
+    min-width: 100px;
+}
+
+.spec-field-row .spec-options-input {
+    flex: 2;
+}
+
+.spec-field-row .btn-remove-spec {
+    flex-shrink: 0;
+    padding: 0.25rem 0.5rem;
+}
+
+.spec-field-row .spec-name-input[readonly] {
+    background-color: var(--clr-bg-active);
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.spec-fields-container {
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    background: var(--clr-bg-surface);
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.add-spec-field-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    border-style: dashed;
+}
+
+/* General Badge */
+.badge-general {
+    background: var(--clr-success-subtle);
+    color: var(--clr-success);
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+
+/* Spec Group Badges */
+.spec-group-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: var(--clr-primary-subtle);
+    color: var(--clr-primary);
+    margin-right: 0.25rem;
+}
+
+/* Delete Confirmation */
+.delete-confirmation {
+    background-color: var(--clr-danger-subtle);
+    border: 1px solid var(--clr-danger);
+}
+
+.delete-confirmation .manage-item-name {
+    color: var(--clr-danger);
+}
+
+/* Empty State */
+.manage-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--clr-text-muted);
+}
+
+.manage-empty-state i {
+    font-size: 2.5rem;
+    opacity: 0.5;
+    margin-bottom: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .manage-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .manage-item-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
 }

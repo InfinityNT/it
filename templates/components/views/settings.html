@@ -19,9 +19,10 @@
 
 {% if can_manage_system %}
 <!-- System Settings (Admin Only) -->
+
+<!-- Row 1: General Settings (full width) -->
 <div class="row">
-    <!-- General Settings -->
-    <div class="col-lg-6">
+    <div class="col-12">
         <div class="card mb-4">
             <div class="card-header">
                 <h6 class="m-0 fw-bold text-primary">
@@ -31,22 +32,108 @@
             <div class="card-body">
                 <form id="generalSettingsForm">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="systemName" class="form-label">System Name</label>
-                        <input type="text" class="form-control" id="systemName" value="{{ current_settings.system_name|default:'IT Device Management' }}" placeholder="Enter system name">
-                        <div class="form-text">Displayed in page titles and headers</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="timezone" class="form-label">Timezone</label>
-                        <select class="form-select" id="timezone">
-                            <option value="UTC" {% if current_settings.timezone == 'UTC' or not current_settings.timezone %}selected{% endif %}>UTC</option>
-                            <option value="America/New_York" {% if current_settings.timezone == 'America/New_York' %}selected{% endif %}>America/New_York</option>
-                            <option value="America/Chicago" {% if current_settings.timezone == 'America/Chicago' %}selected{% endif %}>America/Chicago</option>
-                            <option value="America/Los_Angeles" {% if current_settings.timezone == 'America/Los_Angeles' %}selected{% endif %}>America/Los_Angeles</option>
-                            <option value="Europe/London" {% if current_settings.timezone == 'Europe/London' %}selected{% endif %}>Europe/London</option>
-                            <option value="Asia/Tokyo" {% if current_settings.timezone == 'Asia/Tokyo' %}selected{% endif %}>Asia/Tokyo</option>
-                        </select>
-                        <div class="form-text">Used for timestamps and scheduling</div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="systemName" class="form-label">System Name</label>
+                                <input type="text" class="form-control" id="systemName" value="{{ current_settings.system_name|default:'IT Device Management' }}" placeholder="Enter system name">
+                                <div class="form-text">Displayed in page titles and headers</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="timezone" class="form-label">Timezone</label>
+                                <select class="form-select" id="timezone">
+                                    <optgroup label="Universal">
+                                        <option value="UTC" {% if current_settings.timezone == 'UTC' or not current_settings.timezone %}selected{% endif %}>UTC</option>
+                                    </optgroup>
+                                    <optgroup label="Americas">
+                                        <option value="America/New_York" {% if current_settings.timezone == 'America/New_York' %}selected{% endif %}>Eastern Time (New York)</option>
+                                        <option value="America/Chicago" {% if current_settings.timezone == 'America/Chicago' %}selected{% endif %}>Central Time (Chicago)</option>
+                                        <option value="America/Denver" {% if current_settings.timezone == 'America/Denver' %}selected{% endif %}>Mountain Time (Denver)</option>
+                                        <option value="America/Los_Angeles" {% if current_settings.timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time (Los Angeles)</option>
+                                        <option value="America/Anchorage" {% if current_settings.timezone == 'America/Anchorage' %}selected{% endif %}>Alaska (Anchorage)</option>
+                                        <option value="Pacific/Honolulu" {% if current_settings.timezone == 'Pacific/Honolulu' %}selected{% endif %}>Hawaii (Honolulu)</option>
+                                        <option value="America/Toronto" {% if current_settings.timezone == 'America/Toronto' %}selected{% endif %}>Eastern Canada (Toronto)</option>
+                                        <option value="America/Vancouver" {% if current_settings.timezone == 'America/Vancouver' %}selected{% endif %}>Pacific Canada (Vancouver)</option>
+                                        <option value="America/Mexico_City" {% if current_settings.timezone == 'America/Mexico_City' %}selected{% endif %}>Mexico City</option>
+                                        <option value="America/Bogota" {% if current_settings.timezone == 'America/Bogota' %}selected{% endif %}>Bogota</option>
+                                        <option value="America/Lima" {% if current_settings.timezone == 'America/Lima' %}selected{% endif %}>Lima</option>
+                                        <option value="America/Santiago" {% if current_settings.timezone == 'America/Santiago' %}selected{% endif %}>Santiago</option>
+                                        <option value="America/Buenos_Aires" {% if current_settings.timezone == 'America/Buenos_Aires' %}selected{% endif %}>Buenos Aires</option>
+                                        <option value="America/Sao_Paulo" {% if current_settings.timezone == 'America/Sao_Paulo' %}selected{% endif %}>Sao Paulo</option>
+                                        <option value="America/Caracas" {% if current_settings.timezone == 'America/Caracas' %}selected{% endif %}>Caracas</option>
+                                    </optgroup>
+                                    <optgroup label="Europe">
+                                        <option value="Europe/London" {% if current_settings.timezone == 'Europe/London' %}selected{% endif %}>London (GMT/BST)</option>
+                                        <option value="Europe/Dublin" {% if current_settings.timezone == 'Europe/Dublin' %}selected{% endif %}>Dublin</option>
+                                        <option value="Europe/Paris" {% if current_settings.timezone == 'Europe/Paris' %}selected{% endif %}>Paris</option>
+                                        <option value="Europe/Berlin" {% if current_settings.timezone == 'Europe/Berlin' %}selected{% endif %}>Berlin</option>
+                                        <option value="Europe/Madrid" {% if current_settings.timezone == 'Europe/Madrid' %}selected{% endif %}>Madrid</option>
+                                        <option value="Europe/Rome" {% if current_settings.timezone == 'Europe/Rome' %}selected{% endif %}>Rome</option>
+                                        <option value="Europe/Amsterdam" {% if current_settings.timezone == 'Europe/Amsterdam' %}selected{% endif %}>Amsterdam</option>
+                                        <option value="Europe/Zurich" {% if current_settings.timezone == 'Europe/Zurich' %}selected{% endif %}>Zurich</option>
+                                        <option value="Europe/Brussels" {% if current_settings.timezone == 'Europe/Brussels' %}selected{% endif %}>Brussels</option>
+                                        <option value="Europe/Vienna" {% if current_settings.timezone == 'Europe/Vienna' %}selected{% endif %}>Vienna</option>
+                                        <option value="Europe/Warsaw" {% if current_settings.timezone == 'Europe/Warsaw' %}selected{% endif %}>Warsaw</option>
+                                        <option value="Europe/Stockholm" {% if current_settings.timezone == 'Europe/Stockholm' %}selected{% endif %}>Stockholm</option>
+                                        <option value="Europe/Oslo" {% if current_settings.timezone == 'Europe/Oslo' %}selected{% endif %}>Oslo</option>
+                                        <option value="Europe/Helsinki" {% if current_settings.timezone == 'Europe/Helsinki' %}selected{% endif %}>Helsinki</option>
+                                        <option value="Europe/Athens" {% if current_settings.timezone == 'Europe/Athens' %}selected{% endif %}>Athens</option>
+                                        <option value="Europe/Bucharest" {% if current_settings.timezone == 'Europe/Bucharest' %}selected{% endif %}>Bucharest</option>
+                                        <option value="Europe/Istanbul" {% if current_settings.timezone == 'Europe/Istanbul' %}selected{% endif %}>Istanbul</option>
+                                        <option value="Europe/Moscow" {% if current_settings.timezone == 'Europe/Moscow' %}selected{% endif %}>Moscow</option>
+                                        <option value="Europe/Lisbon" {% if current_settings.timezone == 'Europe/Lisbon' %}selected{% endif %}>Lisbon</option>
+                                        <option value="Europe/Kyiv" {% if current_settings.timezone == 'Europe/Kyiv' %}selected{% endif %}>Kyiv</option>
+                                    </optgroup>
+                                    <optgroup label="Asia">
+                                        <option value="Asia/Dubai" {% if current_settings.timezone == 'Asia/Dubai' %}selected{% endif %}>Dubai (Gulf)</option>
+                                        <option value="Asia/Riyadh" {% if current_settings.timezone == 'Asia/Riyadh' %}selected{% endif %}>Riyadh</option>
+                                        <option value="Asia/Tehran" {% if current_settings.timezone == 'Asia/Tehran' %}selected{% endif %}>Tehran</option>
+                                        <option value="Asia/Karachi" {% if current_settings.timezone == 'Asia/Karachi' %}selected{% endif %}>Karachi</option>
+                                        <option value="Asia/Kolkata" {% if current_settings.timezone == 'Asia/Kolkata' %}selected{% endif %}>Kolkata (India)</option>
+                                        <option value="Asia/Dhaka" {% if current_settings.timezone == 'Asia/Dhaka' %}selected{% endif %}>Dhaka</option>
+                                        <option value="Asia/Bangkok" {% if current_settings.timezone == 'Asia/Bangkok' %}selected{% endif %}>Bangkok</option>
+                                        <option value="Asia/Jakarta" {% if current_settings.timezone == 'Asia/Jakarta' %}selected{% endif %}>Jakarta</option>
+                                        <option value="Asia/Singapore" {% if current_settings.timezone == 'Asia/Singapore' %}selected{% endif %}>Singapore</option>
+                                        <option value="Asia/Kuala_Lumpur" {% if current_settings.timezone == 'Asia/Kuala_Lumpur' %}selected{% endif %}>Kuala Lumpur</option>
+                                        <option value="Asia/Hong_Kong" {% if current_settings.timezone == 'Asia/Hong_Kong' %}selected{% endif %}>Hong Kong</option>
+                                        <option value="Asia/Shanghai" {% if current_settings.timezone == 'Asia/Shanghai' %}selected{% endif %}>Shanghai (China)</option>
+                                        <option value="Asia/Taipei" {% if current_settings.timezone == 'Asia/Taipei' %}selected{% endif %}>Taipei</option>
+                                        <option value="Asia/Tokyo" {% if current_settings.timezone == 'Asia/Tokyo' %}selected{% endif %}>Tokyo</option>
+                                        <option value="Asia/Seoul" {% if current_settings.timezone == 'Asia/Seoul' %}selected{% endif %}>Seoul</option>
+                                        <option value="Asia/Manila" {% if current_settings.timezone == 'Asia/Manila' %}selected{% endif %}>Manila</option>
+                                        <option value="Asia/Ho_Chi_Minh" {% if current_settings.timezone == 'Asia/Ho_Chi_Minh' %}selected{% endif %}>Ho Chi Minh City</option>
+                                        <option value="Asia/Jerusalem" {% if current_settings.timezone == 'Asia/Jerusalem' %}selected{% endif %}>Jerusalem</option>
+                                        <option value="Asia/Beirut" {% if current_settings.timezone == 'Asia/Beirut' %}selected{% endif %}>Beirut</option>
+                                    </optgroup>
+                                    <optgroup label="Africa">
+                                        <option value="Africa/Cairo" {% if current_settings.timezone == 'Africa/Cairo' %}selected{% endif %}>Cairo</option>
+                                        <option value="Africa/Lagos" {% if current_settings.timezone == 'Africa/Lagos' %}selected{% endif %}>Lagos</option>
+                                        <option value="Africa/Nairobi" {% if current_settings.timezone == 'Africa/Nairobi' %}selected{% endif %}>Nairobi</option>
+                                        <option value="Africa/Johannesburg" {% if current_settings.timezone == 'Africa/Johannesburg' %}selected{% endif %}>Johannesburg</option>
+                                        <option value="Africa/Casablanca" {% if current_settings.timezone == 'Africa/Casablanca' %}selected{% endif %}>Casablanca</option>
+                                        <option value="Africa/Accra" {% if current_settings.timezone == 'Africa/Accra' %}selected{% endif %}>Accra</option>
+                                    </optgroup>
+                                    <optgroup label="Australia & Pacific">
+                                        <option value="Australia/Perth" {% if current_settings.timezone == 'Australia/Perth' %}selected{% endif %}>Perth (AWST)</option>
+                                        <option value="Australia/Adelaide" {% if current_settings.timezone == 'Australia/Adelaide' %}selected{% endif %}>Adelaide (ACST)</option>
+                                        <option value="Australia/Sydney" {% if current_settings.timezone == 'Australia/Sydney' %}selected{% endif %}>Sydney (AEST)</option>
+                                        <option value="Australia/Melbourne" {% if current_settings.timezone == 'Australia/Melbourne' %}selected{% endif %}>Melbourne</option>
+                                        <option value="Australia/Brisbane" {% if current_settings.timezone == 'Australia/Brisbane' %}selected{% endif %}>Brisbane</option>
+                                        <option value="Pacific/Auckland" {% if current_settings.timezone == 'Pacific/Auckland' %}selected{% endif %}>Auckland (NZ)</option>
+                                        <option value="Pacific/Fiji" {% if current_settings.timezone == 'Pacific/Fiji' %}selected{% endif %}>Fiji</option>
+                                        <option value="Pacific/Guam" {% if current_settings.timezone == 'Pacific/Guam' %}selected{% endif %}>Guam</option>
+                                    </optgroup>
+                                    <optgroup label="Atlantic & Indian Ocean">
+                                        <option value="Atlantic/Reykjavik" {% if current_settings.timezone == 'Atlantic/Reykjavik' %}selected{% endif %}>Reykjavik (Iceland)</option>
+                                        <option value="Indian/Maldives" {% if current_settings.timezone == 'Indian/Maldives' %}selected{% endif %}>Maldives</option>
+                                        <option value="Indian/Mauritius" {% if current_settings.timezone == 'Indian/Mauritius' %}selected{% endif %}>Mauritius</option>
+                                    </optgroup>
+                                </select>
+                                <div class="form-text">Used for timestamps and scheduling</div>
+                            </div>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save me-1"></i>Save General Settings
@@ -55,32 +142,9 @@
             </div>
         </div>
     </div>
-
-    <!-- Feature Toggles -->
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="m-0 fw-bold text-primary">
-                    <i class="bi bi-toggles me-2"></i>Feature Settings
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="enableApprovals" {% if current_settings.enable_approvals == 'True' or not current_settings.enable_approvals %}checked{% endif %}>
-                    <label class="form-check-label" for="enableApprovals">
-                        <strong>Approval Workflows</strong>
-                        <div class="form-text">Require approval for assignments</div>
-                    </label>
-                </div>
-                <button type="button" id="saveFeatureSettings" class="btn btn-primary">
-                    <i class="bi bi-save me-1"></i>Save Feature Settings
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- Security & Database -->
+<!-- Row 2: Security & Backup side by side -->
 <div class="row">
     <!-- Security Settings -->
     <div class="col-lg-6">
@@ -128,21 +192,21 @@
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label">Last Backup</label>
-                    <p class="form-control-plaintext text-muted">Today at 2:00 AM</p>
+                    <p id="lastBackupTime" class="form-control-plaintext text-muted">{{ last_backup_time|default:"No backups recorded" }}</p>
                 </div>
                 <div class="mb-3">
                     <label for="backupFrequency" class="form-label">Backup Frequency</label>
                     <select class="form-select" id="backupFrequency">
-                        <option selected>Daily</option>
-                        <option>Weekly</option>
-                        <option>Manual Only</option>
+                        <option value="daily" {% if current_settings.backup_frequency == 'daily' or not current_settings.backup_frequency %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if current_settings.backup_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="manual" {% if current_settings.backup_frequency == 'manual' %}selected{% endif %}>Manual Only</option>
                     </select>
                 </div>
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-primary" onclick="runBackup()">
+                    <button type="button" class="btn btn-outline-primary" onclick="runBackup(event)">
                         <i class="bi bi-download me-1"></i>Create Backup Now
                     </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="checkDataIntegrity()">
+                    <button type="button" class="btn btn-outline-danger" onclick="checkDataIntegrity(event)">
                         <i class="bi bi-database-check me-1"></i>Check Data Integrity
                     </button>
                 </div>
@@ -163,19 +227,19 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
-                        <strong><i class="bi bi-app me-1"></i>Version:</strong><br>
+                        <strong><i class="bi bi-app me-1 text-primary"></i>Version:</strong><br>
                         <span class="text-muted">1.0.0</span>
                     </div>
                     <div class="col-md-3">
-                        <strong><i class="bi bi-database me-1"></i>Database:</strong><br>
+                        <strong><i class="bi bi-database me-1 text-primary"></i>Database:</strong><br>
                         <span class="text-muted">SQLite</span>
                     </div>
                     <div class="col-md-3">
-                        <strong><i class="bi bi-code-square me-1"></i>Python:</strong><br>
+                        <strong><i class="bi bi-code-square me-1 text-primary"></i>Python:</strong><br>
                         <span class="text-muted">3.12.7</span>
                     </div>
                     <div class="col-md-3">
-                        <strong><i class="bi bi-bootstrap me-1"></i>Django:</strong><br>
+                        <strong><i class="bi bi-bootstrap me-1 text-primary"></i>Django:</strong><br>
                         <span class="text-muted">5.2.1</span>
                     </div>
                 </div>
@@ -210,7 +274,7 @@
                     <div class="mb-3">
                         <label for="email" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" placeholder="email@example.com">
-                        <div class="form-text">Used for notifications and password reset</div>
+                        <div class="form-text">Your contact email address</div>
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save me-1"></i>Save Profile Changes

@@ -1,5 +1,9 @@
 <!-- Quick Actions Sidebar -->
 <nav class="sidebar loaded" id="sidebarMenu">
+    <!-- Close button (mobile drawer) -->
+    <button class="sidebar-close-btn" type="button" aria-label="Close menu">
+        <i class="bi bi-x-lg"></i>
+    </button>
     <div class="position-sticky pt-3">
         <ul class="nav flex-column">
             <!-- User Profile Section -->
@@ -29,6 +33,103 @@
                     </div>
                 </a>
             </li>
+
+            <!-- Navigation links (visible only below 992px when sidebar is unified menu) -->
+            <div class="sidebar-nav-links">
+                <li class="nav-item">
+                    <hr class="sidebar-divider">
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link-header">
+                        <i class="bi bi-compass"></i>
+                        Navigation
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                       href="{% url 'dashboard' %}">
+                        <i class="bi bi-speedometer2"></i>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
+                </li>
+                {% if user.can_view_devices %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'devices' %}active{% endif %}"
+                       href="{% url 'devices' %}">
+                        <i class="bi bi-laptop"></i>
+                        <span class="nav-link-text">Devices</span>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'advanced-search' %}active{% endif %}"
+                       href="{% url 'advanced-search' %}">
+                        <i class="bi bi-search"></i>
+                        <span class="nav-link-text">Search</span>
+                    </a>
+                </li>
+                {% if user.can_view_assignments %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'assignments' %}active{% endif %}"
+                       href="{% url 'assignments' %}">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span class="nav-link-text">Assignments</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.can_manage_users %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}"
+                       href="{% url 'users' %}">
+                        <i class="bi bi-people"></i>
+                        <span class="nav-link-text">Users</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.can_view_employees %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'employees' %}active{% endif %}"
+                       href="{% url 'employees' %}">
+                        <i class="bi bi-person-badge"></i>
+                        <span class="nav-link-text">Employees</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.can_view_reports %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}"
+                       href="{% url 'reports:reports' %}">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span class="nav-link-text">Reports</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.can_modify_assignments %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'approvals' %}active{% endif %}"
+                       href="{% url 'approvals' %}">
+                        <i class="bi bi-check2-square"></i>
+                        <span class="nav-link-text">Approvals</span>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'docs' in request.resolver_match.url_name %}active{% endif %}"
+                       href="{% url 'docs' %}">
+                        <i class="bi bi-question-circle"></i>
+                        <span class="nav-link-text">Help</span>
+                    </a>
+                </li>
+                {% if user.can_manage_system_settings %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
+                       href="{% url 'settings' %}">
+                        <i class="bi bi-gear"></i>
+                        <span class="nav-link-text">Settings</span>
+                    </a>
+                </li>
+                {% endif %}
+            </div>
 
             <!-- Dynamic Quick Actions Section -->
             <div id="quick-actions-section"

@@ -36,7 +36,7 @@
                         <div class="text-xs fw-bold text-primary text-uppercase mb-1">
                             Total Asset Value
                         </div>
-                        <div class="h5 mb-0 fw-bold text-dark">
+                        <div class="h5 mb-0 fw-bold text-body">
                             <span class="placeholder-glow">
                                 <span class="placeholder col-6"></span>
                             </span>
@@ -58,7 +58,7 @@
                         <div class="text-xs fw-bold text-success text-uppercase mb-1">
                             Utilization Rate
                         </div>
-                        <div class="h5 mb-0 fw-bold text-dark">
+                        <div class="h5 mb-0 fw-bold text-body">
                             <span class="placeholder-glow">
                                 <span class="placeholder col-4"></span>
                             </span>
@@ -80,7 +80,7 @@
                         <div class="text-xs fw-bold text-info text-uppercase mb-1">
                             Avg Assignment Duration
                         </div>
-                        <div class="h5 mb-0 fw-bold text-dark">
+                        <div class="h5 mb-0 fw-bold text-body">
                             <span class="placeholder-glow">
                                 <span class="placeholder col-5"></span>
                             </span>
@@ -102,7 +102,7 @@
                         <div class="text-xs fw-bold text-warning text-uppercase mb-1">
                             Warranty Expiring
                         </div>
-                        <div class="h5 mb-0 fw-bold text-dark">
+                        <div class="h5 mb-0 fw-bold text-body">
                             <span class="placeholder-glow">
                                 <span class="placeholder col-3"></span>
                             </span>
@@ -121,12 +121,22 @@
 <div class="row">
     <!-- Device Distribution Chart -->
     <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 fw-bold text-primary">Device Distribution by Category</h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('deviceDistribution')">
-                    <i class="bi bi-download me-1"></i>Export
-                </button>
+        <div class="chart-card chart-card--distribution chart-card-animate mb-4">
+            <div class="card-header">
+                <div class="chart-card__header-inner">
+                    <div class="chart-card__title-group">
+                        <div class="chart-card__icon">
+                            <i class="bi bi-pie-chart-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="chart-card__title">Device Distribution</h6>
+                            <small class="chart-card__subtitle">By category</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('deviceDistribution')">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
             </div>
             <div class="card-body" style="min-height: 300px;">
                 <div class="chart-loading text-center py-5">
@@ -144,12 +154,22 @@
 
     <!-- Status Overview Chart -->
     <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 fw-bold text-primary">Device Status Overview</h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('statusOverview')">
-                    <i class="bi bi-download me-1"></i>Export
-                </button>
+        <div class="chart-card chart-card--status chart-card-animate mb-4">
+            <div class="card-header">
+                <div class="chart-card__header-inner">
+                    <div class="chart-card__title-group">
+                        <div class="chart-card__icon">
+                            <i class="bi bi-bar-chart-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="chart-card__title">Status Overview</h6>
+                            <small class="chart-card__subtitle">Current device states</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('statusOverview')">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
             </div>
             <div class="card-body" style="min-height: 300px;">
                 <div class="chart-loading text-center py-5">
@@ -157,7 +177,7 @@
                 </div>
                 <canvas id="statusOverviewChart" style="display: none;"></canvas>
                 <div class="chart-empty-state text-center py-5" style="display: none;">
-                    <i class="bi bi-pie-chart display-4 text-muted" style="opacity: 0.3;"></i>
+                    <i class="bi bi-bar-chart display-4 text-muted" style="opacity: 0.3;"></i>
                     <p class="text-muted mt-3 mb-0">No status data available</p>
                     <small class="text-muted">Add devices to see status breakdown</small>
                 </div>
@@ -169,12 +189,22 @@
 <div class="row">
     <!-- Assignment Trends -->
     <div class="col-lg-8">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 fw-bold text-primary">Assignment Trends (Last 12 Months)</h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="exportChart('assignmentTrends')">
-                    <i class="bi bi-download me-1"></i>Export
-                </button>
+        <div class="chart-card chart-card--trends chart-card-animate mb-4">
+            <div class="card-header">
+                <div class="chart-card__header-inner">
+                    <div class="chart-card__title-group">
+                        <div class="chart-card__icon">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div>
+                            <h6 class="chart-card__title">Assignment Trends</h6>
+                            <small class="chart-card__subtitle">Last 12 months</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('assignmentTrends')">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
             </div>
             <div class="card-body" style="min-height: 300px;">
                 <div class="chart-loading text-center py-5">
@@ -192,12 +222,22 @@
 
     <!-- Top Users -->
     <div class="col-lg-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 fw-bold text-primary">Top Device Users</h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="exportTable('topUsers')">
-                    <i class="bi bi-download me-1"></i>Export
-                </button>
+        <div class="chart-card chart-card--users chart-card-animate mb-4">
+            <div class="card-header">
+                <div class="chart-card__header-inner">
+                    <div class="chart-card__title-group">
+                        <div class="chart-card__icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div>
+                            <h6 class="chart-card__title">Top Device Users</h6>
+                            <small class="chart-card__subtitle">Most active</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportTable('topUsers')">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
             </div>
             <div class="card-body" style="min-height: 300px;">
                 <div class="chart-loading text-center py-5">
@@ -215,122 +255,122 @@
 </div>
 
 <!-- Detailed Reports -->
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 fw-bold text-primary">
-                    <i class="bi bi-file-earmark-text me-2"></i>
-                    Detailed Reports
-                </h6>
-                <button class="btn btn-outline-primary btn-sm" onclick="window.open('/reports/custom/', 'custom_report', 'width=1000,height=800,scrollbars=yes')">
-                    <i class="bi bi-gear me-1"></i>
-                    Custom Report
-                </button>
+<div class="detailed-reports-section">
+    <div class="detailed-reports-header">
+        <div class="detailed-reports-title-group">
+            <div class="detailed-reports-icon-wrap">
+                <i class="bi bi-file-earmark-text"></i>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card border-left-primary h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="icon-circle bg-primary text-white me-3">
-                                        <i class="bi bi-list-check"></i>
-                                    </div>
-                                    <h6 class="card-title mb-0 fw-bold">Device Inventory Report</h6>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">Complete list of all devices with specifications, status, and location information.</p>
-                                <button class="btn btn-primary btn-sm align-self-start" onclick="generateReport('inventory')">
-                                    <i class="bi bi-file-text me-1"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card border-left-success h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="icon-circle bg-success text-white me-3">
-                                        <i class="bi bi-arrow-left-right"></i>
-                                    </div>
-                                    <h6 class="card-title mb-0 fw-bold">Assignment History Report</h6>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">Historical data of all device assignments, returns, and transfer records.</p>
-                                <button class="btn btn-success btn-sm align-self-start" onclick="generateReport('assignments')">
-                                    <i class="bi bi-file-text me-1"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card border-left-info h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="icon-circle bg-info text-white me-3">
-                                        <i class="bi bi-graph-up"></i>
-                                    </div>
-                                    <h6 class="card-title mb-0 fw-bold">Utilization Analysis</h6>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">Device usage patterns and optimization recommendations for better resource allocation.</p>
-                                <button class="btn btn-info btn-sm align-self-start" onclick="generateReport('utilization')">
-                                    <i class="bi bi-file-text me-1"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card border-left-warning h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="icon-circle bg-warning text-white me-3">
-                                        <i class="bi bi-tools"></i>
-                                    </div>
-                                    <h6 class="card-title mb-0 fw-bold">Maintenance Report</h6>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">Devices requiring maintenance, warranty status, and upcoming service schedules.</p>
-                                <button class="btn btn-warning btn-sm align-self-start" onclick="generateReport('maintenance')">
-                                    <i class="bi bi-file-text me-1"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card border-left-danger h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="icon-circle bg-danger text-white me-3">
-                                        <i class="bi bi-currency-dollar"></i>
-                                    </div>
-                                    <h6 class="card-title mb-0 fw-bold">Cost Analysis Report</h6>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">Financial analysis including total cost of ownership, depreciation, and budget planning.</p>
-                                <button class="btn btn-danger btn-sm align-self-start" onclick="generateReport('cost')">
-                                    <i class="bi bi-file-text me-1"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card border-left-dark h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="icon-circle bg-dark text-white me-3">
-                                        <i class="bi bi-people"></i>
-                                    </div>
-                                    <h6 class="card-title mb-0 fw-bold">User Activity Report</h6>
-                                </div>
-                                <p class="card-text text-muted flex-grow-1">User behavior, device usage patterns, and employee equipment preferences.</p>
-                                <button class="btn btn-dark btn-sm align-self-start" onclick="generateReport('user-activity')">
-                                    <i class="bi bi-file-text me-1"></i> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <div>
+                <h3 class="detailed-reports-title">Detailed Reports</h3>
+                <p class="detailed-reports-subtitle">Generate exportable reports across all tracked data</p>
+            </div>
+        </div>
+        <button class="detailed-reports-custom-btn" data-bs-toggle="modal" data-bs-target="#customReportModal">
+            <i class="bi bi-sliders2"></i>
+            <span>Custom Report</span>
+        </button>
+    </div>
+
+    <div class="report-cards-grid">
+        <!-- Device Inventory -->
+        <div class="report-card report-card--inventory" onclick="generateReport('inventory')">
+            <div class="report-card__accent"></div>
+            <div class="report-card__body">
+                <div class="report-card__icon-area">
+                    <i class="bi bi-hdd-stack"></i>
+                </div>
+                <div class="report-card__content">
+                    <h4 class="report-card__title">Device Inventory</h4>
+                    <p class="report-card__desc">Full device list with specs, status, and location data</p>
+                </div>
+                <div class="report-card__action">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment History -->
+        <div class="report-card report-card--assignments" onclick="generateReport('assignments')">
+            <div class="report-card__accent"></div>
+            <div class="report-card__body">
+                <div class="report-card__icon-area">
+                    <i class="bi bi-arrow-left-right"></i>
+                </div>
+                <div class="report-card__content">
+                    <h4 class="report-card__title">Assignment History</h4>
+                    <p class="report-card__desc">All assignments, returns, and transfer records over time</p>
+                </div>
+                <div class="report-card__action">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Utilization Analysis -->
+        <div class="report-card report-card--utilization" onclick="generateReport('utilization')">
+            <div class="report-card__accent"></div>
+            <div class="report-card__body">
+                <div class="report-card__icon-area">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div class="report-card__content">
+                    <h4 class="report-card__title">Utilization Analysis</h4>
+                    <p class="report-card__desc">Usage patterns and resource optimization insights</p>
+                </div>
+                <div class="report-card__action">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance -->
+        <div class="report-card report-card--maintenance" onclick="generateReport('maintenance')">
+            <div class="report-card__accent"></div>
+            <div class="report-card__body">
+                <div class="report-card__icon-area">
+                    <i class="bi bi-wrench-adjustable"></i>
+                </div>
+                <div class="report-card__content">
+                    <h4 class="report-card__title">Maintenance</h4>
+                    <p class="report-card__desc">Service schedules, warranty status, and device health</p>
+                </div>
+                <div class="report-card__action">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Analysis -->
+        <div class="report-card report-card--cost" onclick="generateReport('cost')">
+            <div class="report-card__accent"></div>
+            <div class="report-card__body">
+                <div class="report-card__icon-area">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div class="report-card__content">
+                    <h4 class="report-card__title">Cost Analysis</h4>
+                    <p class="report-card__desc">Total ownership costs, depreciation, and budget planning</p>
+                </div>
+                <div class="report-card__action">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Activity -->
+        <div class="report-card report-card--activity" onclick="generateReport('user-activity')">
+            <div class="report-card__accent"></div>
+            <div class="report-card__body">
+                <div class="report-card__icon-area">
+                    <i class="bi bi-person-lines-fill"></i>
+                </div>
+                <div class="report-card__content">
+                    <h4 class="report-card__title">User Activity</h4>
+                    <p class="report-card__desc">Employee usage patterns and equipment preferences</p>
+                </div>
+                <div class="report-card__action">
+                    <i class="bi bi-arrow-right"></i>
                 </div>
             </div>
         </div>

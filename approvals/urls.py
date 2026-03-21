@@ -5,7 +5,6 @@ from . import views
 api_urlpatterns = [
     path('list/', views.approval_list_api_view, name='approval-list-html'),
     path('stats/', views.approval_statistics_view, name='approval-stats'),
-    path('bulk-operations/', views.approval_bulk_operations_view, name='approval-bulk-operations'),
     path('<int:approval_id>/approve/', views.approve_request_view, name='approve-request'),
     path('<int:approval_id>/reject/', views.reject_request_view, name='reject-request'),
     path('<int:approval_id>/comment/', views.add_comment_view, name='add-approval-comment'),

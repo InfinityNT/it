@@ -3,7 +3,7 @@
     <div class="container-fluid">
         <!-- Sidebar toggle button (for quick actions panel) -->
         <button class="sidebar-toggle-btn me-2" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle quick actions">
-            <i class="bi bi-list toggle-icon"></i>
+            <i class="bi bi-layout-sidebar-inset toggle-icon"></i>
         </button>
 
         <!-- Brand
@@ -106,5 +106,15 @@
                 {% endif %}
             </ul>
         </div>
+
+        <!-- Help (outside collapse so always visible) -->
+        <a href="{% url 'docs' %}" class="navbar-help-btn ms-auto me-1" title="Help" aria-label="Help">
+            <i class="bi bi-question-circle{% if 'docs' in request.resolver_match.url_name %}-fill{% endif %}"></i>
+        </a>
+
+        <!-- Theme Toggle (outside collapse so always visible) -->
+        <button type="button" class="btn btn-link theme-toggle-btn me-2" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode" id="themeToggleBtn">
+            <i class="bi bi-moon-fill" id="themeToggleIcon"></i>
+        </button>
     </div>
 </nav>

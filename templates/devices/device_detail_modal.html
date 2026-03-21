@@ -60,11 +60,11 @@
                 <h6 class="info-card-header">Specifications</h6>
                 <div class="info-card-body">
                     <div class="row">
-                        {% for key, value in formatted_specs.items %}
+                        {% for spec in formatted_specs %}
                         <div class="col-md-6">
                             <div class="info-field">
-                                <span class="info-label">{{ key }}:</span>
-                                <span class="info-value">{{ value }}</span>
+                                <span class="info-label">{{ spec.label }}:</span>
+                                <span class="info-value">{{ spec.value }}</span>
                             </div>
                         </div>
                         {% endfor %}

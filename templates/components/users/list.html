@@ -1,14 +1,4 @@
 {% if users %}
-<!-- Bulk Select Header - Hidden by default -->
-<div id="bulk-select-header" class="mb-3" style="display: none;">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" id="selectAllUsers" onchange="toggleSelectAll()">
-        <label class="form-check-label fw-bold" for="selectAllUsers">
-            Select All Users
-        </label>
-    </div>
-</div>
-
 <!-- User Cards Grid -->
 <div class="card-grid">
     {% for user_item in users %}
@@ -17,7 +7,6 @@
         <div class="item-card-header">
             <div class="item-card-header-content">
                 <div class="item-card-header-left">
-                    <input type="checkbox" class="item-card-checkbox user-checkbox bulk-select-cell" value="{{ user_item.id }}" onchange="updateBulkActions()" style="display: none;">
                     <h6 class="item-card-title">{{ user_item.username }}</h6>
                 </div>
                 <div class="item-card-header-right">

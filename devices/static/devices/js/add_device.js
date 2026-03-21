@@ -1,76 +1,54 @@
 // Device Add Form JavaScript
 // Form validation and enhancement
+// Note: Category filtering and model dropdown logic is handled inline in add_device_modal.html
+// to ensure proper initialization when modal is loaded via HTMX
+
 document.addEventListener('DOMContentLoaded', function() {
     const assetTagInput = document.getElementById('asset_tag');
     const itAssetTagInput = document.getElementById('it_asset_tag');
     const serialNumberInput = document.getElementById('serial_number');
-    
-    // Auto-uppercase asset tag
-    assetTagInput.addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-    });
-    
-    // Auto-fill IT Asset Tag based on serial number
-    serialNumberInput.addEventListener('input', function() {
-        const serialNumber = this.value.trim();
-        if (serialNumber.length >= 7) {
-            const last7Chars = serialNumber.slice(-7);
-            const suggestedItAssetTag = 'MEX-' + last7Chars;
-            
-            // Only auto-fill if the IT Asset Tag is empty or already follows the MEX- pattern
-            if (!itAssetTagInput.value || itAssetTagInput.value.startsWith('MEX-')) {
-                itAssetTagInput.value = suggestedItAssetTag;
-            }
-        }
-    });
-    
-    // Category filter for device models
-    const categorySelect = document.getElementById('category');
-    const deviceModelSelect = document.getElementById('device_model');
-    const allDeviceModels = [...deviceModelSelect.options].slice(1); // Skip the first "Select" option
-    
-    categorySelect.addEventListener('change', function() {
-        const selectedCategory = this.value;
-        
-        // Clear current options (except first)
-        deviceModelSelect.innerHTML = '<option value="">Select Device Model</option>';
-        
-        // Filter and add matching device models
-        allDeviceModels.forEach(option => {
-            if (!selectedCategory || option.dataset.category === selectedCategory) {
-                deviceModelSelect.appendChild(option.cloneNode(true));
+
+    // Auto-uppercase asset tag (only if element exists)
+    if (assetTagInput) {
+        assetTagInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
+
+    // Auto-fill IT Asset Tag based on serial number (only if elements exist)
+    if (serialNumberInput && itAssetTagInput) {
+        serialNumberInput.addEventListener('input', function() {
+            const serialNumber = this.value.trim();
+            if (serialNumber.length >= 7) {
+                const last7Chars = serialNumber.slice(-7);
+                const suggestedItAssetTag = 'MEX-' + last7Chars;
+
+                // Only auto-fill if the IT Asset Tag is empty or already follows the MEX- pattern
+                if (!itAssetTagInput.value || itAssetTagInput.value.startsWith('MEX-')) {
+                    itAssetTagInput.value = suggestedItAssetTag;
+                }
             }
         });
-    });
-    
-    // Update device info when device model is selected
-    deviceModelSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        
-        if (this.value) {
-            const manufacturer = selectedOption.dataset.manufacturer;
-            const model = selectedOption.dataset.model;
-            const category = selectedOption.dataset.category;
-            
-            // Update the category dropdown to match
-            categorySelect.value = category;
-        }
-    });
-    
+    }
+
     // Handle form submission success
     document.body.addEventListener('htmx:afterRequest', function(event) {
         if (event.detail.xhr.status === 200 && event.detail.elt.tagName === 'FORM') {
             // Form submitted successfully
             const spinner = document.getElementById('save-spinner');
-            spinner.classList.add('d-none');
+            if (spinner) {
+                spinner.classList.add('d-none');
+            }
         }
     });
-    
+
     // Handle form submission errors
     document.body.addEventListener('htmx:responseError', function(event) {
         const spinner = document.getElementById('save-spinner');
-        spinner.classList.add('d-none');
-        
+        if (spinner) {
+            spinner.classList.add('d-none');
+        }
+
         if (event.detail.xhr.status === 400) {
             try {
                 const response = JSON.parse(event.detail.xhr.responseText);
@@ -80,12 +58,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
+
     // Show spinner on form submit
     document.body.addEventListener('htmx:beforeRequest', function(event) {
         if (event.detail.elt.tagName === 'FORM') {
             const spinner = document.getElementById('save-spinner');
-            spinner.classList.remove('d-none');
+            if (spinner) {
+                spinner.classList.remove('d-none');
+            }
         }
     });
 });
@@ -223,87 +203,4 @@ function updateSpecPlaceholder(select) {
         valueInput.placeholder = placeholders[selectedValue] || 'Enter value...';
         valueInput.focus();
     }
-}
-
-function addCommonSpecs(type) {
-    // Clear existing specifications
-    const container = document.getElementById('specifications-container');
-    container.innerHTML = '';
-    
-    let specs = [];
-    
-    switch(type) {
-        case 'laptop':
-            specs = [
-                ['CPUModel', 'Intel i7-1265U'],
-                ['GPU', 'Intel Iris Xe'],
-                ['Display', '14" 1920x1080 IPS'],
-                ['RAM', '16 GB DDR4'],
-                ['Storage', '512 GB NVMe SSD'],
-                ['OperatingSystem', 'Windows 11 Pro'],
-                ['BatteryHealth', '100%'],
-                ['BIOSVersion', '1.2.0'],
-                ['Ports', 'USB-C, USB-C, HDMI, Ethernet'],
-                ['WiFi', 'Wi-Fi 6'],
-                ['Bluetooth', '5.1'],
-                ['ChassisType', 'Laptop']
-            ];
-            break;
-        case 'desktop':
-            specs = [
-                ['CPUModel', 'Intel i5-12400'],
-                ['GPU', 'Intel UHD Graphics 730'],
-                ['Display', 'External Required'],
-                ['RAM', '16 GB DDR4'],
-                ['Storage', '512 GB NVMe SSD'],
-                ['OperatingSystem', 'Windows 11 Pro'],
-                ['BIOSVersion', '2.1.0'],
-                ['Ports', 'USB-A, USB-A, USB-C, HDMI, Ethernet'],
-                ['WiFi', 'Wi-Fi 6'],
-                ['Bluetooth', '5.1'],
-                ['ChassisType', 'Desktop']
-            ];
-            break;
-        case 'monitor':
-            specs = [
-                ['Display', '27" 2560x1440 IPS'],
-                ['Ports', 'HDMI, DisplayPort, USB-C'],
-                ['ChassisType', 'Monitor']
-            ];
-            break;
-        case 'phone':
-            specs = [
-                ['Display', '6.1" OLED'],
-                ['Storage', '256 GB'],
-                ['RAM', '8 GB'],
-                ['OperatingSystem', 'iOS 17'],
-                ['BatteryHealth', '100%'],
-                ['Ports', 'Lightning'],
-                ['WiFi', 'Wi-Fi 6'],
-                ['Bluetooth', '5.3'],
-                ['ChassisType', 'Phone']
-            ];
-            break;
-    }
-    
-    specs.forEach((spec, index) => {
-        const row = document.createElement('div');
-        row.className = 'row specification-row' + (index > 0 ? ' mt-2' : '');
-        row.innerHTML = `
-            <div class="col-md-5">
-                <input type="text" class="form-control" name="spec_key[]" value="${spec[0]}">
-            </div>
-            <div class="col-md-5">
-                <input type="text" class="form-control" name="spec_value[]" value="${spec[1]}">
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSpecification(this)" ${index === 0 && specs.length === 1 ? 'style="display: none;"' : ''}>
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-        `;
-        container.appendChild(row);
-    });
-    
-    updateRemoveButtons();
 }

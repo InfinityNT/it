@@ -1,10 +1,20 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - DMP</title>
+
+    <!-- Theme detection (before CSS to prevent flash) -->
+    <script>
+    (function(){
+        var t = localStorage.getItem('dmp-theme') ||
+                (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+    </script>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +43,60 @@
             display: flex;
             background: #0f172a;
             overflow: hidden;
+        }
+
+        /* Light theme login panel */
+        [data-theme="light"] .login-panel {
+            background: #ffffff;
+        }
+
+        [data-theme="light"] .login-header h1 {
+            color: #2d3748;
+        }
+
+        [data-theme="light"] .login-header p {
+            color: #718096;
+        }
+
+        [data-theme="light"] .form-label {
+            color: #4a5568;
+        }
+
+        [data-theme="light"] .form-input {
+            background: #f8f9fa;
+            border-color: #e9ecef;
+            color: #2d3748;
+        }
+
+        [data-theme="light"] .form-input::placeholder {
+            color: #a0aec0;
+        }
+
+        [data-theme="light"] .form-input:focus {
+            border-color: #3b82f6;
+            background: #ffffff;
+        }
+
+        [data-theme="light"] .input-wrapper i {
+            color: #a0aec0;
+        }
+
+        [data-theme="light"] .input-wrapper:focus-within i {
+            color: #3b82f6;
+        }
+
+        [data-theme="light"] .login-footer {
+            color: #a0aec0;
+        }
+
+        [data-theme="light"] .error-alert {
+            background: rgba(239, 68, 68, 0.05);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        [data-theme="light"] .error-alert-title,
+        [data-theme="light"] .error-alert-message {
+            color: #dc3545;
         }
 
         /* Left Panel - Branding */
@@ -490,6 +554,9 @@
             </form>
 
             <div class="login-footer">
+                <button type="button" class="btn btn-link p-0 me-2" onclick="toggleLoginTheme()" aria-label="Toggle dark mode" style="color: inherit; font-size: 1rem; text-decoration: none;">
+                    <i class="bi bi-moon-fill" id="loginThemeIcon"></i>
+                </button>
                 DMP - Device Management Platform
             </div>
         </div>
@@ -577,7 +644,6 @@
                 // Preload page scripts while showing success animation
                 const scriptsToPreload = [
                     '/static/core/js/base.js?v=5',
-                    '/static/core/js/bulk-operations.js',
                     '/static/devices/js/devices-new.js',
                     '/static/devices/js/filter_state.js',
                     '/static/approvals/js/approvals-new.js',
@@ -620,7 +686,29 @@
             }
         });
 
-        document.addEventListener('DOMContentLoaded', () => new LoginController());
+        // Theme toggle for login page
+        function toggleLoginTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            html.setAttribute('data-bs-theme', next);
+            localStorage.setItem('dmp-theme', next);
+            updateLoginThemeIcon(next);
+        }
+
+        function updateLoginThemeIcon(theme) {
+            var icon = document.getElementById('loginThemeIcon');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            new LoginController();
+            var theme = document.documentElement.getAttribute('data-theme') || 'light';
+            updateLoginThemeIcon(theme);
+        });
     </script>
 </body>
 </html>

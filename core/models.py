@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.urls import reverse
 from django.utils import timezone
 
 
@@ -107,22 +108,28 @@ class User(AbstractUser):
         """Get user's enabled quick actions that they have permission to use"""
         user_actions = self.quick_actions.filter(is_enabled=True).order_by('display_order', 'action_code')
         enabled_actions = []
-        
+
         for action in user_actions:
             config = action.action_config
             # Check if user has permission for this action
             if config.get('permission') and not self.has_perm(config['permission']):
                 continue
-            
+
+            # Pre-resolve URL to avoid template tag issues with namespaced URLs
+            try:
+                resolved_url = reverse(config.get('url', ''))
+            except Exception:
+                continue
+
+            url_params = config.get('url_params', '')
             enabled_actions.append({
                 'code': action.action_code,
                 'display_name': action.get_action_code_display(),
-                'url': config.get('url'),
-                'url_params': config.get('url_params', ''),
+                'url': resolved_url + url_params,
                 'icon': config.get('icon', 'bi-circle'),
                 'order': action.display_order
             })
-        
+
         return enabled_actions
     
     def get_available_quick_actions(self):

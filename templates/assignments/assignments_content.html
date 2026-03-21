@@ -55,12 +55,6 @@
             <!-- Action Buttons -->
             <div class="filter-item filter-actions">
                 <div class="filter-button-group">
-                    {% if user.can_modify_assignments %}
-                    <button class="btn btn-outline-secondary" id="bulkActionsBtn" onclick="toggleBulkMode()" disabled>
-                        <i class="bi bi-check2-square"></i>
-                        <span class="btn-text">Bulk Actions</span>
-                    </button>
-                    {% endif %}
                     {% if user.can_generate_reports %}
                     <button class="btn btn-outline-secondary" onclick="exportAssignments()">
                         <i class="bi bi-download"></i>
@@ -128,9 +122,6 @@
         </div>
     </div>
 </div>
-
-<!-- Include standardized bulk operations modal -->
-{% include 'components/forms/bulk_operations_modal.html' %}
 
 <script>
     // Pass user permissions to JavaScript

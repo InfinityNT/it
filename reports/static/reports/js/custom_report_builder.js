@@ -16,7 +16,8 @@ function initializeReportBuilder() {
         return;
     }
 
-    const modal = document.getElementById('customReportModal');
+    // Support both standalone modal and dynamic modal (HTMX)
+    const modal = document.getElementById('customReportModal') || document.getElementById('dynamicModal');
     if (!modal) {
         console.warn('[Report Builder] Modal element not found');
         return;
@@ -30,29 +31,27 @@ function initializeReportBuilder() {
     console.log('[Report Builder] Initialization complete');
 }
 
-// Setup modal event listener
+// Setup modal event listener (standalone modal only)
 function setupModalListener() {
-    const modal = document.getElementById('customReportModal');
-    if (modal && !modal.hasAttribute('data-report-builder-initialized')) {
-        modal.setAttribute('data-report-builder-initialized', 'true');
-        modal.addEventListener('shown.bs.modal', function() {
-            initializeReportBuilder();
-        });
-        // Also initialize immediately
+    const standaloneModal = document.getElementById('customReportModal');
+    if (standaloneModal && !standaloneModal.hasAttribute('data-report-builder-initialized')) {
+        standaloneModal.setAttribute('data-report-builder-initialized', 'true');
         setTimeout(initializeReportBuilder, 100);
     }
 }
 
-// Try to setup on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', setupModalListener);
-
-// Also try immediately if DOM is already loaded
-if (document.readyState !== 'loading') {
-    setupModalListener();
-}
-
-// For HTMX loaded content, try after a short delay
+// For standalone modal on page load
 setTimeout(setupModalListener, 200);
+
+// For HTMX-loaded content in dynamic modal
+document.body.addEventListener('htmx:afterSettle', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'dynamicModalContent') {
+        if (document.getElementById('dataSourceSelection')) {
+            isInitialized = false;
+            initializeReportBuilder();
+        }
+    }
+});
 
 /**
  * Load report schema from backend
@@ -155,6 +154,17 @@ function updateDataSourceUI() {
  * Fetch suggested primary source from backend
  */
 function fetchSuggestedPrimary() {
+    // For single source, no need to call backend
+    if (selectedDataSources.length === 1) {
+        primarySource = selectedDataSources[0];
+        document.getElementById('suggestedPrimary').textContent = reportSchema[primarySource]?.label || primarySource;
+        document.getElementById('primarySourceSection').classList.add('step-hidden');
+        renderMultiSourceFieldSelection();
+        document.getElementById('step2').classList.remove('step-hidden');
+        document.getElementById('step3').classList.remove('step-hidden');
+        return;
+    }
+
     fetch('/reports/api/suggest-primary/', {
         method: 'POST',
         headers: {
@@ -163,7 +173,10 @@ function fetchSuggestedPrimary() {
         },
         body: JSON.stringify({ sources: selectedDataSources })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
     .then(data => {
         console.log('[Report Builder] Primary source suggestion:', data);
 
@@ -174,11 +187,7 @@ function fetchSuggestedPrimary() {
         populatePrimarySelect(data.suggested, data.join_paths);
 
         // Show primary source section if multiple sources
-        if (selectedDataSources.length > 1) {
-            document.getElementById('primarySourceSection').classList.remove('step-hidden');
-        } else {
-            document.getElementById('primarySourceSection').classList.add('step-hidden');
-        }
+        document.getElementById('primarySourceSection').classList.remove('step-hidden');
 
         // Render field selection
         renderMultiSourceFieldSelection();
@@ -189,7 +198,11 @@ function fetchSuggestedPrimary() {
     })
     .catch(error => {
         console.error('[Report Builder] Error fetching primary source:', error);
-        showError('Failed to determine primary source');
+        // Fallback: use first source as primary
+        primarySource = selectedDataSources[0];
+        renderMultiSourceFieldSelection();
+        document.getElementById('step2').classList.remove('step-hidden');
+        document.getElementById('step3').classList.remove('step-hidden');
     });
 }
 
@@ -359,9 +372,13 @@ function initializeEventListeners() {
     }
 
     // Reset modal on close
-    const modal = document.getElementById('customReportModal');
+    const modal = document.getElementById('customReportModal') || document.getElementById('dynamicModal');
     if (modal) {
-        modal.addEventListener('hidden.bs.modal', resetReportBuilder);
+        modal.addEventListener('hidden.bs.modal', function() {
+            resetReportBuilder();
+            isInitialized = false;
+            modal.removeAttribute('data-report-builder-initialized');
+        });
     }
 }
 
@@ -498,8 +515,9 @@ function generateReport() {
     document.body.removeChild(form);
 
     // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('customReportModal'));
-    modal.hide();
+    const modalEl = document.getElementById('customReportModal') || document.getElementById('dynamicModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
 
     showSuccess('Report is being generated...');
 }
@@ -575,20 +593,24 @@ function getCookie(name) {
 function showError(message) {
     console.error('[Report Builder Error]:', message);
     // Try to use toast if available, otherwise use alert
-    if (typeof showToast === 'function') {
-        showToast(message, 'error');
+    if (typeof showToastNotification === 'function') {
+        showToastNotification(message, 'error');
     } else {
         // Create a Bootstrap alert in the modal
-        const modal = document.getElementById('customReportModal');
+        const modal = document.getElementById('customReportModal') || document.getElementById('dynamicModal');
         if (modal) {
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.style.cssText = 'background-color: #f8d7da; border-color: #f5c2c7; color: #842029;';
             alertDiv.innerHTML = `
                 <strong>Error:</strong> ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            modal.querySelector('.modal-body').prepend(alertDiv);
-            setTimeout(() => alertDiv.remove(), 5000);
+            const modalBody = modal.querySelector('.modal-body');
+            if (modalBody) {
+                modalBody.prepend(alertDiv);
+                setTimeout(() => alertDiv.remove(), 5000);
+            }
         } else {
             alert('Error: ' + message);
         }
@@ -597,10 +619,10 @@ function showError(message) {
 
 function showSuccess(message) {
     console.log('[Report Builder Success]:', message);
-    if (typeof showToast === 'function') {
-        showToast(message, 'success');
+    if (typeof showToastNotification === 'function') {
+        showToastNotification(message, 'success');
     } else {
-        const modal = document.getElementById('customReportModal');
+        const modal = document.getElementById('customReportModal') || document.getElementById('dynamicModal');
         if (modal) {
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert alert-success alert-dismissible fade show';
@@ -608,8 +630,11 @@ function showSuccess(message) {
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            modal.querySelector('.modal-body').prepend(alertDiv);
-            setTimeout(() => alertDiv.remove(), 3000);
+            const modalBody = modal.querySelector('.modal-body');
+            if (modalBody) {
+                modalBody.prepend(alertDiv);
+                setTimeout(() => alertDiv.remove(), 3000);
+            }
         } else {
             alert(message);
         }

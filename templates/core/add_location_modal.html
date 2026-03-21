@@ -1,0 +1,77 @@
+{% load static %}
+
+<!-- Add Location Modal -->
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="bi bi-geo-alt me-2"></i>Add New Location
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post"
+          id="addLocationForm"
+          hx-post="{% url 'add-location' %}"
+          hx-target="#dynamicModalContent"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Location Name *</label>
+                    <input type="text" class="form-control" id="name" name="name" required
+                           placeholder="e.g., Main Office, Remote, Building A - Floor 2">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="code" class="form-label">Code *</label>
+                    <input type="text" class="form-control" id="code" name="code" required
+                           placeholder="e.g., MAIN, REMOTE" maxlength="20">
+                    <div class="form-text">Short code for quick reference</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="2"
+                      placeholder="Additional details about this location"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="address" class="form-label">Address</label>
+            <textarea class="form-control" id="address" name="address" rows="2"
+                      placeholder="Physical address if applicable"></textarea>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="building" class="form-label">Building</label>
+                    <input type="text" class="form-control" id="building" name="building"
+                           placeholder="e.g., Building A, Tower 1" maxlength="50">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="floor" class="form-label">Floor</label>
+                    <input type="text" class="form-control" id="floor" name="floor"
+                           placeholder="e.g., 1, Ground, B1" maxlength="10">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <button type="submit" form="addLocationForm" class="btn btn-primary">
+        <i class="bi bi-check-lg me-1"></i>Create Location
+    </button>
+</div>

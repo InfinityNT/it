@@ -1,0 +1,49 @@
+{% if departments %}
+{% for department in departments %}
+<div class="manage-list-item {% if not department.is_active %}inactive{% endif %}"
+     id="department-item-{{ department.id }}">
+    <div class="manage-item-info">
+        <div class="manage-item-name">
+            {{ department.name }}
+            <span class="badge bg-light text-dark ms-1">{{ department.code }}</span>
+            {% if not department.is_active %}
+                <span class="badge bg-secondary ms-1">Inactive</span>
+            {% endif %}
+        </div>
+        <div class="manage-item-meta">
+            {% if department.manager %}
+                <span class="text-muted">
+                    <i class="bi bi-person me-1"></i>Manager: {{ department.manager.get_full_name }}
+                </span>
+            {% endif %}
+            {% with emp_count=department.employee_set.count %}
+            {% if emp_count > 0 %}
+                <span class="text-muted ms-2">
+                    <i class="bi bi-people me-1"></i>{{ emp_count }} employee{{ emp_count|pluralize }}
+                </span>
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+    <div class="manage-item-actions">
+        <button class="btn btn-sm btn-outline-primary" title="Edit"
+                hx-get="{% url 'manage-departments-edit' department_id=department.id %}"
+                hx-target="#departments-content"
+                hx-swap="innerHTML">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" title="Delete"
+                hx-get="{% url 'manage-departments-delete' department_id=department.id %}"
+                hx-target="#department-item-{{ department.id }}"
+                hx-swap="outerHTML">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="manage-empty-state">
+    <i class="bi bi-inbox d-block"></i>
+    <p class="mb-0">No departments found</p>
+</div>
+{% endif %}

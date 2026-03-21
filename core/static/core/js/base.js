@@ -38,7 +38,7 @@ document.addEventListener('htmx:configRequest', (event) => {
 
         if (!sidebar || !mainContent) return;
 
-        if (window.innerWidth >= 768) {
+        if (window.innerWidth >= 1143) {
             const sidebarHidden = localStorage.getItem('sidebarHidden') === 'true';
             if (sidebarHidden) {
                 sidebar.classList.add('sidebar-hidden');
@@ -46,6 +46,21 @@ document.addEventListener('htmx:configRequest', (event) => {
             }
         }
     }
+
+    // Close button inside sidebar drawer
+    document.addEventListener('click', function(event) {
+        const closeBtn = event.target.closest('.sidebar-close-btn');
+        if (!closeBtn) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const sidebar = document.getElementById('sidebarMenu');
+        if (sidebar) {
+            sidebar.classList.remove('mobile-show');
+            document.body.classList.remove('mobile-sidebar-open');
+        }
+    });
 
     // Event delegation for sidebar toggle click
     document.addEventListener('click', function(event) {
@@ -61,7 +76,7 @@ document.addEventListener('htmx:configRequest', (event) => {
         if (!sidebar || !mainContent) return;
 
         // Desktop: Hide/show sidebar
-        if (window.innerWidth >= 768) {
+        if (window.innerWidth >= 1143) {
             const isHidden = sidebar.classList.toggle('sidebar-hidden');
             mainContent.classList.toggle('sidebar-hidden');
             localStorage.setItem('sidebarHidden', isHidden);
@@ -73,9 +88,9 @@ document.addEventListener('htmx:configRequest', (event) => {
         }
     });
 
-    // Close sidebar when clicking outside on mobile
+    // Close sidebar when clicking outside on mobile/tablet
     document.addEventListener('click', function(event) {
-        if (window.innerWidth >= 768) return;
+        if (window.innerWidth >= 1143) return;
 
         const sidebar = document.getElementById('sidebarMenu');
         if (!sidebar || !sidebar.classList.contains('mobile-show')) return;

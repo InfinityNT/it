@@ -9,8 +9,7 @@ api_urlpatterns = [
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='api-user-detail'),
     path('users/<int:user_id>/toggle-status/', views.toggle_user_status, name='api-toggle-user-status'),
     path('users/<int:user_id>/reset-password/', views.reset_user_password, name='api-reset-user-password'),
-    path('users/bulk-operations/', views.user_bulk_operations_view, name='api-user-bulk-operations'),
-    
+
     # System API (JSON only)
     path('audit-logs/', views.AuditLogListView.as_view(), name='api-audit-logs'),
     path('settings/', views.SystemSettingsListView.as_view(), name='api-settings'),
@@ -41,6 +40,9 @@ api_urlpatterns = [
 
     # Global search
     path('global-search/', views.dashboard_search_view, name='api-global-search'),
+
+    # Docs content-only view for SPA
+    path('views/docs/', views.docs_content_view, name='api-view-docs'),
 ]
 
 # HTMX Fragment URLs - For dynamic content updates
@@ -72,12 +74,27 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('password-change/', views.password_change_view, name='password-change'),
 
+    # Session management
+    path('api/session/extend/', views.extend_session_view, name='session-extend'),
+
     # User management modals
     path('users/add/', views.add_user_modal_view, name='add-user-modal'),
     path('users/<int:user_id>/detail/', views.user_detail_view, name='user-detail-modal'),
     path('users/<int:user_id>/edit/', views.user_edit_view, name='edit-user-modal'),
     path('users/<int:user_id>/deactivate-modal/', views.deactivate_user_modal_view, name='deactivate-user-modal'),
     path('users/<int:user_id>/reactivate-modal/', views.reactivate_user_modal_view, name='reactivate-user-modal'),
+
+    # Location management
+    path('locations/add/', views.add_location_modal_view, name='add-location'),
+    path('locations/manage/', views.manage_locations_view, name='manage-locations'),
+    path('locations/manage/list/', views.manage_locations_list_view, name='manage-locations-list'),
+    path('locations/manage/add-form/', views.manage_locations_add_form_view, name='manage-locations-add-form'),
+    path('locations/manage/<int:location_id>/edit/', views.manage_locations_edit_view, name='manage-locations-edit'),
+    path('locations/manage/<int:location_id>/delete/', views.manage_locations_delete_view, name='manage-locations-delete'),
+
+    # Documentation / Help
+    path('docs/', views.docs_view, name='docs'),
+    path('docs/<path:doc_path>/', views.docs_page_view, name='docs-page'),
 
     # Include API and HTMX routes
     path('api/', include(api_urlpatterns)),

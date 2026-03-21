@@ -15,7 +15,7 @@
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label for="asset_tag" class="form-label">Asset Tag *</label>
-                <input type="text" class="form-control" id="asset_tag" name="asset_tag" value="{{ device.asset_tag }}" required>
+                <input type="text" class="form-control" id="asset_tag" name="asset_tag" value="{{ device.asset_tag }}" required style="text-transform: uppercase">
             </div>
             <div class="col-md-4 mb-3">
                 <label for="hostname" class="form-label">Hostname *</label>
@@ -40,39 +40,29 @@
         </div>
 
         <!-- Specifications Section -->
-        {% if formatted_specs %}
+        {% if spec_fields %}
         <div class="mb-3">
             <h6 class="border-bottom pb-2">Device Specifications</h6>
         </div>
 
         <div class="row">
+            {% for spec in spec_fields %}
             <div class="col-md-4 mb-3">
-                <label for="spec_cpu" class="form-label">CPU Model</label>
-                <input type="text" class="form-control" id="spec_cpu" name="spec_cpu" value="{{ formatted_specs.CPUModel|default:'' }}" placeholder="e.g., Intel Core i7">
+                <label for="spec_{{ spec.name }}" class="form-label">{{ spec.label }}</label>
+                {% if spec.type == 'dropdown' and spec.options %}
+                <select class="form-select" id="spec_{{ spec.name }}" name="spec_{{ spec.name }}">
+                    <option value="">Select...</option>
+                    {% for option in spec.options %}
+                    <option value="{{ option }}" {% if spec.value == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% elif spec.type == 'number' %}
+                <input type="number" class="form-control" id="spec_{{ spec.name }}" name="spec_{{ spec.name }}" value="{{ spec.value }}">
+                {% else %}
+                <input type="text" class="form-control" id="spec_{{ spec.name }}" name="spec_{{ spec.name }}" value="{{ spec.value }}">
+                {% endif %}
             </div>
-            <div class="col-md-4 mb-3">
-                <label for="spec_ram" class="form-label">RAM</label>
-                <input type="text" class="form-control" id="spec_ram" name="spec_ram" value="{{ formatted_specs.RAM|default:'' }}" placeholder="e.g., 16 GB DDR4">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="spec_storage" class="form-label">Storage</label>
-                <input type="text" class="form-control" id="spec_storage" name="spec_storage" value="{{ formatted_specs.Storage|default:'' }}" placeholder="e.g., 512 GB SSD">
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label for="spec_gpu" class="form-label">GPU</label>
-                <input type="text" class="form-control" id="spec_gpu" name="spec_gpu" value="{{ formatted_specs.GPU|default:'' }}" placeholder="e.g., NVIDIA RTX 3080">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="spec_display" class="form-label">Display</label>
-                <input type="text" class="form-control" id="spec_display" name="spec_display" value="{{ formatted_specs.Display|default:'' }}" placeholder="e.g., 15.6&quot; FHD">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="spec_os" class="form-label">Operating System</label>
-                <input type="text" class="form-control" id="spec_os" name="spec_os" value="{{ formatted_specs.OperatingSystem|default:'' }}" placeholder="e.g., Windows 11">
-            </div>
+            {% endfor %}
         </div>
         {% endif %}
 
@@ -157,6 +147,14 @@
 </form>
 
 <script>
+// Auto-uppercase asset tag
+const assetTagInput = document.getElementById('asset_tag');
+if (assetTagInput) {
+    assetTagInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+}
+
 // Handle form errors - use once to avoid duplicate listeners
 document.body.addEventListener('htmx:responseError', function handleEditError(event) {
     // Only handle errors for this form

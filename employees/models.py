@@ -91,6 +91,12 @@ class Employee(models.Model):
     office_location = models.CharField(max_length=100, blank=True)
     desk_number = models.CharField(max_length=20, blank=True, help_text="Desk/cubicle number within the location")
     
+    # Department Responsibility
+    is_department_responsible = models.BooleanField(
+        default=False,
+        help_text="Designate this employee as the responsible person for their department"
+    )
+
     # Additional Information
     cost_center = models.CharField(max_length=50, blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)

@@ -1,32 +1,32 @@
-<!-- Dashboard Stats - Dark Theme -->
-<div class="stats-grid">
-    <div class="stat-card-dark stat-primary">
-        <div class="stat-icon-dark">
+<!-- Dashboard Stats -->
+<div class="stats-grid stagger-children">
+    <div class="stat-card stat-primary">
+        <div class="stat-icon">
             <i class="bi bi-laptop"></i>
         </div>
-        <div class="stat-content-dark">
-            <div class="stat-value-dark">{{ total_devices|default:0 }}</div>
-            <div class="stat-label-dark">Total Devices</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_devices|default:0 }}</div>
+            <div class="stat-label">Total Devices</div>
         </div>
     </div>
 
-    <div class="stat-card-dark stat-success">
-        <div class="stat-icon-dark">
+    <div class="stat-card stat-success">
+        <div class="stat-icon">
             <i class="bi bi-check-circle"></i>
         </div>
-        <div class="stat-content-dark">
-            <div class="stat-value-dark">{{ available_devices|default:0 }}</div>
-            <div class="stat-label-dark">Available</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ available_devices|default:0 }}</div>
+            <div class="stat-label">Available</div>
         </div>
     </div>
 
-    <div class="stat-card-dark stat-warning">
-        <div class="stat-icon-dark">
+    <div class="stat-card stat-warning">
+        <div class="stat-icon">
             <i class="bi bi-person-check"></i>
         </div>
-        <div class="stat-content-dark">
-            <div class="stat-value-dark">{{ assigned_devices|default:0 }}</div>
-            <div class="stat-label-dark">Assigned</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ assigned_devices|default:0 }}</div>
+            <div class="stat-label">Assigned</div>
         </div>
     </div>
 </div>

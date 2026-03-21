@@ -1,21 +1,61 @@
-{% if spec_fields %}
-<div class="row">
-    {% for key, value, display_name in spec_fields %}
-    <div class="col-md-6 mb-3">
-        <label for="spec_{{ key }}" class="form-label">
-            {{ display_name }}
-        </label>
-        <input type="text" class="form-control"
-               id="spec_{{ key }}"
-               name="spec_{{ key }}"
-               value="{{ value }}"
-               placeholder="Enter {{ display_name|lower }}">
+{% if spec_fields or category_specs %}
+<div class="mb-3">
+    <label class="form-label">Specifications</label>
+
+    {% if category_specs %}
+    <!-- Category Specifications -->
+    <div class="row">
+        {% for spec in category_specs %}
+        <div class="col-md-6 mb-2">
+            <label for="spec_{{ spec.name }}" class="form-label small">
+                {{ spec.label|default:spec.name }}
+            </label>
+            {% if spec.type == 'dropdown' %}
+            <select class="form-select form-select-sm"
+                    id="spec_{{ spec.name }}"
+                    name="spec_{{ spec.name }}">
+                <option value="">Select {{ spec.label|default:spec.name }}</option>
+                {% for option in spec.options %}
+                <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+            </select>
+            {% elif spec.type == 'number' %}
+            <input type="number" class="form-control form-control-sm"
+                   id="spec_{{ spec.name }}"
+                   name="spec_{{ spec.name }}"
+                   placeholder="Enter {{ spec.label|default:spec.name }}">
+            {% else %}
+            <input type="text" class="form-control form-control-sm"
+                   id="spec_{{ spec.name }}"
+                   name="spec_{{ spec.name }}"
+                   placeholder="Enter {{ spec.label|default:spec.name }}">
+            {% endif %}
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
+    {% endif %}
+
+    {% if spec_fields %}
+    <!-- Built-in Spec Template Fields -->
+    <div class="row">
+        {% for key, value, display_name in spec_fields %}
+        <div class="col-md-6 mb-2">
+            <label for="spec_{{ key }}" class="form-label small">
+                {{ display_name }}
+            </label>
+            <input type="text" class="form-control form-control-sm"
+                   id="spec_{{ key }}"
+                   name="spec_{{ key }}"
+                   value="{{ value }}"
+                   placeholder="Enter {{ display_name }}">
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 {% else %}
-<div class="text-center text-muted py-3">
-    <i class="bi bi-info-circle"></i>
-    No specification template available for this category
+<div class="text-center text-muted py-3 border rounded bg-light">
+    <i class="bi bi-info-circle me-1"></i>
+    No specification fields defined for this category
 </div>
 {% endif %}

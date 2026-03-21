@@ -1,0 +1,161 @@
+<!-- Full edit form that replaces #categories-content -->
+<div class="edit-category-form">
+    <a class="manage-back-btn"
+       hx-get="{% url 'manage-categories' %}"
+       hx-target="#dynamicModalContent"
+       hx-swap="innerHTML">
+        <i class="bi bi-arrow-left"></i>Back to List
+    </a>
+    <h6 class="mt-0">Edit Category: {{ category.name }}</h6>
+
+    <form method="post"
+          hx-post="{% url 'manage-categories-edit' category_id=category.id %}"
+          hx-target="#dynamicModalContent"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+
+        {% if error %}
+        <div class="alert alert-danger alert-sm py-2 mb-3">
+            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+        </div>
+        {% endif %}
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name"
+                       value="{{ category.name }}" required placeholder="Category name">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
+                           {% if category.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="is_general" id="is_general"
+                           {% if category.is_general %}checked{% endif %}>
+                    <label class="form-check-label" for="is_general">General Spec</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Specification Fields</label>
+            <div id="edit-spec-fields" class="spec-fields-container" style="max-height: 300px; overflow-y: auto;">
+                {% for spec in category.specifications %}
+                <div class="spec-field-row" id="edit-spec-field-{{ forloop.counter0 }}">
+                    <input type="text" class="form-control form-control-sm spec-name-input"
+                           name="spec_name[]" placeholder="Field name"
+                           value="{{ spec.name }}" required readonly
+                           title="Spec names cannot be changed after creation">
+                    <input type="text" class="form-control form-control-sm spec-label-input"
+                           name="spec_label[]" placeholder="Display label"
+                           value="{{ spec.label|default:'' }}">
+                    <select class="form-select form-select-sm spec-type-select"
+                            name="spec_type[]"
+                            onchange="toggleEditCategoryOptions({{ forloop.counter0 }}, this.value)">
+                        <option value="text" {% if spec.type == 'text' %}selected{% endif %}>Text</option>
+                        <option value="number" {% if spec.type == 'number' %}selected{% endif %}>Number</option>
+                        <option value="dropdown" {% if spec.type == 'dropdown' %}selected{% endif %}>Dropdown</option>
+                    </select>
+                    <input type="text" class="form-control form-control-sm spec-options-input"
+                           name="spec_options[]" placeholder="Options (comma-separated)"
+                           value="{% if spec.options %}{{ spec.options|join:', ' }}{% endif %}"
+                           style="display: {% if spec.type == 'dropdown' %}block{% else %}none{% endif %};">
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-remove-spec"
+                            onclick="removeEditCategorySpecField({{ forloop.counter0 }})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-3" id="no-specs-msg">
+                    <small>No specification fields defined. Click "Add Field" to create one.</small>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2"
+                    onclick="addEditCategorySpecField()">
+                <i class="bi bi-plus me-1"></i>Add Field
+            </button>
+        </div>
+
+        <div class="d-flex gap-2 pt-3 border-top">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check me-1"></i>Save Changes
+            </button>
+            <button type="button" class="btn btn-secondary"
+                    hx-get="{% url 'manage-categories' %}"
+                    hx-target="#dynamicModalContent"
+                    hx-swap="innerHTML">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Track spec field index
+window.editCategorySpecIndex = {{ category.specifications|length|default:0 }};
+
+function addEditCategorySpecField(name = '', label = '', type = 'text', options = '') {
+    const container = document.getElementById('edit-spec-fields');
+    const noSpecs = document.getElementById('no-specs-msg');
+    if (noSpecs) noSpecs.remove();
+
+    const fieldId = window.editCategorySpecIndex++;
+    const fieldHtml = `
+        <div class="spec-field-row" id="edit-spec-field-${fieldId}">
+            <input type="text" class="form-control form-control-sm spec-name-input"
+                   name="spec_name[]" placeholder="Field name"
+                   value="${name}" required>
+            <input type="text" class="form-control form-control-sm spec-label-input"
+                   name="spec_label[]" placeholder="Display label"
+                   value="${label}">
+            <select class="form-select form-select-sm spec-type-select"
+                    name="spec_type[]"
+                    onchange="toggleEditCategoryOptions(${fieldId}, this.value)">
+                <option value="text" ${type === 'text' ? 'selected' : ''}>Text</option>
+                <option value="number" ${type === 'number' ? 'selected' : ''}>Number</option>
+                <option value="dropdown" ${type === 'dropdown' ? 'selected' : ''}>Dropdown</option>
+            </select>
+            <input type="text" class="form-control form-control-sm spec-options-input"
+                   name="spec_options[]" placeholder="Options (comma-separated)"
+                   value="${options}" style="display: ${type === 'dropdown' ? 'block' : 'none'};">
+            <button type="button" class="btn btn-outline-danger btn-sm btn-remove-spec"
+                    onclick="removeEditCategorySpecField(${fieldId})">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', fieldHtml);
+}
+
+function removeEditCategorySpecField(fieldId) {
+    const field = document.getElementById(`edit-spec-field-${fieldId}`);
+    if (field) field.remove();
+
+    const container = document.getElementById('edit-spec-fields');
+    if (container.children.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-3" id="no-specs-msg">
+                <small>No specification fields defined. Click "Add Field" to create one.</small>
+            </div>
+        `;
+    }
+}
+
+function toggleEditCategoryOptions(fieldId, type) {
+    const field = document.getElementById(`edit-spec-field-${fieldId}`);
+    if (!field) return;
+    const optionsInput = field.querySelector('.spec-options-input');
+    if (optionsInput) {
+        optionsInput.style.display = type === 'dropdown' ? 'block' : 'none';
+        if (type !== 'dropdown') optionsInput.value = '';
+    }
+}
+</script>

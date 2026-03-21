@@ -1,16 +1,19 @@
-<!-- Dashboard Activity List - Dark Theme -->
-<div class="activity-list-dark">
+<!-- Dashboard Activity List — Timeline -->
+<div class="activity-list">
     {% for activity in activities %}
-    <div class="activity-item-dark">
-        <div class="activity-header-dark">
-            <h6 class="activity-title-dark">{{ activity.action }}</h6>
-            <small class="activity-time-dark">{{ activity.timestamp|date:"M d, H:i" }}</small>
+    <div class="activity-item">
+        <div class="activity-dot"></div>
+        <div class="activity-body">
+            <span class="activity-title">{{ activity.action }}</span>
+            <span class="activity-description">{{ activity.description }}</span>
+            <div class="activity-meta">
+                <span class="activity-user">{{ activity.user }}</span>
+                <span class="activity-time">{{ activity.timestamp|date:"M d, H:i" }}</span>
+            </div>
         </div>
-        <p class="activity-description-dark">{{ activity.description }}</p>
-        <small class="activity-user-dark">by {{ activity.user }}</small>
     </div>
     {% empty %}
-    <div class="activity-empty-dark">
+    <div class="activity-empty">
         <i class="bi bi-clock-history"></i>
         <p>No recent activity</p>
     </div>

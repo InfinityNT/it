@@ -15,20 +15,27 @@
             <div class="col-md-4">
                 <div class="mb-3">
                     <label for="asset_tag" class="form-label">Asset Tag *</label>
-                    <input type="text" class="form-control" id="asset_tag" name="asset_tag" required>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="mb-3">
-                    <label for="hostname" class="form-label">Hostname *</label>
-                    <input type="text" class="form-control" id="hostname" name="hostname" required>
-                    <small class="form-text text-muted">Default: MEX-[last 6 of serial]</small>
+                    <input type="text" class="form-control" id="asset_tag" name="asset_tag" required readonly style="text-transform: uppercase">
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" id="custom_asset_tag">
+                        <label class="form-check-label small text-muted" for="custom_asset_tag">Custom asset tag</label>
+                    </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="mb-3">
                     <label for="serial_number" class="form-label">Serial Number *</label>
                     <input type="text" class="form-control" id="serial_number" name="serial_number" required>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label for="hostname" class="form-label">Hostname *</label>
+                    <input type="text" class="form-control" id="hostname" name="hostname" required readonly>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" id="custom_hostname">
+                        <label class="form-check-label small text-muted" for="custom_hostname">Custom hostname</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -40,7 +47,7 @@
                     <select class="form-select" id="category" name="category" required>
                         <option value="">Select Category</option>
                         {% for cat in categories %}
-                        <option value="{{ cat.name }}">{{ cat.name }}</option>
+                        <option value="{{ cat.name }}" data-id="{{ cat.id }}">{{ cat.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -48,12 +55,14 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="device_model" class="form-label">Device Model *</label>
-                    <select class="form-select" id="device_model" name="device_model" required>
+                    <select class="form-select" id="device_model" name="device_model" required disabled>
                         <option value="">Select Device Model</option>
                         {% for model in device_models %}
-                        <option value="{{ model.id }}">{{ model.manufacturer }} {{ model.model_name }}</option>
+                        <option value="{{ model.id }}" data-category="{{ model.category.name }}">{{ model.manufacturer }} {{ model.model_name }}</option>
                         {% endfor %}
                     </select>
+                    <div class="form-text text-muted" id="device_model_helper">Please select a category first</div>
+                    <div class="invalid-feedback" id="device_model_error">Please select a device model.</div>
                 </div>
             </div>
         </div>
@@ -105,14 +114,7 @@
             </div>
         </div>
 
-        <div class="mb-3">
-            <label for="status" class="form-label">Status</label>
-            <select class="form-select" id="status" name="status">
-                <option value="available" selected>Available</option>
-                <option value="assigned">Assigned</option>
-                <option value="retired">Retired</option>
-            </select>
-        </div>
+        <input type="hidden" name="status" value="available">
 
         <div class="mb-3">
             <label for="location" class="form-label">Location</label>
@@ -139,19 +141,138 @@
 </form>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     const serialNumberInput = document.getElementById('serial_number');
     const hostnameInput = document.getElementById('hostname');
+    const assetTagInput = document.getElementById('asset_tag');
     const deviceModelSelect = document.getElementById('device_model');
+    const categorySelect = document.getElementById('category');
+    const customHostnameCheckbox = document.getElementById('custom_hostname');
+    const customAssetTagCheckbox = document.getElementById('custom_asset_tag');
+    const deviceModelHelper = document.getElementById('device_model_helper');
+
+    // Store all device model options for filtering
+    const allDeviceModelOptions = [...deviceModelSelect.querySelectorAll('option[data-category]')];
+
+    function generateHostname() {
+        const serial = serialNumberInput.value.trim();
+        if (serial.length >= 6) {
+            hostnameInput.value = 'MEX-' + serial.slice(-6);
+        }
+    }
+
+    // Auto-generate asset tag from category
+    async function generateAssetTag() {
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const categoryId = selectedOption ? selectedOption.dataset.id : null;
+        if (!categoryId) {
+            assetTagInput.value = '';
+            return;
+        }
+        try {
+            const response = await fetch(`/devices/api/categories/${categoryId}/next-asset-tag/`);
+            if (response.ok) {
+                const data = await response.json();
+                assetTagInput.value = data.asset_tag;
+            }
+        } catch (error) {
+            console.error('Error generating asset tag:', error);
+        }
+    }
+
+    // Custom asset tag toggle
+    if (customAssetTagCheckbox && assetTagInput) {
+        customAssetTagCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                assetTagInput.removeAttribute('readonly');
+                assetTagInput.value = '';
+                assetTagInput.focus();
+            } else {
+                assetTagInput.setAttribute('readonly', '');
+                generateAssetTag();
+            }
+        });
+
+        // Auto-uppercase for manual input
+        assetTagInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
 
     // Auto-generate hostname from serial number
-    if (serialNumberInput && hostnameInput) {
+    if (serialNumberInput && hostnameInput && customHostnameCheckbox) {
         serialNumberInput.addEventListener('input', function() {
-            const serial = this.value.trim();
-            if (serial.length >= 6) {
-                const last6 = serial.slice(-6);
-                hostnameInput.value = 'MEX-' + last6;
+            if (!customHostnameCheckbox.checked) {
+                generateHostname();
             }
+        });
+
+        customHostnameCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                hostnameInput.removeAttribute('readonly');
+            } else {
+                hostnameInput.setAttribute('readonly', '');
+                generateHostname();
+            }
+        });
+    }
+
+    // Category selection - filter and enable device model dropdown + auto-generate asset tag
+    if (categorySelect && deviceModelSelect) {
+        categorySelect.addEventListener('change', function() {
+            const selectedCategory = this.value;
+
+            // Auto-generate asset tag
+            if (!customAssetTagCheckbox.checked) {
+                generateAssetTag();
+            }
+
+            // Clear current options (except first placeholder)
+            deviceModelSelect.innerHTML = '<option value="">Select Device Model</option>';
+
+            if (selectedCategory) {
+                // Enable dropdown and update helper text
+                deviceModelSelect.disabled = false;
+                deviceModelHelper.textContent = '';
+                deviceModelHelper.classList.remove('text-muted');
+
+                // Filter and add matching device models
+                allDeviceModelOptions.forEach(option => {
+                    if (option.dataset.category === selectedCategory) {
+                        deviceModelSelect.appendChild(option.cloneNode(true));
+                    }
+                });
+
+                // Check if no models available for this category
+                if (deviceModelSelect.options.length === 1) {
+                    deviceModelHelper.textContent = 'No device models available for this category';
+                    deviceModelHelper.classList.add('text-warning');
+                }
+            } else {
+                // Disable dropdown and show helper
+                deviceModelSelect.disabled = true;
+                deviceModelHelper.textContent = 'Please select a category first';
+                deviceModelHelper.classList.add('text-muted');
+                deviceModelHelper.classList.remove('text-warning');
+            }
+
+            // Clear any validation state
+            deviceModelSelect.classList.remove('is-invalid');
+        });
+    }
+
+    // Validate device model on form submit
+    const form = document.querySelector('form[hx-post]');
+    if (form && deviceModelSelect) {
+        form.addEventListener('htmx:configRequest', function(e) {
+            if (!deviceModelSelect.value) {
+                e.preventDefault();
+                deviceModelSelect.classList.add('is-invalid');
+                return false;
+            }
+        });
+        deviceModelSelect.addEventListener('change', function() {
+            this.classList.remove('is-invalid');
         });
     }
 
@@ -180,5 +301,5 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
+})();
 </script>

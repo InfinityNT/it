@@ -1,0 +1,64 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/css/docs.css' %}">
+
+<a href="{% url 'docs' %}" class="docs-back-link">
+    <i class="bi bi-arrow-left"></i> Back to Help Center
+</a>
+
+<div class="docs-layout">
+    <!-- Sidebar Navigation -->
+    <nav class="docs-sidebar">
+        {% for section in docs_nav %}
+        {% if section.section == 'admin-guide' or section.section == 'developer' %}
+            {% if user.can_manage_system_settings %}
+            <div class="docs-sidebar__section">
+                <div class="docs-sidebar__heading">
+                    <i class="bi {{ section.icon }}"></i>
+                    {{ section.title }}
+                </div>
+                {% for item in section.items %}
+                <a href="{% url 'docs-page' item.path %}"
+                   class="docs-sidebar__link{% if item.path == current_path %} docs-sidebar__link--active{% endif %}">
+                    {{ item.title }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="docs-sidebar__section">
+            <div class="docs-sidebar__heading">
+                <i class="bi {{ section.icon }}"></i>
+                {{ section.title }}
+            </div>
+            {% for item in section.items %}
+            <a href="{% url 'docs-page' item.path %}"
+               class="docs-sidebar__link{% if item.path == current_path %} docs-sidebar__link--active{% endif %}">
+                {{ item.title }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </nav>
+
+    <!-- Main Content -->
+    <article class="docs-main">
+        {% if toc_html and toc_html != '<div class="toc">\n<ul></ul>\n</div>\n' %}
+        <div class="docs-toc">
+            <div class="docs-toc__title">On this page</div>
+            {{ toc_html|safe }}
+        </div>
+        {% endif %}
+
+        <div class="markdown-body">
+            {{ html_content|safe }}
+        </div>
+
+        {% if truncated %}
+        <div class="docs-truncated-notice">
+            <i class="bi bi-info-circle me-1"></i>
+            This file is very large and has been truncated. Only the first 500 lines are shown.
+        </div>
+        {% endif %}
+    </article>
+</div>

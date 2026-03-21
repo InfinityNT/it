@@ -80,14 +80,6 @@ function attachFormListeners() {
         });
     }
 
-    const featureSettingsBtn = document.getElementById('saveFeatureSettings');
-    if (featureSettingsBtn) {
-        featureSettingsBtn.addEventListener('click', function() {
-            const form = this.closest('.card-body').querySelector('form') || this.closest('.card-body');
-            saveSettings('features', form);
-        });
-    }
-
     const securitySettingsBtn = document.getElementById('saveSecuritySettings');
     if (securitySettingsBtn) {
         securitySettingsBtn.addEventListener('click', function() {
@@ -112,12 +104,6 @@ function saveSettings(settingsType, formElement) {
     if (settingsType === 'general') {
         formData.append('system_name', document.getElementById('systemName')?.value || '');
         formData.append('timezone', document.getElementById('timezone')?.value || '');
-    } else if (settingsType === 'features') {
-        formData.append('enable_ldap', document.getElementById('enableLDAP')?.checked || false);
-        formData.append('enable_mfa', document.getElementById('enableMFA')?.checked || false);
-        formData.append('enable_barcode', document.getElementById('enableBarcode')?.checked || false);
-        formData.append('enable_notifications', document.getElementById('enableNotifications')?.checked || false);
-        formData.append('enable_approvals', document.getElementById('enableApprovals')?.checked || false);
     } else if (settingsType === 'security') {
         formData.append('session_timeout', document.getElementById('sessionTimeout')?.value || 30);
         formData.append('password_policy', document.getElementById('passwordPolicy')?.value || 'standard');
@@ -184,6 +170,11 @@ function runBackup(event) {
     .then(data => {
         if (data.success) {
             showAlert('success', data.message || 'Backup created successfully');
+            // Update the last backup time display
+            const lastBackupEl = document.getElementById('lastBackupTime');
+            if (lastBackupEl && data.last_backup_time) {
+                lastBackupEl.textContent = data.last_backup_time;
+            }
         } else {
             showAlert('danger', data.message || 'Failed to create backup');
         }

@@ -1,0 +1,52 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/css/docs.css' %}">
+
+<!-- Page Header -->
+<div class="page-header info">
+    <div class="page-header-content">
+        <div class="page-header-icon">
+            <i class="bi bi-question-circle"></i>
+        </div>
+        <div class="page-header-text">
+            <h1 class="page-title">Help Center</h1>
+            <p class="page-description">Guides and documentation for the IT Device Management Platform</p>
+        </div>
+    </div>
+</div>
+
+<!-- Doc Category Cards -->
+<div class="docs-cards-grid">
+    <!-- User Guide -->
+    <a href="{% url 'docs-page' 'user-guide/index' %}" class="docs-card">
+        <div class="docs-card__icon docs-card__icon--user">
+            <i class="bi bi-book"></i>
+        </div>
+        <h3 class="docs-card__title">User Guide</h3>
+        <p class="docs-card__desc">Step-by-step instructions for everyday tasks — devices, assignments, employees, and reports.</p>
+        <div class="docs-card__count">8 articles</div>
+    </a>
+
+    <!-- Admin Guide -->
+    {% if user.can_manage_system_settings %}
+    <a href="{% url 'docs-page' 'admin-guide/index' %}" class="docs-card">
+        <div class="docs-card__icon docs-card__icon--admin">
+            <i class="bi bi-gear"></i>
+        </div>
+        <h3 class="docs-card__title">Admin Guide</h3>
+        <p class="docs-card__desc">System configuration, user management, locations, and organizational settings.</p>
+        <div class="docs-card__count">6 articles</div>
+    </a>
+    {% endif %}
+
+    <!-- Developer Docs -->
+    {% if user.can_manage_system_settings %}
+    <a href="{% url 'docs-page' 'developer/index' %}" class="docs-card">
+        <div class="docs-card__icon docs-card__icon--dev">
+            <i class="bi bi-code-slash"></i>
+        </div>
+        <h3 class="docs-card__title">Developer Documentation</h3>
+        <p class="docs-card__desc">Technical docs — setup, architecture, testing, and deployment guides.</p>
+        <div class="docs-card__count">11 articles</div>
+    </a>
+    {% endif %}
+</div>

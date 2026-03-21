@@ -1,51 +1,25 @@
-# DMP Documentation
+# Help Center
 
-Welcome to the Device Management Platform documentation.
-
-## Quick Links
-
-- [Quick Start Guide](getting-started/quick-start.md)
-- [Windows Installation](getting-started/installation-windows.md)
-- [Production Deployment](deployment/production.md)
-- [Testing Guide](testing/guide.md)
+Welcome to the IT Device Management Platform help center. Find guides and documentation for every feature.
 
 ## Documentation Sections
 
-### Getting Started
-- [Quick Start](getting-started/quick-start.md) - Get up and running in minutes
-- [Windows Installation](getting-started/installation-windows.md) - Windows-specific setup with batch scripts
-- [Development Setup](getting-started/development-setup.md) - Local development environment and commands
+### User Guide
+Step-by-step instructions for everyday tasks — managing devices, assignments, employees, and reports.
 
-### Architecture
-- [Project Structure](architecture/project-structure.md) - Codebase organization and key configuration
-- [Template System](architecture/template-system.md) - Component-based SPA templates with HTMX
+[Browse User Guide](user-guide/index.md)
 
-### Features
-- [Custom Reports](features/custom-reports.md) - Multi-source dynamic report builder
-- [Responsive Design](features/responsive-design.md) - Mobile UI implementation
+### Admin Guide
+System configuration, user management, locations, and organizational settings for administrators.
 
-### Operations
-- [Production Deployment](deployment/production.md) - Docker & Traefik setup
-- [Testing Guide](testing/guide.md) - Testing procedures and checklists
+[Browse Admin Guide](admin-guide/index.md)
 
-### Contributing
-- [AI Assistant Guide](contributing/ai-assistant-guide.md) - Guidelines for AI assistants
+### Developer Documentation
+Technical documentation for developers — setup, architecture, testing, and deployment.
 
-### Reference
-- [Changelog](CHANGELOG.md) - Version history and changes
+[Browse Developer Docs](developer/index.md)
 
-## Technology Stack
+### Changelog
+Version history and release notes.
 
-| Component | Technology |
-|-----------|------------|
-| Backend | Django 5.2.1, Python 3.12 |
-| Database | SQLite (dev), PostgreSQL (prod) |
-| Frontend | Bootstrap 5, HTMX |
-| Deployment | Docker, Traefik |
-
-## Key Features
-
-- **Multi-source Custom Reports** - Combine Devices, Employees, Assignments, Approvals
-- **Approval Workflow** - Request-based approval system for device operations
-- **SPA Architecture** - HTMX-powered single-page application
-- **Responsive Design** - Mobile-first Bootstrap 5 UI
+[View Changelog](CHANGELOG.md)

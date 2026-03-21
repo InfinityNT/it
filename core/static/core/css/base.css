@@ -1,6 +1,7 @@
 body {
-    background-color: #f8f9fa;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--clr-bg-body);
+    font-family: var(--font-sans);
+    color: var(--clr-text-primary);
 }
 
 .card {
@@ -19,27 +20,27 @@ body {
 }
 
 .text-gray-900 {
-    color: #5a5c69 !important;
+    color: var(--clr-text-secondary) !important;
 }
 
 .brand-logo {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #5a5c69;
+    color: var(--clr-text-secondary);
     text-decoration: none;
 }
 
 .brand-logo:hover {
-    color: #3a3b45;
+    color: var(--clr-text-primary);
     text-decoration: none;
 }
 
 /* Navbar toggle button styling */
 .sidebar-toggle-btn {
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
+    border-radius: var(--radius-md);
     padding: 0;
     margin: 0 0.5rem;
     background: none;
@@ -47,6 +48,7 @@ body {
     align-items: center;
     justify-content: center;
     color: rgba(255, 255, 255, 0.85);
+    flex-shrink: 0;
 }
 
 .sidebar-toggle-btn:focus {
@@ -67,9 +69,19 @@ body {
 }
 
 .toggle-icon {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     color: rgba(255, 255, 255, 0.85);
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+}
+
+/* Rotate toggle icon when sidebar drawer is open */
+body.mobile-sidebar-open .sidebar-toggle-btn .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Close button inside sidebar drawer (mobile only) */
+.sidebar-close-btn {
+    display: none;
 }
 
 .sidebar-toggle-btn:hover .toggle-icon {
@@ -99,9 +111,9 @@ body {
     left: 0;
     width: 240px;
     height: calc(100vh - 56px);
-    background: #ffffff;
-    border-right: 1px solid #e9ecef;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    background: linear-gradient(180deg, var(--clr-sidebar-bg) 0%, var(--clr-bg-surface-sunken) 100%);
+    border-right: 1px solid var(--clr-sidebar-border);
+    box-shadow: var(--shadow-lg);
     transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
     z-index: 1000;
     overflow-y: auto;
@@ -127,6 +139,13 @@ body {
 /* For IE/Edge */
 .sidebar {
     -ms-overflow-style: none;
+}
+
+/* Hide sidebar nav links at desktop (they duplicate the navbar) */
+@media (min-width: 1143px) {
+    .sidebar-nav-links {
+        display: none;
+    }
 }
 
 /* Desktop/Tablet Collapsed State */
@@ -185,8 +204,8 @@ body {
     }
 }
 
-/* Medium Desktop (900-1199px): Reduced sidebar for split windows */
-@media (min-width: 900px) and (max-width: 1199.98px) {
+/* Medium Desktop (1143-1199px): Reduced sidebar for split windows */
+@media (min-width: 1143px) and (max-width: 1199.98px) {
     .sidebar {
         position: fixed;
         transform: translateX(0);
@@ -209,81 +228,10 @@ body {
     }
 }
 
-/* Tablet (768-899px): Collapsed sidebar by default */
-@media (min-width: 768px) and (max-width: 899.98px) {
+/* Mobile/Tablet (<1143px): Sidebar as slide-in drawer */
+@media (max-width: 1142.98px) {
     .sidebar {
-        position: fixed;
-        transform: translateX(0);
-        width: 70px;
-    }
-
-    /* Auto-collapse text on tablet */
-    .sidebar .nav-link-text,
-    .sidebar .quick-action-text,
-    .sidebar .user-info,
-    .sidebar .nav-link-header,
-    .sidebar .sidebar-divider {
-        opacity: 0;
-        visibility: hidden;
-    }
-
-    .sidebar .nav-link {
-        justify-content: center;
-        padding: 0.75rem;
-    }
-
-    .sidebar .nav-link i {
-        margin: 0;
-        font-size: 1.25rem;
-    }
-
-    .sidebar .quick-action {
-        justify-content: center;
-        padding: 0.75rem;
-    }
-
-    .sidebar .quick-action i {
-        margin: 0;
-    }
-
-    .sidebar .user-profile {
-        justify-content: center;
-        padding: 0.75rem;
-    }
-
-    .sidebar .user-avatar {
-        margin: 0;
-        font-size: 1.5rem;
-    }
-
-    .sidebar .user-arrow {
-        display: none;
-    }
-
-    .sidebar .logout-btn {
-        justify-content: center;
-        padding: 0.75rem;
-    }
-
-    .sidebar .logout-btn i {
-        margin: 0;
-    }
-
-    .main-content {
-        margin-left: 70px;
-        width: calc(100% - 70px);
-    }
-
-    .main-content.sidebar-hidden {
-        margin-left: 0;
-        width: 100%;
-    }
-}
-
-/* Mobile Behavior */
-@media (max-width: 767.98px) {
-    .sidebar {
-        width: 100%;
+        width: min(320px, 85vw);
         transform: translateX(-100%);
         z-index: 1050;
         opacity: 1;
@@ -301,6 +249,32 @@ body {
         transform: translateX(-100%);
     }
 
+    /* Close button visible in drawer */
+    .sidebar-close-btn {
+        display: flex;
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: var(--clr-bg-hover);
+        border-radius: var(--radius-md);
+        color: var(--clr-text-secondary);
+        cursor: pointer;
+        z-index: 10;
+        font-size: 1.1rem;
+        transition: all var(--transition-base);
+    }
+
+    .sidebar-close-btn:hover {
+        background: var(--clr-danger-subtle);
+        color: var(--clr-danger);
+    }
+
+    /* Backdrop with fade-in animation */
     body.mobile-sidebar-open::before {
         content: '';
         position: fixed;
@@ -310,12 +284,132 @@ body {
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
         z-index: 1040;
+        animation: backdropFadeIn 0.2s ease-out;
     }
 
     .main-content {
         margin-left: 0;
         width: 100%;
     }
+}
+
+/* Extra small phones (<576px): Sidebar fills entire screen */
+@media (max-width: 575.98px) {
+    .sidebar {
+        width: 100%;
+        height: 100vh;
+        top: 0;
+        border-right: none;
+        border-radius: 0;
+        z-index: 1070;
+    }
+
+    .sidebar.mobile-show {
+        transform: translateX(0);
+    }
+
+    /* Push sidebar content below the close button */
+    .sidebar .position-sticky {
+        padding-top: 3.5rem !important;
+    }
+
+    /* Close button larger for touch targets */
+    .sidebar-close-btn {
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 44px;
+        height: 44px;
+        font-size: 1.25rem;
+    }
+
+    /* Tighter main content padding */
+    .main-content {
+        padding-top: 1rem;
+    }
+
+    /* Sidebar toggle button: ensure good touch target */
+    .sidebar-toggle-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Tighter nav link padding in sidebar */
+    .nav-link {
+        padding: 0.5rem 0.75rem;
+        margin: 0.125rem 0.375rem;
+        font-size: 0.875rem;
+    }
+
+    .nav-link i {
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 0.8rem;
+        margin-right: 0.625rem;
+    }
+
+    /* Quick actions smaller */
+    .quick-action {
+        padding: 0.4375rem 0.75rem;
+        margin: 0.125rem 0.375rem;
+        font-size: 0.8rem;
+    }
+
+    .quick-action i {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+    }
+
+    /* User profile compact */
+    .user-profile {
+        padding: 0.625rem;
+        margin: 0 0.375rem;
+    }
+
+    .user-avatar {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+
+    .user-name {
+        font-size: 0.875rem;
+    }
+
+    .user-role {
+        font-size: 0.75rem;
+    }
+
+    /* Logout button compact */
+    .logout-btn {
+        padding: 0.5rem 0.75rem;
+        margin: 0 0.375rem;
+        font-size: 0.8rem;
+    }
+
+    .logout-btn i {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+    }
+
+    /* Nav headers */
+    .nav-link-header {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.7rem;
+        margin: 0.75rem 0.375rem 0.375rem 0.375rem;
+    }
+
+    /* Dividers */
+    .sidebar-divider {
+        margin: 0.75rem 0.375rem;
+    }
+}
+
+@keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* ==========================================
@@ -329,105 +423,88 @@ body {
 
 /* Body class for dashboard-specific styling */
 body.dashboard-active {
-    background: #0f172a !important;
-    color: #f1f5f9 !important;
     overflow: hidden;
 }
 
-html.dashboard-active,
-body.dashboard-active {
-    background: #0f172a !important;
-}
-
-/* Hide sidebar when dashboard is active (HTMX navigation support) */
-body.dashboard-active .sidebar {
-    display: none !important;
+/* Hide sidebar when dashboard is active at desktop (available as overlay at mobile) */
+@media (min-width: 1143px) {
+    body.dashboard-active .sidebar {
+        display: none !important;
+    }
 }
 
 body.dashboard-active .main-content {
     margin-left: 0 !important;
     width: 100% !important;
-    background: #0f172a !important;
-    color: #f1f5f9 !important;
     padding: 0 !important;
     min-height: 100vh !important;
     overflow: hidden;
 }
 
-/* Dashboard: Remove container padding since navbar is inline */
-body.dashboard-active .container-fluid {
+/* Dashboard: Remove main container padding (not navbar container) */
+body.dashboard-active .container-fluid.dashboard-layout {
     padding: 0 !important;
-    background: transparent !important;
-}
-
-/* Dashboard-specific text color overrides */
-body.dashboard-active h1,
-body.dashboard-active h2,
-body.dashboard-active h3,
-body.dashboard-active h4,
-body.dashboard-active h5,
-body.dashboard-active h6,
-body.dashboard-active p,
-body.dashboard-active span,
-body.dashboard-active label {
-    color: #f1f5f9;
-}
-
-body.dashboard-active .text-muted {
-    color: #94a3b8 !important;
 }
 
 /* Navigation Link Base Styles */
 .nav-link {
-    color: #495057;
+    color: var(--clr-text-secondary);
     font-weight: 500;
-    padding: 0.75rem 1rem;
-    transition: all 0.2s ease;
-    border-radius: 8px;
-    margin: 0.25rem 0.5rem;
+    padding: 0.625rem 0.875rem;
+    transition: all var(--transition-base);
+    border-radius: var(--radius-md);
+    margin: 0.125rem 0.5rem;
     display: flex;
     align-items: center;
     text-decoration: none;
     position: relative;
 }
 
-/* Icons always stay left-aligned */
+/* Icons with subtle background circle */
 .nav-link i {
     margin-right: 0.75rem;
-    font-size: 1rem;
-    width: 1.25rem;
+    font-size: 0.9rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    color: #007bff;
+    color: var(--clr-primary);
     flex-shrink: 0;
+    background: var(--clr-primary-subtle);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
 }
 
-/* Hover Effect: Dark background, light text */
+/* Hover Effect */
 .nav-link:hover {
-    background: #333;
-    color: white;
+    background: var(--clr-sidebar-hover-bg);
+    color: var(--clr-sidebar-hover-text);
     text-decoration: none;
 }
 
 .nav-link:hover i {
-    color: white;
+    color: var(--clr-primary);
+    background: var(--clr-primary-subtle);
 }
 
-/* Active State: Slightly lighter than hover */
+/* Active State */
 .nav-link.active {
-    background: #495057;
+    background: var(--clr-primary);
     color: white;
     font-weight: 600;
-    border-left: 3px solid #007bff;
-    padding-left: calc(1rem - 3px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 .nav-link.active i {
     color: white;
+    background: rgba(255, 255, 255, 0.2);
 }
 
-/* Active state hover: Keep same background */
+/* Active state hover */
 .nav-link.active:hover {
-    background: #495057;
+    background: var(--clr-primary-hover);
     color: white;
 }
 
@@ -453,38 +530,44 @@ body.dashboard-active .text-muted {
 .quick-action {
     display: flex;
     align-items: center;
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    color: #495057;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    margin: 0.25rem 0.5rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    color: var(--clr-text-secondary);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    margin: 0.125rem 0.5rem;
     text-decoration: none;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background: transparent;
+    border: 1px solid transparent;
 }
 
 .quick-action i {
-    margin-right: 0.75rem;
-    font-size: 1rem;
-    width: 1.25rem;
+    margin-right: 0.625rem;
+    font-size: 0.85rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    color: #007bff;
+    color: var(--clr-success);
     flex-shrink: 0;
+    background: var(--clr-success-subtle);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
 }
 
 /* Quick Action Hover Effect */
 .quick-action:hover {
-    background: #333;
-    color: white;
+    background: var(--clr-sidebar-hover-bg);
+    color: var(--clr-sidebar-hover-text);
     text-decoration: none;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border-color: #333;
+    border-color: var(--clr-border);
 }
 
 .quick-action:hover i {
-    color: white;
+    color: var(--clr-success);
+    transform: scale(1.05);
 }
 
 /* Collapsed state for quick actions */
@@ -507,32 +590,31 @@ body.dashboard-active .text-muted {
 
 /* User Profile Styles */
 .user-profile {
-    background: #f8f9fa;
-    border-radius: 12px;
+    background: var(--clr-primary-subtle);
+    border-radius: var(--radius-lg);
     margin: 0 0.5rem;
-    padding: 1rem;
+    padding: 0.75rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     text-decoration: none;
-    color: #495057;
-    border: 1px solid #e9ecef;
+    color: var(--clr-text-secondary);
+    border: 1px solid transparent;
     display: flex;
     align-items: center;
 }
 
 .user-profile:hover {
-    background: #333;
+    background: var(--clr-primary);
     color: white;
     text-decoration: none;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border-color: #333;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.25);
+    border-color: transparent;
 }
 
 .user-avatar {
-    font-size: 2.25rem;
-    color: #007bff;
-    margin-right: 0.75rem;
+    font-size: 1.75rem;
+    color: var(--clr-primary);
+    margin-right: 0.625rem;
     flex-shrink: 0;
 }
 
@@ -595,29 +677,38 @@ body.dashboard-active .text-muted {
     width: 100%;
     text-align: left;
     border: none;
-    background: none;
-    padding: 0.75rem 1rem;
-    color: #6c757d;
+    background: var(--clr-danger-subtle);
+    padding: 0.625rem 0.875rem;
+    color: var(--clr-danger);
     text-decoration: none;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: all var(--transition-base);
+    border-radius: var(--radius-md);
     margin: 0 0.5rem;
     display: flex;
     align-items: center;
 }
 
 .logout-btn:hover {
-    background: #dc3545;
+    background: var(--clr-danger);
     color: white;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .logout-btn i {
-    margin-right: 0.75rem;
-    font-size: 0.875rem;
-    width: 1.25rem;
+    margin-right: 0.625rem;
+    font-size: 0.85rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     flex-shrink: 0;
+    background: rgba(220, 53, 69, 0.15);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
 }
 
 /* Collapsed logout button */
@@ -643,8 +734,8 @@ body.dashboard-active .text-muted {
     margin: 1rem 0.5rem;
     border: none;
     height: 1px;
-    background: #e9ecef;
-    transition: all 0.3s ease;
+    background: var(--clr-border);
+    transition: all var(--transition-slow);
 }
 
 .nav-form {
@@ -657,7 +748,7 @@ body.dashboard-active .text-muted {
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #6c757d;
+    color: var(--clr-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 1rem 0.5rem 0.5rem 0.5rem;
@@ -666,7 +757,7 @@ body.dashboard-active .text-muted {
 .nav-link-header i {
     margin-right: 0.75rem;
     font-size: 0.875rem;
-    color: #007bff;
+    color: var(--clr-primary);
 }
 
 /* User Profile Section */
@@ -699,15 +790,15 @@ body.dashboard-active .text-muted {
     left: 100%;
     top: 50%;
     transform: translateY(-50%);
-    background: #212529;
-    color: white;
+    background: var(--clr-tooltip-bg);
+    color: var(--clr-tooltip-text);
     padding: 0.5rem 0.75rem;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
     white-space: nowrap;
     z-index: 1000;
     margin-left: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-lg);
 }
 
 .sidebar.collapsed .nav-link:hover::before,
@@ -719,7 +810,7 @@ body.dashboard-active .text-muted {
     transform: translateY(-50%);
     margin-left: 4px;
     border: 6px solid transparent;
-    border-right-color: #212529;
+    border-right-color: var(--clr-tooltip-bg);
     z-index: 1000;
 }
 
@@ -731,14 +822,14 @@ body.dashboard-active .text-muted {
 h1.h2, .h2 {
     font-size: 1.75rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     margin-bottom: 1rem;
     line-height: 1.3;
 }
 
 /* Page header with border */
 .border-bottom {
-    border-bottom: 2px solid #e2e8f0 !important;
+    border-bottom: 2px solid var(--clr-border) !important;
     padding-bottom: 1rem;
     margin-bottom: 1.5rem;
 }
@@ -747,14 +838,14 @@ h1.h2, .h2 {
 h2, .h3 {
     font-size: 1.4rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     margin-bottom: 1rem;
 }
 
 h3, .h4 {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--clr-text-secondary);
     margin-bottom: 0.875rem;
 }
 
@@ -762,7 +853,7 @@ h3, .h4 {
 .card-header h6, .card-header .h6 {
     font-size: 1rem;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--clr-text-primary);
     margin: 0;
 }
 
@@ -770,11 +861,11 @@ h3, .h4 {
 .login-title {
     font-size: 1.75rem !important;
     font-weight: 700 !important;
-    color: #2d3748 !important;
+    color: var(--clr-text-primary) !important;
 }
 
 .login-subtitle {
     font-size: 0.95rem;
-    color: #718096;
+    color: var(--clr-text-muted);
 }
 

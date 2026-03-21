@@ -6,12 +6,32 @@
 <form method="post" hx-post="{% url 'assign-device' %}" hx-swap="outerHTML" hx-target="#dynamicModalContent">
     {% csrf_token %}
     <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <!-- Usage Type Toggle -->
+        <div class="mb-3">
+            <label class="form-label">Usage Type</label>
+            <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="usage_mode" id="mode_individual" value="individual" checked>
+                <label class="btn btn-outline-primary" for="mode_individual">
+                    <i class="bi bi-person me-1"></i>Individual
+                </label>
+                <input type="radio" class="btn-check" name="usage_mode" id="mode_shared" value="shared">
+                <label class="btn btn-outline-primary" for="mode_shared">
+                    <i class="bi bi-people me-1"></i>Shared
+                </label>
+            </div>
+            <small class="form-text text-muted" id="usage_mode_help">Assign to a single employee</small>
+        </div>
+
         <div class="mb-3">
             <label for="device" class="form-label">Device *</label>
             <select class="form-select" id="device" name="device" required {% if preselected_device %}disabled{% endif %}>
                 <option value="">Select Device</option>
                 {% for device in available_devices %}
-                <option value="{{ device.id }}" {% if preselected_device and device.id == preselected_device.id %}selected{% endif %}>{{ device.asset_tag }} - {{ device.device_model }}</option>
+                <option value="{{ device.id }}"
+                        data-usage-type="{{ device.usage_type }}"
+                        {% if preselected_device and device.id == preselected_device.id %}selected{% endif %}>
+                    {{ device.asset_tag }} - {{ device.device_model }}
+                </option>
                 {% endfor %}
             </select>
             {% if preselected_device %}
@@ -24,9 +44,21 @@
             <select class="form-select" id="employee" name="employee" required>
                 <option value="">Select Employee</option>
                 {% for emp in employees %}
-                <option value="{{ emp.id }}">{{ emp.get_full_name }} ({{ emp.employee_id }})</option>
+                <option value="{{ emp.id }}"
+                        data-is-responsible="{{ emp.is_department_responsible|yesno:'true,false' }}"
+                        data-department="{{ emp.department_id|default:'' }}">
+                    {{ emp.get_full_name }} ({{ emp.employee_id }})
+                    {% if emp.is_department_responsible %} [Dept. Responsible]{% endif %}
+                </option>
                 {% endfor %}
             </select>
+            <!-- Override checkbox for shared mode -->
+            <div id="override-container" class="form-check mt-1" style="display: none;">
+                <input class="form-check-input" type="checkbox" id="override_responsible">
+                <label class="form-check-label small text-muted" for="override_responsible">
+                    Show all employees (override department responsible filter)
+                </label>
+            </div>
         </div>
         <div class="mb-3">
             <label for="assignment_type" class="form-label">Assignment Type *</label>
@@ -62,3 +94,72 @@
         <button type="submit" class="btn btn-primary"><i class="bi bi-check me-1"></i>Assign Device</button>
     </div>
 </form>
+
+<script>
+(function() {
+    const modeRadios = document.querySelectorAll('input[name="usage_mode"]');
+    const deviceSelect = document.getElementById('device');
+    const employeeSelect = document.getElementById('employee');
+    const overrideContainer = document.getElementById('override-container');
+    const overrideCheckbox = document.getElementById('override_responsible');
+    const usageModeHelp = document.getElementById('usage_mode_help');
+
+    // Store all employee options
+    const allEmployeeOptions = [...employeeSelect.querySelectorAll('option[value]')];
+
+    function filterEmployees() {
+        const isShared = document.getElementById('mode_shared').checked;
+        const override = overrideCheckbox && overrideCheckbox.checked;
+
+        // Restore all options first
+        const currentValue = employeeSelect.value;
+        employeeSelect.innerHTML = '<option value="">Select Employee</option>';
+
+        allEmployeeOptions.forEach(option => {
+            if (isShared && !override) {
+                // In shared mode without override, only show department responsibles
+                if (option.dataset.isResponsible === 'true') {
+                    employeeSelect.appendChild(option.cloneNode(true));
+                }
+            } else {
+                employeeSelect.appendChild(option.cloneNode(true));
+            }
+        });
+
+        // Try to restore selection
+        if (currentValue) {
+            employeeSelect.value = currentValue;
+        }
+    }
+
+    // Handle mode toggle
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isShared = this.value === 'shared';
+            overrideContainer.style.display = isShared ? 'block' : 'none';
+            usageModeHelp.textContent = isShared
+                ? 'Assign to a department responsible for shared use'
+                : 'Assign to a single employee';
+            filterEmployees();
+        });
+    });
+
+    // Handle override checkbox
+    if (overrideCheckbox) {
+        overrideCheckbox.addEventListener('change', filterEmployees);
+    }
+
+    // Auto-detect shared device and switch mode
+    if (deviceSelect) {
+        deviceSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.dataset.usageType === 'shared') {
+                document.getElementById('mode_shared').checked = true;
+                overrideContainer.style.display = 'block';
+                usageModeHelp.textContent = 'Assign to a department responsible for shared use';
+                filterEmployees();
+            }
+        });
+    }
+})();
+</script>

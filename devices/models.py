@@ -41,13 +41,109 @@ class DeviceVendor(models.Model):
 
 class DeviceCategory(models.Model):
     """Device categories like Laptop, Desktop, Phone, etc."""
+
+    # General specification group constants
+    SPEC_GROUP_NETWORK = 'network_info'
+    SPEC_GROUP_USAGE = 'usage_info'
+
+    AVAILABLE_SPEC_GROUPS = [
+        (SPEC_GROUP_NETWORK, 'Network Information', ['ip_address', 'mac_address']),
+        (SPEC_GROUP_USAGE, 'Usage Information', ['usage_type', 'shared_usage']),
+    ]
+
+    # Specification field types
+    SPEC_TYPES = [
+        ('text', 'Text'),
+        ('number', 'Number'),
+        ('dropdown', 'Dropdown'),
+    ]
+
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    is_general = models.BooleanField(
+        default=False,
+        help_text="Mark this category as a general specification category"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # General specification groups enabled for this category
+    general_spec_groups = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of general specification groups enabled for this category"
+    )
+
+    # Custom specification fields for this category
+    # Format: [{"name": "CPU Model", "type": "text"}, {"name": "OS", "type": "dropdown", "options": ["Windows", "macOS"]}]
+    specifications = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of custom specification field definitions for this category"
+    )
 
     def __str__(self):
         return self.name
+
+    def has_spec_group(self, group_code):
+        """Check if a spec group is enabled for this category"""
+        return group_code in self.general_spec_groups
+
+    def get_enabled_spec_groups(self):
+        """Return list of enabled spec group details"""
+        return [
+            (code, label, fields)
+            for code, label, fields in self.AVAILABLE_SPEC_GROUPS
+            if code in self.general_spec_groups
+        ]
+
+    def get_specification_fields(self):
+        """Return list of specification field definitions"""
+        if not self.specifications:
+            return []
+        return self.specifications
+
+    def get_asset_tag_prefix(self):
+        """Generate a 3-letter prefix from category name for asset tags"""
+        name = self.name.upper().strip()
+        prefix_map = {
+            'LAPTOP': 'LPT',
+            'DESKTOP': 'DSK',
+            'PHONE': 'PHN',
+            'TABLET': 'TBL',
+            'MONITOR': 'MON',
+            'PRINTER': 'PRT',
+            'SERVER': 'SRV',
+            'NETWORK': 'NET',
+            'ACCESSORIES': 'ACC',
+            'PERIPHERAL': 'PRP',
+        }
+        if name in prefix_map:
+            return prefix_map[name]
+        # Generate from first 3 consonants, or first 3 chars
+        consonants = [c for c in name if c.isalpha() and c not in 'AEIOU']
+        if len(consonants) >= 3:
+            return ''.join(consonants[:3])
+        return name[:3]
+
+    def generate_next_asset_tag(self):
+        """Generate the next sequential asset tag for this category"""
+        prefix = self.get_asset_tag_prefix()
+        # Find the highest existing number for this prefix
+        from django.db.models import Max
+        last_device = Device.objects.filter(
+            asset_tag__startswith=f'{prefix}-'
+        ).order_by('-asset_tag').first()
+
+        next_num = 1
+        if last_device:
+            try:
+                num_part = last_device.asset_tag.split('-', 1)[1]
+                next_num = int(num_part) + 1
+            except (IndexError, ValueError):
+                pass
+
+        return f'{prefix}-{next_num:03d}'
 
     class Meta:
         verbose_name_plural = "Device Categories"

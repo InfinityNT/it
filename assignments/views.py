@@ -15,7 +15,6 @@ from devices.models import Device
 from employees.models import Employee
 from core.models import User
 from core.decorators import permission_required_redirect
-from core.mixins import BulkOperationsMixin
 from rest_framework import status
 from django.db import transaction
 
@@ -276,6 +275,7 @@ def assign_device_view(request, device_id=None):
                 device_id = request.POST.get('device')
                 employee_id = request.POST.get('employee')
                 assignment_type = request.POST.get('assignment_type')
+                usage_mode = request.POST.get('usage_mode', 'individual')
                 purpose = request.POST.get('purpose', '')
                 location = request.POST.get('location', '')
                 notes = request.POST.get('notes', '')
@@ -290,6 +290,10 @@ def assign_device_view(request, device_id=None):
                 # Check if device is available
                 if device.status != 'available':
                     return JsonResponse({'error': f'Device {device.asset_tag} is not available for assignment.'}, status=400)
+
+                # Update device usage type based on mode selection
+                if usage_mode == 'shared':
+                    device.usage_type = 'shared'
 
                 # Check if user needs approval for device assignments
                 if request.user.can_manage_system_settings:
@@ -582,172 +586,3 @@ def return_device_view_page(request):
         # Non-HTMX requests redirect to assignments page
         messages.info(request, 'Please use the Return Device button from the assignment or device page.')
         return redirect('assignments')
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def assignment_bulk_operations_view(request):
-    """Bulk operations for assignments"""
-    assignment_ids = request.data.get('item_ids', [])
-    operation = request.data.get('operation')
-
-    if not assignment_ids or not operation:
-        return Response({'error': 'Assignment IDs and operation are required'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
-    
-    assignments = Assignment.objects.filter(id__in=assignment_ids)
-    if not assignments.exists():
-        return Response({'error': 'No valid assignments found'}, 
-                       status=status.HTTP_404_NOT_FOUND)
-    
-    # Check permissions
-    if not request.user.has_perm('assignments.can_modify_assignments'):
-        return Response({'error': 'Permission denied'}, 
-                       status=status.HTTP_403_FORBIDDEN)
-    
-    updated_count = 0
-    errors = []
-    
-    try:
-        with transaction.atomic():
-            if operation == 'bulk_return':
-                return_notes = request.data.get('return_notes', '')
-
-                for assignment in assignments:
-                    if assignment.status != 'active':
-                        errors.append(f'Assignment #{assignment.id} is not active')
-                        continue
-
-                    # Return the device
-                    assignment.return_device(
-                        returned_by=request.user,
-                        notes=return_notes
-                    )
-                    updated_count += 1
-            
-            elif operation == 'update_status':
-                new_status = request.data.get('new_status')
-                status_notes = request.data.get('status_notes', '')
-                
-                if not new_status:
-                    return Response({'error': 'New status is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                for assignment in assignments:
-                    old_status = assignment.status
-                    assignment.status = new_status
-                    if status_notes:
-                        assignment.notes = (assignment.notes or '') + f'\\n[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Status updated by {request.user.get_full_name()}: {status_notes}'
-                    assignment.save()
-                    updated_count += 1
-            
-            elif operation == 'extend_return_date':
-                new_expected_return_date = request.data.get('new_expected_return_date')
-                extension_reason = request.data.get('extension_reason', '')
-                
-                if not new_expected_return_date:
-                    return Response({'error': 'New expected return date is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    return_date = datetime.strptime(new_expected_return_date, '%Y-%m-%d').date()
-                except ValueError:
-                    return Response({'error': 'Invalid date format'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                for assignment in assignments:
-                    if assignment.status == 'returned':
-                        errors.append(f'Assignment #{assignment.id} is already returned')
-                        continue
-                    
-                    assignment.expected_return_date = return_date
-                    if extension_reason:
-                        assignment.notes = (assignment.notes or '') + f'\\n[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Return date extended by {request.user.get_full_name()}: {extension_reason}'
-                    assignment.save()
-                    updated_count += 1
-            
-            elif operation == 'transfer_assignments':
-                new_employee_id = request.data.get('new_employee_id')
-                transfer_notes = request.data.get('transfer_notes', '')
-                new_expected_return_date = request.data.get('new_expected_return_date')
-                
-                if not new_employee_id:
-                    return Response({'error': 'New employee is required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                try:
-                    new_employee = Employee.objects.get(id=new_employee_id)
-                except Employee.DoesNotExist:
-                    return Response({'error': 'Employee not found'}, 
-                                   status=status.HTTP_404_NOT_FOUND)
-                
-                for assignment in assignments:
-                    if assignment.status != 'active':
-                        errors.append(f'Assignment #{assignment.id} is not active')
-                        continue
-                    
-                    # Update device assignment
-                    assignment.device.assigned_to = new_employee
-                    assignment.device.save()
-                    
-                    # Update assignment
-                    old_employee = assignment.employee
-                    assignment.employee = new_employee
-                    
-                    if new_expected_return_date:
-                        try:
-                            assignment.expected_return_date = datetime.strptime(new_expected_return_date, '%Y-%m-%d').date()
-                        except ValueError:
-                            pass  # Keep existing date if invalid
-                    
-                    if transfer_notes:
-                        assignment.notes = (assignment.notes or '') + f'\\n[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Transferred from {old_employee.get_full_name()} to {new_employee.get_full_name()} by {request.user.get_full_name()}: {transfer_notes}'
-                    
-                    assignment.save()
-                    updated_count += 1
-            
-            elif operation == 'mark_overdue':
-                overdue_notes = request.data.get('overdue_notes', '')
-                
-                for assignment in assignments:
-                    if assignment.status == 'returned':
-                        errors.append(f'Assignment #{assignment.id} is already returned')
-                        continue
-                    
-                    assignment.status = 'overdue'
-                    if overdue_notes:
-                        assignment.notes = (assignment.notes or '') + f'\\n[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Marked as overdue by {request.user.get_full_name()}: {overdue_notes}'
-                    assignment.save()
-                    updated_count += 1
-            
-            elif operation == 'add_notes':
-                additional_notes = request.data.get('additional_notes')
-                
-                if not additional_notes:
-                    return Response({'error': 'Additional notes are required'}, 
-                                   status=status.HTTP_400_BAD_REQUEST)
-                
-                for assignment in assignments:
-                    assignment.notes = (assignment.notes or '') + f'\\n[{timezone.now().strftime("%Y-%m-%d %H:%M")}] Note added by {request.user.get_full_name()}: {additional_notes}'
-                    assignment.save()
-                    updated_count += 1
-            
-            else:
-                return Response({'error': 'Invalid operation'}, 
-                               status=status.HTTP_400_BAD_REQUEST)
-        
-        response_data = {
-            'message': f'Successfully updated {updated_count} assignments',
-            'updated_count': updated_count,
-            'total_assignments': len(assignment_ids)
-        }
-        
-        if errors:
-            response_data['errors'] = errors
-            response_data['error_count'] = len(errors)
-        
-        return Response(response_data)
-    
-    except Exception as e:
-        return Response({'error': f'Bulk operation failed: {str(e)}'}, 
-                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)

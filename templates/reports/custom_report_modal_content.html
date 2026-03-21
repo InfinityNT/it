@@ -1,11 +1,11 @@
 {% load static %}
 <!-- Custom Report Builder Modal Content for HTMX Dynamic Modal -->
-<div class="modal-header bg-primary text-white">
+<div class="modal-header">
     <h5 class="modal-title">
         <i class="bi bi-graph-up-arrow me-2"></i>
         Create Custom Report
     </h5>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
     <!-- Step 1: Select Data Sources (Multiple) -->
@@ -156,7 +156,3 @@
         Generate Report
     </button>
 </div>
-
-<!-- Load Styles and JavaScript -->
-<link rel="stylesheet" href="{% static 'reports/css/custom_report_builder.css' %}">
-<script src="{% static 'reports/js/custom_report_builder.js' %}"></script>

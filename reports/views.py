@@ -96,7 +96,7 @@ def reports_summary_view(request):
                             <div class="text-xs fw-bold text-primary text-uppercase mb-1">
                                 Total Devices
                             </div>
-                            <div class="h5 mb-0 fw-bold text-dark">
+                            <div class="h5 mb-0 fw-bold text-body">
                                 {summary_data['total_devices']}
                             </div>
                         </div>
@@ -116,7 +116,7 @@ def reports_summary_view(request):
                             <div class="text-xs fw-bold text-success text-uppercase mb-1">
                                 Utilization Rate
                             </div>
-                            <div class="h5 mb-0 fw-bold text-dark">
+                            <div class="h5 mb-0 fw-bold text-body">
                                 {summary_data['utilization_rate']}
                             </div>
                         </div>
@@ -136,7 +136,7 @@ def reports_summary_view(request):
                             <div class="text-xs fw-bold text-info text-uppercase mb-1">
                                 Avg Assignment Duration
                             </div>
-                            <div class="h5 mb-0 fw-bold text-dark">
+                            <div class="h5 mb-0 fw-bold text-body">
                                 {summary_data['avg_assignment_duration']}
                             </div>
                         </div>
@@ -156,7 +156,7 @@ def reports_summary_view(request):
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">
                                 Available Devices
                             </div>
-                            <div class="h5 mb-0 fw-bold text-dark">
+                            <div class="h5 mb-0 fw-bold text-body">
                                 {summary_data['available_devices']}
                             </div>
                         </div>

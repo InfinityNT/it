@@ -62,6 +62,9 @@ MIDDLEWARE = [
     "django_htmx.middleware.HtmxMiddleware",
     "core.middleware.HTMXContentMiddleware",
     "core.middleware.PasswordChangeRequiredMiddleware",
+    "core.middleware.SessionTimeoutMiddleware",
+    "core.middleware.PasswordExpiryMiddleware",
+    "core.middleware.TimezoneMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -115,7 +118,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME": "core.validators.DynamicPasswordValidator",
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",

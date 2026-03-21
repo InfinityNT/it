@@ -77,7 +77,7 @@
 
 .card-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Button Animations */
@@ -262,7 +262,7 @@
 }
 
 .table-row-animate:hover {
-    background-color: rgba(13, 110, 253, 0.05);
+    background-color: var(--clr-primary-subtle);
     transform: translateX(2px);
 }
 
@@ -345,8 +345,15 @@
     .animate-slow {
         transition-duration: 0.2s;
     }
-    
+
     .view-content {
         transition-duration: 0.2s;
     }
+}
+
+/* ===================================
+   HTMX Content Swap Animation
+   ================================== */
+#content-area.htmx-settling {
+    animation: fadeInScale 0.3s ease-out;
 }

@@ -1,8 +1,8 @@
-/* Custom navbar breakpoint: 992px (Bootstrap's lg) */
+/* Custom navbar breakpoint: 1143px */
 /* Optimized for split-window desktop usage */
 
-/* Below 992px: Show hamburger menu and full-width mobile layout */
-@media (max-width: 991.98px) {
+/* Below 1143px: Use sidebar as unified menu */
+@media (max-width: 1142.98px) {
     /* Force mobile navbar behavior */
     .navbar-expand-lg {
         flex-wrap: wrap;
@@ -19,9 +19,20 @@
         padding-left: var(--bs-gutter-x, 0.75rem);
     }
 
-    /* Show hamburger toggle */
+    /* Hide Bootstrap hamburger & collapse on all pages, use sidebar as unified menu */
     .navbar-expand-lg .navbar-toggler {
-        display: block !important;
+        display: none !important;
+    }
+
+    .navbar-expand-lg .navbar-collapse {
+        display: none !important;
+    }
+
+    /* Sidebar toggle is the only button at mobile/tablet */
+    .sidebar-toggle-btn {
+        display: flex !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
     }
 
     /* Collapse behavior */
@@ -62,8 +73,8 @@
     }
 }
 
-/* Above 992px: Show full horizontal navbar */
-@media (min-width: 992px) {
+/* Above 1143px: Show full horizontal navbar */
+@media (min-width: 1143px) {
     .navbar-expand-lg .navbar-toggler {
         display: none !important;
     }
@@ -96,7 +107,7 @@
     padding: 0.5rem 1.25rem;
     border-radius: 8px;
     font-weight: 600;
-    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.875rem;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -118,8 +129,8 @@
 }
 
 /* Responsive navbar adjustments */
-/* Mobile/Tablet - Below 992px breakpoint */
-@media (max-width: 991.98px) {
+/* Mobile/Tablet - Below 1143px breakpoint */
+@media (max-width: 1142.98px) {
     .navbar-nav {
         padding: 1rem 0;
         gap: 0.25rem;
@@ -145,86 +156,89 @@
 
 /* ==========================================
    Dashboard-Specific Navbar Overrides
-   Only handles: transparency, hidden elements, centering
-   (Pill styling is now in base styles above)
    ========================================== */
 
 /* Base navbar transition */
 .navbar {
-    transition: background 0.3s ease, box-shadow 0.3s ease;
+    transition: background var(--transition-slow), box-shadow var(--transition-slow);
+    z-index: 1060; /* Above sidebar (1050) and backdrop (1040) so toggle button stays accessible */
 }
 
-/* Dashboard: Make navbar overlay content so gradient shows through */
-body.dashboard-active .navbar {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: transparent !important;
-    box-shadow: none;
-    padding: 0.75rem 1rem !important;
-    margin: 0 !important;
-    z-index: 1000;
-    transition: background 0.3s ease, backdrop-filter 0.3s ease;
-}
-
-/* Mobile: Navbar gets background when scrolled */
-@media (max-width: 767.98px) {
-    body.dashboard-active .navbar.scrolled {
-        background: rgba(15, 23, 42, 0.95) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+/* Dashboard (desktop only): Hide brand/title and sidebar toggle visually */
+@media (min-width: 1143px) {
+    body.dashboard-active .navbar-brand,
+    body.dashboard-active .sidebar-toggle-btn {
+        visibility: hidden;
+        pointer-events: none;
     }
 }
 
-/* Dashboard: Center the nav container */
-body.dashboard-active .navbar > .container-fluid {
+/* Theme Toggle Button */
+.theme-toggle-btn {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 1rem;
+    width: 36px;
+    height: 36px;
     padding: 0 !important;
-    margin: 0 !important;
-    background: transparent !important;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    border-radius: var(--radius-md) !important;
+    transition: all var(--transition-base);
+    text-decoration: none !important;
+    border: none !important;
+    flex-shrink: 0;
 }
 
-/* Dashboard: Hide brand/title and sidebar toggle */
-body.dashboard-active .navbar-brand,
-body.dashboard-active .sidebar-toggle-btn {
-    display: none !important;
-}
-
-body.dashboard-active .navbar-collapse {
-    flex-grow: 0;
-    background: transparent;
-}
-
-/* Dashboard: Hide the Dashboard nav link since we're already on it */
-body.dashboard-active .navbar-nav .nav-link[href="/"],
-body.dashboard-active .navbar-nav .nav-link[href="/dashboard/"] {
-    display: none !important;
-}
-
-/* Dashboard: Slightly lighter text color for transparent background */
-body.dashboard-active .navbar-nav .nav-link {
-    color: rgba(226, 232, 240, 0.9) !important;
-}
-
-body.dashboard-active .navbar-nav .nav-link:hover {
+.theme-toggle-btn:hover {
     color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Dashboard: Mobile collapsed menu with matching dark theme */
-@media (max-width: 991.98px) {
-    body.dashboard-active .navbar-collapse.show,
-    body.dashboard-active .navbar-collapse.collapsing {
-        background: rgba(30, 41, 59, 0.95);
-        border: 1px solid rgba(51, 65, 85, 0.5);
+.theme-toggle-btn i {
+    transition: transform var(--transition-slow);
+}
+
+.theme-toggle-btn:hover i {
+    transform: rotate(20deg);
+}
+
+/* Help icon button */
+.navbar-help-btn {
+    color: rgba(255, 255, 255, 0.55) !important;
+    font-size: 1.05rem;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill) !important;
+    transition: color var(--transition-base), background var(--transition-base);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.navbar-help-btn:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    text-decoration: none;
+}
+
+/* Extra small phones (<576px): Compact navbar */
+@media (max-width: 575.98px) {
+    .navbar {
+        padding-top: 0.375rem;
+        padding-bottom: 0.375rem;
     }
-}
 
-/* Dashboard: Navbar toggler (hamburger) styling */
-body.dashboard-active .navbar-toggler {
-    border-color: rgba(241, 245, 249, 0.3) !important;
-}
+    .navbar > .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
 
-body.dashboard-active .navbar-toggler-icon {
-    filter: brightness(1.2);
+    .theme-toggle-btn {
+        width: 40px;
+        height: 40px;
+    }
 }

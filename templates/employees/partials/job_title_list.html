@@ -1,0 +1,47 @@
+{% if job_titles %}
+{% for jt in job_titles %}
+<div class="manage-list-item {% if not jt.is_active %}inactive{% endif %}"
+     id="job-title-item-{{ jt.id }}">
+    <div class="manage-item-info">
+        <div class="manage-item-name">
+            {{ jt.title }}
+            {% if not jt.is_active %}
+                <span class="badge bg-secondary ms-1">Inactive</span>
+            {% endif %}
+        </div>
+        <div class="manage-item-meta">
+            <span class="badge bg-light text-dark">{{ jt.department.name }}</span>
+            {% if jt.level %}
+                <span class="text-muted ms-2">Level: {{ jt.level }}</span>
+            {% endif %}
+            {% with emp_count=jt.employee_set.count %}
+            {% if emp_count > 0 %}
+                <span class="text-muted ms-2">
+                    <i class="bi bi-people me-1"></i>{{ emp_count }} employee{{ emp_count|pluralize }}
+                </span>
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+    <div class="manage-item-actions">
+        <button class="btn btn-sm btn-outline-primary" title="Edit"
+                hx-get="{% url 'manage-job-titles-edit' job_title_id=jt.id %}"
+                hx-target="#job-titles-content"
+                hx-swap="innerHTML">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" title="Delete"
+                hx-get="{% url 'manage-job-titles-delete' job_title_id=jt.id %}"
+                hx-target="#job-title-item-{{ jt.id }}"
+                hx-swap="outerHTML">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="manage-empty-state">
+    <i class="bi bi-inbox d-block"></i>
+    <p class="mb-0">No job titles found</p>
+</div>
+{% endif %}

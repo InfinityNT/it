@@ -1,14 +1,4 @@
 {% if devices %}
-<!-- Bulk Select Header - Hidden by default -->
-<div id="bulk-select-header" class="mb-3" style="display: none;">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" id="selectAllDevices" onchange="toggleSelectAll()">
-        <label class="form-check-label fw-bold" for="selectAllDevices">
-            Select All Devices
-        </label>
-    </div>
-</div>
-
 <!-- Device Cards Grid -->
 <div class="card-grid">
     {% for device in devices %}
@@ -17,7 +7,6 @@
         <div class="item-card-header">
             <div class="item-card-header-content">
                 <div class="item-card-header-left">
-                    <input type="checkbox" class="item-card-checkbox device-checkbox bulk-select-cell" value="{{ device.id }}" onchange="updateBulkActions()" style="display: none;">
                     <h6 class="item-card-title">{{ device.asset_tag }}</h6>
                 </div>
                 <div class="item-card-header-right">

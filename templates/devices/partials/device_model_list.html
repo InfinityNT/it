@@ -1,0 +1,44 @@
+{% if device_models %}
+{% for model in device_models %}
+<div class="manage-list-item {% if not model.is_active %}inactive{% endif %}"
+     id="device-model-item-{{ model.id }}">
+    <div class="manage-item-info">
+        <div class="manage-item-name">
+            {{ model.manufacturer }} {{ model.model_name }}
+            {% if not model.is_active %}
+                <span class="badge bg-secondary ms-1">Inactive</span>
+            {% endif %}
+        </div>
+        <div class="manage-item-meta">
+            <span class="badge bg-light text-dark">{{ model.category.name }}</span>
+            {% if model.device_set.count > 0 %}
+                <span class="text-muted ms-2">
+                    <i class="bi bi-laptop me-1"></i>{{ model.device_set.count }} device{{ model.device_set.count|pluralize }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    {% if can_modify %}
+    <div class="manage-item-actions">
+        <button class="btn btn-sm btn-outline-primary" title="Edit"
+                hx-get="{% url 'manage-device-models-edit' model_id=model.id %}"
+                hx-target="#device-models-content"
+                hx-swap="innerHTML">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" title="Delete"
+                hx-get="{% url 'manage-device-models-delete' model_id=model.id %}"
+                hx-target="#device-model-item-{{ model.id }}"
+                hx-swap="outerHTML">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="manage-empty-state">
+    <i class="bi bi-inbox d-block"></i>
+    <p class="mb-0">No device models found</p>
+</div>
+{% endif %}

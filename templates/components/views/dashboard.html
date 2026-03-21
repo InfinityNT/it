@@ -1,7 +1,7 @@
 {% load static %}
 
-<!-- Dashboard Container - Dark Theme -->
-<div class="dashboard-dark">
+<!-- Dashboard Container -->
+<div class="dashboard-container">
     <!-- Quick Actions Grid -->
     <div class="dashboard-section">
         <h2 class="section-title">
@@ -13,7 +13,7 @@
              hx-get="/api/dashboard/quick-actions/"
              hx-trigger="load once">
             <!-- Loading state -->
-            <div class="loading-placeholder-dark">
+            <div class="loading-placeholder">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
@@ -23,19 +23,19 @@
 
     <!-- Global Search -->
     <div class="dashboard-section">
-        <div class="search-card-dark">
+        <div class="dash-search-card">
             <div class="search-input-wrapper">
                 <form class="d-flex" id="global-search-form" onsubmit="performGlobalSearch(event)">
                     <div class="input-group input-group-lg">
-                        <span class="input-group-text search-icon-dark">
+                        <span class="input-group-text dash-search-icon">
                             <i class="bi bi-search"></i>
                         </span>
                         <input type="text"
-                               class="form-control search-input-dark"
+                               class="form-control dash-search-input"
                                id="global-search-input"
                                placeholder="Search devices, employees, users, assignments..."
                                autocomplete="off">
-                        <button class="btn btn-primary-dark" type="submit">
+                        <button class="btn btn-primary-dash" type="submit">
                             <i class="bi bi-search me-1"></i>
                             Search
                         </button>
@@ -43,7 +43,7 @@
                 </form>
             </div>
             <div class="mt-2">
-                <small class="text-muted-dark">
+                <small class="text-muted-dash">
                     <i class="bi bi-lightbulb me-1"></i>
                     <strong>Quick search:</strong> Try searching by device name, asset tag, employee name
                 </small>
@@ -53,18 +53,18 @@
 
     <!-- Search Results (hidden by default) -->
     <div class="dashboard-section" id="search-results-container" style="display: none;">
-        <div class="card-dark">
-            <div class="card-header-dark d-flex justify-content-between align-items-center">
-                <h5 class="card-title-dark mb-0">
+        <div class="dash-card">
+            <div class="dash-card-header d-flex justify-content-between align-items-center">
+                <h5 class="dash-card-title mb-0">
                     <i class="bi bi-search me-2"></i>
                     Search Results
                 </h5>
-                <button class="btn btn-sm btn-outline-secondary-dark" onclick="clearSearch()">
+                <button class="btn btn-sm btn-outline-secondary-dash" onclick="clearSearch()">
                     <i class="bi bi-x-circle me-1"></i>
                     Clear
                 </button>
             </div>
-            <div class="card-body-dark" id="search-results-content">
+            <div class="dash-card-body" id="search-results-content">
                 <!-- Results loaded here -->
             </div>
         </div>
@@ -79,7 +79,7 @@
         <div id="dashboard-stats"
              hx-get="/api/dashboard/stats/"
              hx-trigger="load once">
-            <div class="loading-placeholder-dark">
+            <div class="loading-placeholder">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading statistics...</span>
                 </div>
@@ -93,11 +93,11 @@
             <i class="bi bi-clock-history"></i>
             Recent Activity
         </h2>
-        <div class="card-dark">
-            <div class="card-body-dark" id="dashboard-activity"
+        <div class="dash-card">
+            <div class="dash-card-body" id="dashboard-activity"
                  hx-get="/api/dashboard/activity/"
                  hx-trigger="load once">
-                <div class="loading-placeholder-dark">
+                <div class="loading-placeholder">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading activity...</span>
                     </div>
@@ -121,19 +121,24 @@ function performGlobalSearch(event) {
 
     // Show container and loading state
     resultsContainer.style.display = 'block';
-    resultsContent.innerHTML = `
-        <div class="loading-placeholder-dark">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Searching...</span>
-            </div>
-        </div>
-    `;
+    resultsContent.textContent = '';
+    var loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading-placeholder';
+    var spinner = document.createElement('div');
+    spinner.className = 'spinner-border text-primary';
+    spinner.setAttribute('role', 'status');
+    var srText = document.createElement('span');
+    srText.className = 'visually-hidden';
+    srText.textContent = 'Searching...';
+    spinner.appendChild(srText);
+    loadingDiv.appendChild(spinner);
+    resultsContent.appendChild(loadingDiv);
 
     // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     // Perform search via HTMX
-    htmx.ajax('GET', `/api/global-search/?q=${encodeURIComponent(query)}`, {
+    htmx.ajax('GET', '/api/global-search/?q=' + encodeURIComponent(query), {
         target: '#search-results-content',
         swap: 'innerHTML'
     });
@@ -142,23 +147,6 @@ function performGlobalSearch(event) {
 function clearSearch() {
     document.getElementById('global-search-input').value = '';
     document.getElementById('search-results-container').style.display = 'none';
-    document.getElementById('search-results-content').innerHTML = '';
+    document.getElementById('search-results-content').textContent = '';
 }
-
-// Mobile scroll detection for navbar background
-(function() {
-    if (window.innerWidth < 768) {
-        const dashboard = document.querySelector('.dashboard-dark');
-        const navbar = document.querySelector('.navbar');
-        if (dashboard && navbar) {
-            dashboard.addEventListener('scroll', function() {
-                if (this.scrollTop > 10) {
-                    navbar.classList.add('scrolled');
-                } else {
-                    navbar.classList.remove('scrolled');
-                }
-            });
-        }
-    }
-})();
 </script>
